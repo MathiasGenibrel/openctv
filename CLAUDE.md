@@ -5,14 +5,14 @@ pilotable entièrement à la télécommande, sans pub ni télémétrie. Jetpack 
 Compose for TV, architecture feature folders, DI Koin, OkHttp (téléchargement des listes de filtres),
 Room (favoris).
 
-> **Projet greenfield** : le dépôt ne contient pas encore de code. La stack ci-dessus est la cible ;
-> le premier lot de travail est le scaffolding Gradle. Quand le code existe, il fait foi sur ce fichier.
+> Le code fait foi sur ce fichier. Catalogue de versions : `gradle/libs.versions.toml`
+> (toute version ≥ 10 jours).
 
 **Avant toute tâche, lire le brief produit : @.claude/docs/product.md** — ce qu'on construit, pour
 qui, et les enjeux (navigation au D-pad, UI à 10 pieds, vie privée, sécurité WebView, performance TV).
 
 ## Quick Reference
-- **Min SDK 28 / Target SDK 35** — Kotlin 2.x, Java 17, Gradle (wrapper à créer au scaffolding)
+- **Min SDK 28 / Target SDK 35** — Kotlin 2.x, Java 17, Gradle (wrapper `./gradlew`)
 - **Package / applicationId** : `com.openctv.browser` — activité de lancement `com.openctv.browser/.MainActivity`
   (déclarée `LEANBACK_LAUNCHER`, `android.software.leanback` requis, `android.hardware.touchscreen` non requis)
 - **Test command**: `./gradlew :app:testDebugUnitTest`

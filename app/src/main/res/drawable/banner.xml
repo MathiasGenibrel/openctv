@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Bannière TV 320x180 dp -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M0,0h320v180h-320z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M40,126h240v6h-240z" />
+    <!-- O -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M60,60a24,24 0,1 0,48 0a24,24 0,1 0,-48 0zM68,60a16,16 0,1 1,32 0a16,16 0,1 1,-32 0z"
+        android:fillType="evenOdd" />
+    <!-- C -->
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M148,60a24,24 0,1 0,48 0h-8a16,16 0,1 1,-32 0z"
+        android:fillType="evenOdd" />
+    <!-- TV -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M204,40h40v8h-16v40h-8v-40h-16z M246,40h8l10,32l10,-32h8l-14,48h-8z" />
+</vector>
