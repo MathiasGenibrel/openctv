@@ -8,16 +8,23 @@ data class BrowserHud(
     val isToolbarInteractive: Boolean,
     /** Snackbar « Mode interface : … », masquée sous une surcouche. */
     val isInterfaceHelpShown: Boolean,
+    /** Snackbar « Mode curseur : … » + astuce « Maintenir Haut », quelques secondes en mode page. */
+    val isCursorHelpShown: Boolean = false,
+    /** Le D-pad est dans la page : le curseur virtuel prend les touches et s'affiche (jamais en plein écran, sous une surcouche ou sur une erreur). */
+    val isCursorVisible: Boolean = false,
 )
 
-fun browserHudOf(layers: BrowserLayers, pageState: PageState): BrowserHud {
+fun browserHudOf(layers: BrowserLayers, pageState: PageState, isCursorHelpRequested: Boolean = false): BrowserHud {
     // Vidéo plein écran : aucune interface OpenCTV par-dessus le lecteur.
     if (layers.isFullscreen) return BrowserHud(isToolbarShown = false, isToolbarInteractive = false, isInterfaceHelpShown = false)
     val isLoading = pageState is PageState.Loading
+    val isCursorVisible = !layers.isInterfaceMode && !layers.isOverlayOpen && pageState !is PageState.Error
     return BrowserHud(
         isToolbarShown = layers.isInterfaceMode || isLoading,
         isToolbarInteractive = layers.isInterfaceMode,
         isInterfaceHelpShown = layers.isInterfaceMode && !layers.isOverlayOpen,
+        isCursorHelpShown = isCursorHelpRequested && isCursorVisible,
+        isCursorVisible = isCursorVisible,
     )
 }
 

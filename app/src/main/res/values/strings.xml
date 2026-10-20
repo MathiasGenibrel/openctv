@@ -29,6 +29,8 @@
     <string name="browser_toolbar_bookmark_add">Ajouter aux favoris</string>
     <string name="browser_toolbar_bookmark_remove">Retirer des favoris</string>
     <string name="browser_toolbar_menu">Menu</string>
+    <string name="browser_cursor_help">Mode curseur : OK pour cliquer · Retour pour la page précédente</string>
+    <string name="browser_cursor_hold_up_hint">Maintenir Haut : barre d\'adresse</string>
     <string name="browser_notice_bookmark_failed">Le favori n\'a pas pu être enregistré.</string>
     <string name="browser_notice_adblock_failed">Le réglage du bloqueur n\'a pas pu être enregistré.</string>
     <string name="browser_notice_setting_failed">Le réglage n\'a pas pu être enregistré.</string>

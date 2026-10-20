@@ -3,12 +3,11 @@ package com.openctv.browser.core.webview
 import android.annotation.SuppressLint
 import android.content.Context
 import android.webkit.WebSettings
-import android.webkit.WebView
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 
 /**
- * Seul endroit qui crée et configure une [WebView]. Aucune feature ne touche `WebSettings`.
+ * Seul endroit qui crée et configure une `WebView`. Aucune feature ne touche `WebSettings`.
  * Réglages verrouillés : pas d'accès fichier/contenu, contenu mixte interdit, Safe Browsing si
  * disponible, aucune interface JavaScript exposée aux pages.
  */
@@ -17,8 +16,8 @@ class LockedWebViewFactory(
 ) {
     // JavaScript est indispensable au web moderne ; le reste est verrouillé ci-dessous.
     @SuppressLint("SetJavaScriptEnabled")
-    fun create(context: Context, listener: WebPageListener, fullscreenHost: FullscreenHost): WebView =
-        WebView(context).apply {
+    fun create(context: Context, listener: WebPageListener, fullscreenHost: FullscreenHost): PointerAwareWebView =
+        PointerAwareWebView(context).apply {
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true

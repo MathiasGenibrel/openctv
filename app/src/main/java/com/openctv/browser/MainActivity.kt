@@ -23,6 +23,9 @@ import com.openctv.browser.features.browser.ui.BrowserMenu
 import com.openctv.browser.features.browser.ui.BrowserMenuViewModel
 import com.openctv.browser.features.browser.ui.BrowserScreen
 import com.openctv.browser.features.browser.ui.BrowserViewModel
+import com.openctv.browser.features.browser.ui.PageKeyHandler
+import com.openctv.browser.features.cursor.ui.CursorOverlay
+import com.openctv.browser.features.cursor.ui.rememberCursorSession
 import com.openctv.browser.features.home.ui.HomeScreen
 import com.openctv.browser.features.home.ui.HomeViewModel
 import com.openctv.browser.features.search.domain.RecentSearchesContract
@@ -95,7 +98,18 @@ class MainActivity : ComponentActivity() {
                             val browser = viewModel {
                                 BrowserViewModel(current.url, bookmarks, onPageVisited = settings::recordLastPage)
                             }
+                            // Curseur virtuel : la racine relie les features (le navigateur n'importe pas le curseur).
+                            val cursor = rememberCursorSession(speedFactor = { settings.current.cursorSpeed.factor })
                             BrowserScreen(
+                                pageKeys = PageKeyHandler { event -> cursor.onKeyEvent(event) },
+                                cursor = { webView, isActive ->
+                                    CursorOverlay(
+                                        session = cursor,
+                                        webView = webView,
+                                        isActive = isActive,
+                                        onEnterInterface = browser::enterInterfaceMode,
+                                    )
+                                },
                                 webViewFactory = webViewFactory,
                                 viewModel = browser,
                                 onClose = { destination = Destination.Home },

@@ -1,7 +1,11 @@
 package com.openctv.browser.features.browser.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -13,10 +17,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.DPadIcon
+import com.openctv.browser.core.designsystem.KeyHint
+import com.openctv.browser.core.designsystem.OpenCtvColors
+import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.webview.LockedWebViewFactory
+import com.openctv.browser.core.webview.PointerAwareWebView
 import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.search.domain.SearchRequest
@@ -35,6 +45,10 @@ import com.openctv.browser.features.search.domain.SearchRequest
  * [addressInput] (saisie d'adresse) et [menu] (contenu du menu, #10) sont des surcouches fournies par la
  * racine de composition : la WebView reste vivante dessous, et le focus revient à l'élément qui les a
  * ouvertes quand elles se ferment. [menu] doit piéger le focus (`focusTrap`).
+ *
+ * Le curseur virtuel (#8) arrive par [pageKeys] (flèches et OK en mode page, avant la WebView) et par le slot
+ * [cursor] (surcouche et injection des événements sur la WebView reçue ; `isActive` = le D-pad est dans la
+ * page, sans surcouche ni erreur).
  */
 @Composable
 fun BrowserScreen(
@@ -44,6 +58,8 @@ fun BrowserScreen(
     modifier: Modifier = Modifier,
     addressInput: @Composable (SearchRequest) -> Unit = {},
     menu: @Composable () -> Unit = {},
+    pageKeys: PageKeyHandler = PageKeyHandler.None,
+    cursor: @Composable (webView: PointerAwareWebView, isActive: Boolean) -> Unit = { _, _ -> },
 ) {
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val layers by viewModel.layers.collectAsStateWithLifecycle()
@@ -94,7 +110,7 @@ fun BrowserScreen(
 
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
     // en bas d'écran, menu, saisie d'adresse, vidéo plein écran (au-dessus de tout).
-    Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView) }) {
+    Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
         BrowserContent(
             pageState = pageState,
             pageView = { PageView(webView, isVisible = pageState !is PageState.Error) },
@@ -113,13 +129,20 @@ fun BrowserScreen(
                 }
             },
         )
+        cursor(webView, hud.isCursorVisible)
         val shownNotice = notice
         val bottomMessage = when {
             shownNotice != null -> stringResource(noticeTextRes(shownNotice))
             hud.isInterfaceHelpShown -> stringResource(R.string.browser_interface_help)
+            hud.isCursorHelpShown -> stringResource(R.string.browser_cursor_help)
             else -> null
         }
-        bottomMessage?.let { BottomSnackbar(it) }
+        val bottomHint = if (shownNotice == null && hud.isCursorHelpShown) {
+            stringResource(R.string.browser_cursor_hold_up_hint)
+        } else {
+            null
+        }
+        bottomMessage?.let { BottomSnackbar(it, bottomHint) }
         // Plein écran : le menu (son Retour, son piège à focus) laisse la main au lecteur, et revient après.
         val isMenuShown = layers.isMenuOpen && !layers.isFullscreen
         if (isMenuShown) menu()
@@ -129,12 +152,26 @@ fun BrowserScreen(
 }
 
 @Composable
-private fun BottomSnackbar(text: String) {
+private fun BottomSnackbar(text: String, hint: String? = null) {
     OverscanSafeArea {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-            HelpSnackbar(text = text)
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                hint?.let { KeyHintChip(it) }
+                HelpSnackbar(text = text)
+            }
         }
     }
+}
+
+/** Astuce de touche (« Maintenir Haut : barre d'adresse ») au-dessus de la snackbar d'aide. */
+@Composable
+private fun KeyHintChip(label: String) {
+    KeyHint(
+        label = label,
+        modifier = Modifier
+            .background(OpenCtvColors.SurfaceContainerHigh, OpenCtvShapes.Full)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+    ) { DPadIcon() }
 }
 
 private fun noticeTextRes(notice: BrowserNotice): Int = when (notice) {

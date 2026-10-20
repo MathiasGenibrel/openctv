@@ -83,12 +83,19 @@ class BrowserViewModel(
      */
     val layers: StateFlow<BrowserLayers> = _layers.asStateFlow()
 
+    private val _isCursorHelpRequested = MutableStateFlow(true)
+    private var cursorHelpJob: Job? = null
+
     /** Barre d'outils et aide affichées par-dessus la page. */
-    val hud: StateFlow<BrowserHud> = combine(_layers, _pageState, ::browserHudOf).stateIn(
+    val hud: StateFlow<BrowserHud> = combine(_layers, _pageState, _isCursorHelpRequested, ::browserHudOf).stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-        browserHudOf(_layers.value, _pageState.value),
+        browserHudOf(_layers.value, _pageState.value, _isCursorHelpRequested.value),
     )
+
+    init {
+        showCursorHelp()
+    }
 
     private val _notice = MutableStateFlow<BrowserNotice?>(null)
     private var noticeJob: Job? = null
@@ -138,6 +145,17 @@ class BrowserViewModel(
     /** Le D-pad pilote de nouveau la page. */
     fun exitInterfaceMode() {
         _layers.update { it.copy(mode = BrowserMode.Page) }
+        showCursorHelp()
+    }
+
+    /** L'aide du mode curseur s'affiche à chaque retour dans la page, puis s'efface seule après [CURSOR_HELP_DURATION]. */
+    private fun showCursorHelp() {
+        cursorHelpJob?.cancel()
+        cursorHelpJob = viewModelScope.launch {
+            _isCursorHelpRequested.value = true
+            delay(CURSOR_HELP_DURATION)
+            _isCursorHelpRequested.value = false
+        }
     }
 
     /**
@@ -274,6 +292,7 @@ class BrowserViewModel(
     /** Adresse ou recherche validée dans la saisie : chargée dans la même WebView (historique conservé). */
     fun onAddressChosen(url: String) {
         _layers.update { it.copy(addressInput = null, mode = BrowserMode.Page) }
+        showCursorHelp()
         load(url)
     }
 
@@ -333,5 +352,6 @@ class BrowserViewModel(
     companion object {
         private const val STOP_TIMEOUT_MS = 5_000L
         val NOTICE_DURATION = 4.seconds
+        val CURSOR_HELP_DURATION = 8.seconds
     }
 }
