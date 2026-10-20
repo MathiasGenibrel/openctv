@@ -3,6 +3,8 @@ package com.openctv.browser.core.di
 import com.openctv.browser.core.common.DefaultDispatcherProvider
 import com.openctv.browser.core.common.DispatcherProvider
 import com.openctv.browser.core.database.databaseModule
+import com.openctv.browser.core.network.networkModule
+import com.openctv.browser.core.webview.webViewModule
 import com.openctv.browser.features.adblock.di.adBlockModule
 import com.openctv.browser.features.bookmarks.di.bookmarksModule
 import com.openctv.browser.features.settings.di.settingsModule
@@ -13,4 +15,4 @@ val appModule = module {
     single<DispatcherProvider> { DefaultDispatcherProvider() }
 }
 
-val appModules = listOf(appModule, adBlockModule, databaseModule, bookmarksModule, settingsModule)
+val appModules = listOf(appModule, networkModule, webViewModule, adBlockModule, databaseModule, bookmarksModule, settingsModule)

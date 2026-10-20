@@ -1,7 +1,5 @@
 package com.openctv.browser.features.adblock.domain
 
-import java.util.Locale
-
 class DefaultAdBlockEngine : AdBlockEngine {
 
     @Volatile
@@ -63,7 +61,5 @@ class DefaultAdBlockEngine : AdBlockEngine {
         return true
     }
 
-    private fun normalize(site: String): String? =
-        (if ("://" in site) HostUtils.hostOf(site) else site.trim().trimEnd('.').lowercase(Locale.ROOT))
-            ?.takeIf { it.isNotEmpty() }
+    private fun normalize(site: String): String? = HostUtils.siteKeyOf(site)
 }

@@ -5,6 +5,11 @@ import java.util.Locale
 /** Utilitaires d'hôte en Kotlin pur (pas d'`android.net.Uri` : testable en JVM, sans I/O). */
 internal object HostUtils {
 
+    /** Clé de site normalisée : hôte d'une URL http(s) ou nom d'hôte brut en minuscules ; `null` si vide/invalide. */
+    fun siteKeyOf(site: String): String? =
+        (if ("://" in site) hostOf(site) else site.trim().trimEnd('.').lowercase(Locale.ROOT))
+            ?.takeIf { it.isNotEmpty() }
+
     private val twoPartSecondLevels = setOf("co", "com", "org", "net", "gov", "edu", "ac")
 
     /**

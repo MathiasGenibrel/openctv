@@ -33,6 +33,13 @@
     <string name="settings_ad_block_off">Désactivé</string>
     <string name="settings_filter_lists">Listes de filtres</string>
     <string name="settings_filter_lists_never">Jamais mises à jour</string>
+    <string name="settings_filter_lists_today">Mises à jour aujourd\'hui</string>
+    <string name="settings_filter_lists_updating">Mise à jour en cours…</string>
+    <string name="settings_filter_lists_failed">Échec de la mise à jour : OK pour réessayer</string>
+    <plurals name="settings_filter_lists_days_ago">
+        <item quantity="one">Mises à jour il y a %d jour</item>
+        <item quantity="other">Mises à jour il y a %d jours</item>
+    </plurals>
     <string name="settings_default_badge">Par défaut</string>
     <string name="settings_no_tracking">Sans pistage</string>
     <string name="settings_start_home">Écran d\'accueil OpenCTV</string>
