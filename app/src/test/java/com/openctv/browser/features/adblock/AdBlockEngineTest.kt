@@ -48,7 +48,7 @@ class AdBlockEngineTest {
     @Test
     fun `Given the blocker disabled for a site When that site requests a blocked domain Then it is allowed`() {
         val engine = engineWith("||ads.example.com^")
-        engine.setEnabledForSite("arte.tv", enabled = false)
+        engine.updateDisabledSites(setOf("arte.tv"))
 
         assertThat(engine.shouldBlock("https://ads.example.com/a.js", "https://www.arte.tv/fr/")).isFalse()
         assertThat(engine.shouldBlock("https://ads.example.com/a.js", "https://news.org/")).isTrue()
@@ -57,11 +57,32 @@ class AdBlockEngineTest {
     @Test
     fun `Given a site disabled then re-enabled When it requests a blocked domain Then it is blocked again`() {
         val engine = engineWith("||ads.example.com^")
-        engine.setEnabledForSite("arte.tv", enabled = false)
-        engine.setEnabledForSite("arte.tv", enabled = true)
+        engine.updateDisabledSites(setOf("arte.tv"))
+        engine.updateDisabledSites(emptySet())
 
         assertThat(engine.isEnabledForSite("arte.tv")).isTrue()
         assertThat(engine.shouldBlock("https://ads.example.com/a.js", "https://arte.tv/")).isTrue()
+    }
+
+    @Test
+    fun `Given disabled sites restored from storage as urls or mixed case When deciding Then those sites are allowed`() {
+        val engine = engineWith("||ads.example.com^")
+        engine.updateDisabledSites(listOf("https://WWW.Arte.tv/fr/", " News.org. ", ""))
+
+        assertThat(engine.isEnabledForSite("www.arte.tv")).isFalse()
+        assertThat(engine.isEnabledForSite("arte.tv")).isTrue()
+        assertThat(engine.shouldBlock("https://ads.example.com/a.js", "https://live.news.org/")).isFalse()
+        assertThat(engine.shouldBlock("https://ads.example.com/a.js", "https://other.org/")).isTrue()
+    }
+
+    @Test
+    fun `Given request urls with credentials port case or trailing dot When deciding Then the host is still matched`() {
+        val engine = engineWith("||ads.example.com^")
+        assertThat(engine.shouldBlock("HTTPS://user:pw@Ads.Example.COM.:8443/a.js?x=1", null)).isTrue()
+        assertThat(engine.shouldBlock("http://ads.example.com#frag", null)).isTrue()
+        assertThat(engine.shouldBlock("https://ads.example.com@evil.org/a.js", null)).isFalse()
+        assertThat(engine.shouldBlock("https://[::1]/a.js", null)).isFalse()
+        assertThat(engine.shouldBlock("ftp://ads.example.com/a.js", null)).isFalse()
     }
 
     @Test

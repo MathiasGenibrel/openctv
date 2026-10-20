@@ -7,27 +7,36 @@ internal object HostUtils {
 
     private val twoPartSecondLevels = setOf("co", "com", "org", "net", "gov", "edu", "ac")
 
-    /** Hôte d'une URL http/https, en minuscules ; `null` pour tout autre schéma ou URL invalide. */
+    /**
+     * Hôte d'une URL http/https, en minuscules ; `null` pour tout autre schéma ou URL invalide.
+     * Appelé pour chaque requête : parcours par index, une seule chaîne allouée.
+     */
     fun hostOf(url: String): String? {
         val schemeEnd = url.indexOf("://")
-        if (schemeEnd <= 0) return null
-        val scheme = url.substring(0, schemeEnd)
-        val isWebScheme = scheme.equals("http", true) || scheme.equals("https", true)
-        if (!isWebScheme) return null
+        val isHttp = schemeEnd == 4 && url.regionMatches(0, "http", 0, 4, ignoreCase = true)
+        val isHttps = schemeEnd == 5 && url.regionMatches(0, "https", 0, 5, ignoreCase = true)
+        if (!isHttp && !isHttps) return null
 
+        val authorityStart = schemeEnd + 3
         var authorityEnd = url.length
-        for (i in schemeEnd + 3 until url.length) {
+        for (i in authorityStart until url.length) {
             val c = url[i]
             if (c == '/' || c == '?' || c == '#') {
                 authorityEnd = i
                 break
             }
         }
-        var authority = url.substring(schemeEnd + 3, authorityEnd)
-        authority = authority.substringAfterLast('@')
-        if (authority.startsWith("[")) return null // IPv6 littérale : jamais dans une liste de domaines
-        authority = authority.substringBefore(':').trimEnd('.')
-        return authority.takeIf { it.isNotEmpty() }?.lowercase(Locale.ROOT)
+
+        val userInfoEnd = url.lastIndexOf('@', authorityEnd - 1)
+        val hostStart = if (userInfoEnd >= authorityStart) userInfoEnd + 1 else authorityStart
+        val isIpv6Literal = hostStart < authorityEnd && url[hostStart] == '['
+        if (isIpv6Literal) return null // jamais dans une liste de domaines
+
+        var hostEnd = hostStart
+        while (hostEnd < authorityEnd && url[hostEnd] != ':') hostEnd++
+        while (hostEnd > hostStart && url[hostEnd - 1] == '.') hostEnd--
+        if (hostEnd == hostStart) return null
+        return url.substring(hostStart, hostEnd).lowercase(Locale.ROOT)
     }
 
     /** Hôte lui-même puis chaque suffixe de domaine : a.b.c -> a.b.c, b.c, c. */
@@ -42,9 +51,16 @@ internal object HostUtils {
         }
     }
 
-    fun isSameOrSubdomainOf(host: String, domain: String): Boolean =
-        host == domain || (host.length > domain.length && host.endsWith(domain) &&
-            host[host.length - domain.length - 1] == '.')
+    /** `true` si [host] est l'un des [domains] ou l'un de leurs sous-domaines. */
+    fun isCoveredBy(host: String, domains: Set<String>): Boolean {
+        if (domains.isEmpty()) return false
+        var found = false
+        forEachSuffix(host) { suffix ->
+            found = suffix in domains
+            !found
+        }
+        return found
+    }
 
     /** Approximation sans Public Suffix List : 2 derniers labels, 3 pour `co.uk`, `com.au`… */
     fun baseDomain(host: String): String {
