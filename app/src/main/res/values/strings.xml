@@ -1,7 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenCTV</string>
-    <string name="home_open_sample">Ouvrir arte.tv</string>
+    <string name="home_title">Où va-t-on ce soir ?</string>
+    <string name="home_settings">Réglages</string>
+    <string name="home_search_placeholder">Rechercher sur %1$s ou saisir une adresse</string>
+    <string name="home_favorites">Favoris</string>
+    <string name="home_add">Ajouter</string>
+    <string name="home_empty_title">Aucun favori pour l\'instant</string>
+    <string name="home_empty_add">Ajouter un favori</string>
+    <string name="home_favorites_unavailable">Vos favoris n\'ont pas pu être chargés.</string>
+    <string name="home_exit_hint">Appuyez encore sur Retour pour quitter</string>
+    <string name="home_hint_navigate">Naviguer</string>
+    <string name="home_hint_select">Sélectionner</string>
+    <string name="home_hint_quit">Quitter</string>
     <string name="browser_loading">Chargement de %1$s…</string>
     <string name="browser_error_title">Impossible d\'atteindre %1$s</string>
     <string name="browser_error_unreachable">Vérifiez la connexion de la TV, puis réessayez.</string>
