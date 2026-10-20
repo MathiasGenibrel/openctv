@@ -2,7 +2,6 @@ package com.openctv.browser.core.common
 
 import app.cash.turbine.turbineScope
 import com.google.common.truth.Truth.assertThat
-import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -13,12 +12,6 @@ import org.junit.Test
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class ResourceTest {
-
-    private class TestDispatcherProvider(dispatcher: CoroutineDispatcher) : DispatcherProvider {
-        override val main = dispatcher
-        override val io = dispatcher
-        override val default = dispatcher
-    }
 
     private fun load(dispatchers: DispatcherProvider, failure: Exception?): Flow<Resource<String>> =
         flow {

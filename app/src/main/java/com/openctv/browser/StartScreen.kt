@@ -14,6 +14,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.tv.material3.Button
 import androidx.tv.material3.Text
 import com.openctv.browser.core.designsystem.OpenCtvTheme
+import com.openctv.browser.core.designsystem.OverscanSafeArea
 
 /** Premier écran minimal : un seul élément, focalisé dès l'ouverture. */
 @Composable
@@ -32,5 +33,7 @@ fun StartScreen(modifier: Modifier = Modifier) {
 @Preview(device = "id:tv_1080p")
 @Composable
 private fun StartScreenPreview() {
-    OpenCtvTheme { StartScreen() }
+    OpenCtvTheme {
+        OverscanSafeArea { StartScreen() }
+    }
 }

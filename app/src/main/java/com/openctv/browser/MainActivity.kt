@@ -4,12 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import com.openctv.browser.core.designsystem.OpenCtvTheme
+import com.openctv.browser.core.designsystem.OverscanSafeArea
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            OpenCtvTheme { StartScreen() }
+            OpenCtvTheme {
+                OverscanSafeArea { StartScreen() }
+            }
         }
     }
 }
