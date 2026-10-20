@@ -59,5 +59,6 @@ Le skill `.claude/skills/improve-codebase-architecture/` est une **dépendance i
 ## Detailed Documentation
 - **Product brief & enjeux** (à lire en premier) : @.claude/docs/product.md
 - Architecture & packages: @.claude/docs/architecture.md
+- Design (M3 Expressive : couleurs, formes, typo, focus, écrans) : @.claude/docs/design.md
 - Code conventions & examples: @.claude/docs/conventions.md
 - Workflow & task management: @.claude/docs/workflows.md
