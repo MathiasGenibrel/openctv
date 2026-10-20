@@ -15,6 +15,7 @@ import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.orDefaults
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -41,6 +42,7 @@ class BrowserMenuViewModel(
     private val openPanel = MutableStateFlow<BrowserMenuPanel?>(null)
 
     /** Réglages concernant la page courante, recalculés quand elle change (page monopage, redirection). */
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val pageSettings: Flow<PageSettings> = pageUrl.flatMapLatest { url ->
         combine(adBlock.isEnabledForSite(url), adBlock.blockedCount(url), bookmarks.isBookmarked(url)) {
                 isEnabledForSite, blockedCount, bookmarked ->

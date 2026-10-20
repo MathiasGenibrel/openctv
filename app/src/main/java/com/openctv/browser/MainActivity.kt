@@ -96,17 +96,23 @@ class MainActivity : ComponentActivity() {
                         )
                         is Destination.Browser -> {
                             val browser = viewModel {
-                                BrowserViewModel(current.url, bookmarks, onPageVisited = settings::recordLastPage)
+                                BrowserViewModel(
+                                    current.url,
+                                    bookmarks,
+                                    onPageVisited = settings::recordLastPage,
+                                    hudHideDelay = { settings.current.hudHideDelay.delay },
+                                )
                             }
                             // Curseur virtuel : la racine relie les features (le navigateur n'importe pas le curseur).
                             val cursor = rememberCursorSession(speedFactor = { settings.current.cursorSpeed.factor })
                             BrowserScreen(
                                 pageKeys = PageKeyHandler { event -> cursor.onKeyEvent(event) },
-                                cursor = { webView, isActive ->
+                                cursor = { webView, isActive, isVisible ->
                                     CursorOverlay(
                                         session = cursor,
                                         webView = webView,
                                         isActive = isActive,
+                                        isVisible = isVisible,
                                         onEnterInterface = browser::enterInterfaceMode,
                                     )
                                 },
