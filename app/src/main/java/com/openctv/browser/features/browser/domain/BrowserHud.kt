@@ -12,19 +12,32 @@ data class BrowserHud(
     val isCursorHelpShown: Boolean = false,
     /** Le D-pad est dans la page : le curseur virtuel prend les touches et s'affiche (jamais en plein écran, sous une surcouche ou sur une erreur). */
     val isCursorVisible: Boolean = false,
+    /**
+     * Interface masquée après une inactivité (fondu) : barre, aides et pointeur disparaissent, mais restent
+     * en place (focus et position du pointeur conservés). Jamais sous une surcouche, pendant un chargement,
+     * sur une erreur ni en plein écran.
+     */
+    val isHidden: Boolean = false,
+    /** Le pointeur est dessiné : [isCursorVisible] et interface non masquée. Il garde les touches même masqué. */
+    val isCursorShown: Boolean = false,
 )
 
-fun browserHudOf(layers: BrowserLayers, pageState: PageState, isCursorHelpRequested: Boolean = false): BrowserHud {
+fun browserHudOf(layers: BrowserLayers, pageState: PageState, isCursorHelpRequested: Boolean = false, isIdle: Boolean = false): BrowserHud {
     // Vidéo plein écran : aucune interface OpenCTV par-dessus le lecteur.
     if (layers.isFullscreen) return BrowserHud(isToolbarShown = false, isToolbarInteractive = false, isInterfaceHelpShown = false)
     val isLoading = pageState is PageState.Loading
     val isCursorVisible = !layers.isInterfaceMode && !layers.isOverlayOpen && pageState !is PageState.Error
+    val isError = pageState is PageState.Error
+    val canHide = !layers.isOverlayOpen && !isLoading && !isError
+    val isHidden = isIdle && canHide
     return BrowserHud(
         isToolbarShown = layers.isInterfaceMode || isLoading,
         isToolbarInteractive = layers.isInterfaceMode,
         isInterfaceHelpShown = layers.isInterfaceMode && !layers.isOverlayOpen,
         isCursorHelpShown = isCursorHelpRequested && isCursorVisible,
         isCursorVisible = isCursorVisible,
+        isHidden = isHidden,
+        isCursorShown = isCursorVisible && !isHidden,
     )
 }
 

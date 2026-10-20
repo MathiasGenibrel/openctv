@@ -29,6 +29,10 @@ fun interface PageKeyHandler {
  * de la WebView dont il a besoin (défilement possible).
  */
 internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pageKeys: PageKeyHandler): Boolean {
+    // Interface masquée : la première touche ne fait que la réafficher (jamais de clic accidentel sous le pointeur).
+    // Retour garde son rôle (BackHandler) ; toute touche relance le minuteur d'inactivité.
+    val isBackKey = event.key == Key.Back
+    if (onRemoteKey(isBackKey)) return true
     val currentLayers = layers.value
     // Plein écran vidéo : OK, flèches et Menu appartiennent au lecteur ; Retour passe par BackHandler.
     if (currentLayers.isFullscreen) return false

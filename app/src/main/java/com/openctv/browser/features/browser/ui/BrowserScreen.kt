@@ -59,7 +59,7 @@ fun BrowserScreen(
     addressInput: @Composable (SearchRequest) -> Unit = {},
     menu: @Composable () -> Unit = {},
     pageKeys: PageKeyHandler = PageKeyHandler.None,
-    cursor: @Composable (webView: PointerAwareWebView, isActive: Boolean) -> Unit = { _, _ -> },
+    cursor: @Composable (webView: PointerAwareWebView, isActive: Boolean, isVisible: Boolean) -> Unit = { _, _, _ -> },
 ) {
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val layers by viewModel.layers.collectAsStateWithLifecycle()
@@ -119,7 +119,9 @@ fun BrowserScreen(
             retryFocus = focus.retry,
             toolbar = {
                 if (hud.isToolbarShown) {
+                    // Masquée par fondu mais toujours composée : le focus reste sur son élément.
                     BrowserToolbar(
+                        modifier = Modifier.hudFade(isHidden = hud.isHidden),
                         state = toolbarState,
                         actions = toolbarActions,
                         isInteractive = hud.isToolbarInteractive,
@@ -129,7 +131,7 @@ fun BrowserScreen(
                 }
             },
         )
-        cursor(webView, hud.isCursorVisible)
+        cursor(webView, hud.isCursorVisible, hud.isCursorShown)
         val shownNotice = notice
         val bottomMessage = when {
             shownNotice != null -> stringResource(noticeTextRes(shownNotice))
@@ -142,7 +144,7 @@ fun BrowserScreen(
         } else {
             null
         }
-        bottomMessage?.let { BottomSnackbar(it, bottomHint) }
+        bottomMessage?.let { BottomSnackbar(it, bottomHint, Modifier.hudFade(isHidden = hud.isHidden)) }
         // Plein écran : le menu (son Retour, son piège à focus) laisse la main au lecteur, et revient après.
         val isMenuShown = layers.isMenuOpen && !layers.isFullscreen
         if (isMenuShown) menu()
@@ -152,8 +154,8 @@ fun BrowserScreen(
 }
 
 @Composable
-private fun BottomSnackbar(text: String, hint: String? = null) {
-    OverscanSafeArea {
+private fun BottomSnackbar(text: String, hint: String? = null, modifier: Modifier = Modifier) {
+    OverscanSafeArea(modifier) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 hint?.let { KeyHintChip(it) }

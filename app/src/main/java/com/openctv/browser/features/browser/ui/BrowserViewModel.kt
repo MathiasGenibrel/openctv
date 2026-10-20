@@ -13,6 +13,7 @@ import com.openctv.browser.features.browser.domain.BrowserHud
 import com.openctv.browser.features.browser.domain.BrowserLayers
 import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
+import com.openctv.browser.features.browser.domain.HudAutoHide
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.ToolbarState
 import com.openctv.browser.features.browser.domain.MenuWriteFailure
@@ -22,6 +23,7 @@ import com.openctv.browser.features.browser.domain.siteLabelOf
 import com.openctv.browser.features.browser.domain.toolbarStateOf
 import com.openctv.browser.features.search.domain.SearchMode
 import com.openctv.browser.features.search.domain.SearchRequest
+import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
@@ -33,6 +35,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
@@ -60,6 +63,8 @@ class BrowserViewModel(
     private val bookmarks: BookmarksContract,
     /** Appelé à chaque page chargée avec succès (alimente « Reprendre la dernière page »). */
     private val onPageVisited: (String) -> Unit = {},
+    /** Délai d'inactivité avant masquage de l'interface, lu à chaque activité (`null` = jamais). */
+    hudHideDelay: () -> Duration? = { null },
 ) : ViewModel(), WebPageListener {
     private val _pageUrl = MutableStateFlow(initialUrl)
 
@@ -86,15 +91,40 @@ class BrowserViewModel(
     private val _isCursorHelpRequested = MutableStateFlow(true)
     private var cursorHelpJob: Job? = null
 
-    /** Barre d'outils et aide affichées par-dessus la page. */
-    val hud: StateFlow<BrowserHud> = combine(_layers, _pageState, _isCursorHelpRequested, ::browserHudOf).stateIn(
+    private val autoHide = HudAutoHide(viewModelScope, hudHideDelay)
+
+    /** Barre d'outils, aide et pointeur affichés par-dessus la page (masqués à l'inactivité, cf. [HudAutoHide]). */
+    val hud: StateFlow<BrowserHud> = combine(
+        _layers, _pageState, _isCursorHelpRequested, autoHide.isIdle, ::browserHudOf,
+    ).stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-        browserHudOf(_layers.value, _pageState.value, _isCursorHelpRequested.value),
+        currentHud(),
     )
 
     init {
         showCursorHelp()
+        // Un changement de couche ou d'état de la page (menu fermé, chargement fini…) compte comme une activité :
+        // l'interface ne se masque jamais juste après, et le délai repart de zéro.
+        viewModelScope.launch {
+            val pageStateKind = _pageState.map { it::class }.distinctUntilChanged()
+            combine(_layers, pageStateKind) { _, _ -> }.collect { autoHide.onUserActivity() }
+        }
+    }
+
+    private fun currentHud() = browserHudOf(
+        _layers.value, _pageState.value, _isCursorHelpRequested.value, autoHide.isIdle.value,
+    )
+
+    /**
+     * Une touche de la télécommande vient d'arriver. Renvoie `true` si elle ne doit rien faire d'autre que
+     * réafficher l'interface masquée (rien n'est transmis à la page ni au curseur) ; Retour garde son rôle
+     * ([isBack]) et réaffiche aussi.
+     */
+    fun onRemoteKey(isBack: Boolean): Boolean {
+        val wasHidden = currentHud().isHidden
+        autoHide.onUserActivity()
+        return wasHidden && !isBack
     }
 
     private val _notice = MutableStateFlow<BrowserNotice?>(null)
@@ -127,6 +157,7 @@ class BrowserViewModel(
 
     /** Retour retire la couche la plus haute, puis recule dans l'historique, puis revient à l'accueil ([backAction]). */
     fun onBack(canGoBack: Boolean) {
+        autoHide.onUserActivity()
         when (_layers.value.backAction(canGoBack)) {
             BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
             BackAction.CloseAddressInput -> closeAddressInput()
