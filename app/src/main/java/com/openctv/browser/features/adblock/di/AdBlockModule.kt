@@ -3,7 +3,6 @@ package com.openctv.browser.features.adblock.di
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import com.openctv.browser.core.common.DispatcherProvider
-import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.core.webview.RequestInterceptor
 import com.openctv.browser.features.adblock.data.AdBlockImpl
 import com.openctv.browser.features.adblock.data.AdBlockInterceptor
@@ -45,5 +44,4 @@ val adBlockModule = module {
         )
     }
     single<RequestInterceptor> { AdBlockInterceptor(engine = get(), settings = get(), counter = get()) }
-    single { LockedWebViewFactory(requestInterceptor = get()) }
 }

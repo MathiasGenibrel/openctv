@@ -28,4 +28,7 @@ data class Settings(
  * Réglages à appliquer : la valeur lue, ou les défauts tant qu'elle ne l'est pas (lecture en cours,
  * stockage illisible). Un consommateur n'a ainsi jamais à traiter `Loading`/`Error` lui-même.
  */
-fun Resource<Settings>.orDefaults(): Settings = (this as? Resource.Success)?.data ?: Settings()
+fun Resource<Settings>.orDefaults(): Settings = (this as? Resource.Success)?.data ?: DefaultSettings
+
+/** Instance partagée (immuable) : `orDefaults()` est lu pour chaque requête, sans allocation. */
+private val DefaultSettings = Settings()

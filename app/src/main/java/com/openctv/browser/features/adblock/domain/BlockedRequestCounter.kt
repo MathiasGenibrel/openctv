@@ -5,6 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 
@@ -28,5 +29,9 @@ class BlockedRequestCounter {
         return counts[key]?.get() ?: 0
     }
 
-    fun observe(site: String): Flow<Int> = ticks.map { countOf(site) }.distinctUntilChanged()
+    /** Clé normalisée une fois par abonnement : chaque tick ne coûte qu'une lecture de table. */
+    fun observe(site: String): Flow<Int> {
+        val key = HostUtils.siteKeyOf(site) ?: return flowOf(0)
+        return ticks.map { counts[key]?.get() ?: 0 }.distinctUntilChanged()
+    }
 }

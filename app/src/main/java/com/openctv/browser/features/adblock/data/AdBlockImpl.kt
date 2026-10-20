@@ -17,10 +17,12 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
@@ -52,7 +54,9 @@ class AdBlockImpl(
             sitesStore.sites.catch { }.collect { engine.updateDisabledSites(it) }
         }
         scope.launch(dispatchers.io) {
-            loadCache()
+            // Sous le verrou des mises à jour : un cache lu avant un téléchargement concurrent
+            // n'écrase jamais, dans le moteur, la liste plus récente installée entre-temps.
+            refreshLock.withLock { loadCache() }
             if (isCacheStale()) refreshNow()
         }
     }
@@ -70,7 +74,7 @@ class AdBlockImpl(
     }
 
     override fun isEnabledForSite(site: String): Flow<Boolean> {
-        val key = HostUtils.siteKeyOf(site) ?: return sitesStore.sites.map { true }
+        val key = HostUtils.siteKeyOf(site) ?: return flowOf(true)
         return sitesStore.sites
             .map { disabled -> !HostUtils.isCoveredBy(key, disabled) }
             .catch { emit(true) }

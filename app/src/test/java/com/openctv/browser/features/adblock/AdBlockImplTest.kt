@@ -236,6 +236,42 @@ class AdBlockImplTest {
         assertThat(adBlock.blockedCount("example.com").first()).isEqualTo(0)
     }
 
+    @Test
+    fun `Given a download cut off midway When the list is staged Then no partial file is left and the old list stays active`() = runTest {
+        // Given
+        cachedList("||ads.example.com^\n", age = Duration.ofDays(10))
+        val adBlock = adBlock()
+        adBlock.start()
+        advanceUntilIdle()
+        val brokenStream = object : java.io.InputStream() {
+            private var sent = false
+            override fun read(): Int = if (!sent) { sent = true; '|'.code } else throw IOException("Connexion perdue")
+        }
+
+        // When
+        val result = runCatching { cache.stage(brokenStream) }
+
+        // Then
+        assertThat(result.exceptionOrNull()).isInstanceOf(IOException::class.java)
+        assertThat(cacheDir.list()).asList().containsExactly("filters.txt")
+        assertThat(isBlocked("https://ads.example.com/banner.js")).isTrue()
+        assertThat(adBlock.filterLists.value.lastUpdated).isNotNull()
+    }
+
+    @Test
+    fun `Given a page without a valid host When the menu reads its state Then blocking is shown enabled with no blocked request`() = runTest {
+        // Given
+        val adBlock = adBlock()
+
+        // When
+        val isEnabled = adBlock.isEnabledForSite("about:blank").first()
+        val count = adBlock.blockedCount("about:blank").first()
+
+        // Then
+        assertThat(isEnabled).isTrue()
+        assertThat(count).isEqualTo(0)
+    }
+
     private class InMemorySitesStore : DisabledSitesStore {
         override val sites = MutableStateFlow<Set<String>>(emptySet())
         override suspend fun update(transform: (Set<String>) -> Set<String>) {

@@ -31,4 +31,7 @@ class AdBlockInterceptor(
     }
 }
 
-private fun emptyWebResponse() = WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
+/** Corps partagé ; la réponse et son flux restent neufs à chaque blocage (le flux est consommé par la WebView). */
+private val EmptyBody = ByteArray(0)
+
+private fun emptyWebResponse() = WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(EmptyBody))

@@ -38,21 +38,24 @@ class FileFilterListCache(
         cacheFile.takeIf { it.isFile }?.let { it.readLinesOf(block) }
 
     override fun stage(input: InputStream): FilterListCache.StagedList {
-        input.use { source ->
-            stagedFile.outputStream().use { target ->
-                var copied = 0L
-                val buffer = ByteArray(BufferBytes)
-                while (true) {
-                    val read = source.read(buffer)
-                    if (read < 0) break
-                    copied += read
-                    if (copied > maxBytes) {
-                        stagedFile.delete()
-                        throw IOException("Liste trop volumineuse")
+        try {
+            input.use { source ->
+                stagedFile.outputStream().use { target ->
+                    var copied = 0L
+                    val buffer = ByteArray(BufferBytes)
+                    while (true) {
+                        val read = source.read(buffer)
+                        if (read < 0) break
+                        copied += read
+                        if (copied > maxBytes) throw IOException("Liste trop volumineuse")
+                        target.write(buffer, 0, read)
                     }
-                    target.write(buffer, 0, read)
                 }
             }
+        } catch (e: Throwable) {
+            // Téléchargement interrompu, trop gros… : pas de fichier partiel laissé sur la TV.
+            stagedFile.delete()
+            throw e
         }
         return Staged()
     }
