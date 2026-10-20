@@ -15,6 +15,8 @@ import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.HudAutoHide
 import com.openctv.browser.features.browser.domain.PageState
+import com.openctv.browser.features.browser.domain.RemoteKey
+import com.openctv.browser.features.browser.domain.RevealKeyGuard
 import com.openctv.browser.features.browser.domain.ToolbarState
 import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.domain.backAction
@@ -25,6 +27,7 @@ import com.openctv.browser.features.search.domain.SearchMode
 import com.openctv.browser.features.search.domain.SearchRequest
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -92,6 +95,7 @@ class BrowserViewModel(
     private var cursorHelpJob: Job? = null
 
     private val autoHide = HudAutoHide(viewModelScope, hudHideDelay)
+    private val revealKeys = RevealKeyGuard()
 
     /** Barre d'outils, aide et pointeur affichés par-dessus la page (masqués à l'inactivité, cf. [HudAutoHide]). */
     val hud: StateFlow<BrowserHud> = combine(
@@ -117,14 +121,15 @@ class BrowserViewModel(
     )
 
     /**
-     * Une touche de la télécommande vient d'arriver. Renvoie `true` si elle ne doit rien faire d'autre que
-     * réafficher l'interface masquée (rien n'est transmis à la page ni au curseur) ; Retour garde son rôle
-     * ([isBack]) et réaffiche aussi.
+     * Une touche de la télécommande vient d'arriver (appui, répétition ou relâchement) : elle relance le minuteur.
+     * Renvoie `true` si elle ne doit rien faire d'autre que réafficher l'interface masquée : la touche qui
+     * réaffiche est avalée jusqu'à son relâchement ([RevealKeyGuard]), rien n'est transmis à la page, au curseur
+     * ni à la barre. Retour garde son rôle et réaffiche aussi.
      */
-    fun onRemoteKey(isBack: Boolean): Boolean {
+    fun onRemoteKey(key: RemoteKey): Boolean {
         val wasHidden = currentHud().isHidden
         autoHide.onUserActivity()
-        return wasHidden && !isBack
+        return revealKeys.swallows(key, isHudHidden = wasHidden)
     }
 
     private val _notice = MutableStateFlow<BrowserNotice?>(null)
@@ -133,6 +138,7 @@ class BrowserViewModel(
     /** Message bref (échec d'un favori…), effacé seul après [NOTICE_DURATION]. `null` = aucun. */
     val notice: StateFlow<BrowserNotice?> = _notice.asStateFlow()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val isBookmarked: StateFlow<Boolean> = _pageUrl
         .flatMapLatest { bookmarks.isBookmarked(it) }
         .map { resource -> resource is Resource.Success && resource.data }

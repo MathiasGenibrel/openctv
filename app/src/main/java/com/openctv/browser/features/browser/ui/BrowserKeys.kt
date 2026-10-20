@@ -6,6 +6,8 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import com.openctv.browser.features.browser.domain.KeyPhase
+import com.openctv.browser.features.browser.domain.RemoteKey
 
 /**
  * Touches de la page quand aucune surcouche n'est ouverte : le curseur virtuel (#8) les traduit en
@@ -29,10 +31,9 @@ fun interface PageKeyHandler {
  * de la WebView dont il a besoin (défilement possible).
  */
 internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pageKeys: PageKeyHandler): Boolean {
-    // Interface masquée : la première touche ne fait que la réafficher (jamais de clic accidentel sous le pointeur).
-    // Retour garde son rôle (BackHandler) ; toute touche relance le minuteur d'inactivité.
-    val isBackKey = event.key == Key.Back
-    if (onRemoteKey(isBackKey)) return true
+    // Interface masquée : la touche qui la réaffiche ne fait que ça jusqu'à son relâchement (ni déplacement ni clic
+    // accidentel sous le pointeur ou sur la barre). Retour garde son rôle (BackHandler) ; toute touche relance le minuteur.
+    if (onRemoteKey(event.toRemoteKey())) return true
     val currentLayers = layers.value
     // Plein écran vidéo : OK, flèches et Menu appartiennent au lecteur ; Retour passe par BackHandler.
     if (currentLayers.isFullscreen) return false
@@ -47,4 +48,15 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
         Key.Menu -> onMenuKey()
         else -> false
     }
+}
+
+private fun KeyEvent.toRemoteKey(): RemoteKey {
+    val isKeyDown = type == KeyEventType.KeyDown
+    val isRepeat = nativeKeyEvent.repeatCount > 0
+    val phase = when {
+        !isKeyDown -> KeyPhase.Up
+        isRepeat -> KeyPhase.Repeat
+        else -> KeyPhase.Down
+    }
+    return RemoteKey(code = key.keyCode, phase = phase, isBack = key == Key.Back)
 }

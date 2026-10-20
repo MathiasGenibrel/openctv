@@ -108,6 +108,8 @@ fun BrowserScreen(
         )
     }
 
+    val hudAlpha = rememberHudAlpha(isHidden = hud.isHidden)
+
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
     // en bas d'écran, menu, saisie d'adresse, vidéo plein écran (au-dessus de tout).
     Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
@@ -121,7 +123,7 @@ fun BrowserScreen(
                 if (hud.isToolbarShown) {
                     // Masquée par fondu mais toujours composée : le focus reste sur son élément.
                     BrowserToolbar(
-                        modifier = Modifier.hudFade(isHidden = hud.isHidden),
+                        modifier = Modifier.hudFade(hudAlpha),
                         state = toolbarState,
                         actions = toolbarActions,
                         isInteractive = hud.isToolbarInteractive,
@@ -144,7 +146,7 @@ fun BrowserScreen(
         } else {
             null
         }
-        bottomMessage?.let { BottomSnackbar(it, bottomHint, Modifier.hudFade(isHidden = hud.isHidden)) }
+        bottomMessage?.let { BottomSnackbar(it, bottomHint, Modifier.hudFade(hudAlpha)) }
         // Plein écran : le menu (son Retour, son piège à focus) laisse la main au lecteur, et revient après.
         val isMenuShown = layers.isMenuOpen && !layers.isFullscreen
         if (isMenuShown) menu()
