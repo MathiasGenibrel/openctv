@@ -1,0 +1,14 @@
+OpenCTV
+
+Ce produit inclut des icônes tierces :
+
+Material Symbols (style Rounded, poids 400, grade 0, taille optique 24 px)
+Copyright Google LLC
+Licence : Apache License, Version 2.0 — https://www.apache.org/licenses/LICENSE-2.0
+Source : https://github.com/google/material-design-icons
+         commit 49d4db35df873165d6bd6ba09b063c7dafbac2f4
+         symbols/android/<nom>/materialsymbolsrounded/<nom>_24px.xml
+         (star_filled : symbols/android/star/materialsymbolsrounded/star_fill1_24px.xml)
+Fichiers : app/src/main/res/drawable/ic_*.xml (hors ic_launcher.xml)
+Modification : suppression de l'attribut android:tint="?attr/colorControlNormal" (attribut
+AppCompat absent du thème de l'app) ; la teinte est appliquée par Compose (Icon).
