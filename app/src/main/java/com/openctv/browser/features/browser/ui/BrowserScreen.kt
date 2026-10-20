@@ -60,6 +60,7 @@ import com.openctv.browser.features.browser.domain.PageState
 @Composable
 fun BrowserScreen(
     viewModel: BrowserViewModel,
+    webViewFactory: LockedWebViewFactory,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     toolbar: @Composable () -> Unit = {},
@@ -68,7 +69,7 @@ fun BrowserScreen(
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
-    val webView = remember { LockedWebViewFactory().create(context, viewModel) }
+    val webView = remember { webViewFactory.create(context, viewModel) }
     WebViewLifecycle(webView)
 
     val currentOnClose by rememberUpdatedState(onClose)

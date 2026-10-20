@@ -32,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -63,7 +64,13 @@ import java.time.Instant
 
 /** Écran Réglages. Retour ferme le sous-panneau ouvert, puis appelle [onClose] (accueil). */
 @Composable
-fun SettingsScreen(viewModel: SettingsViewModel, onClose: () -> Unit, modifier: Modifier = Modifier) {
+fun SettingsScreen(
+    viewModel: SettingsViewModel,
+    onClose: () -> Unit,
+    modifier: Modifier = Modifier,
+    filterLists: FilterListsStatus = FilterListsStatus(),
+    onRefreshFilterLists: () -> Unit = {},
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     BackHandler { if (!viewModel.onBack()) onClose() }
@@ -79,6 +86,8 @@ fun SettingsScreen(viewModel: SettingsViewModel, onClose: () -> Unit, modifier: 
         onSelectHudHideDelay = viewModel::selectHudHideDelay,
         onSelectCursorSpeed = viewModel::selectCursorSpeed,
         onAdBlockChange = viewModel::setAdBlockEnabled,
+        filterLists = filterLists,
+        onRefreshFilterLists = onRefreshFilterLists,
         modifier = modifier,
     )
 }
@@ -96,6 +105,8 @@ private fun SettingsContent(
     onSelectCursorSpeed: (CursorSpeed) -> Unit,
     onAdBlockChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
+    filterLists: FilterListsStatus = FilterListsStatus(),
+    onRefreshFilterLists: () -> Unit = {},
 ) {
     val rowFocus = remember { SettingsPanel.entries.associateWith { FocusRequester() } }
     val isPanelOpen = state.openPanel != null
@@ -120,6 +131,8 @@ private fun SettingsContent(
                     rowFocus = rowFocus,
                     onOpenPanel = onOpenPanel,
                     onAdBlockChange = onAdBlockChange,
+                    filterLists = filterLists,
+                    onRefreshFilterLists = onRefreshFilterLists,
                     modifier = Modifier.weight(0.6f),
                 )
             }
@@ -182,6 +195,8 @@ private fun SettingsList(
     rowFocus: Map<SettingsPanel, FocusRequester>,
     onOpenPanel: (SettingsPanel) -> Unit,
     onAdBlockChange: (Boolean) -> Unit,
+    filterLists: FilterListsStatus,
+    onRefreshFilterLists: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -229,16 +244,26 @@ private fun SettingsList(
                 isChecked = settings.isAdBlockEnabled,
                 onCheckedChange = onAdBlockChange,
             )
-            // Pas encore d'action : la mise à jour des listes arrive avec le bloqueur.
+            // OK = mettre à jour maintenant ; sans effet pendant une mise à jour (le focus reste sur la ligne).
             SettingsRow(
                 icon = OpenCtvIcons.FilterList,
                 label = stringResource(R.string.settings_filter_lists),
-                value = stringResource(R.string.settings_filter_lists_never),
-                onClick = {},
+                value = filterListsSummary(filterLists),
+                onClick = { if (!filterLists.isUpdating) onRefreshFilterLists() },
                 trailing = {},
             )
         }
     }
+}
+
+@Composable
+private fun filterListsSummary(status: FilterListsStatus): String = when (val summary = status.summary(Instant.now())) {
+    FilterListsSummary.Updating -> stringResource(R.string.settings_filter_lists_updating)
+    FilterListsSummary.Failed -> stringResource(R.string.settings_filter_lists_failed)
+    FilterListsSummary.Never -> stringResource(R.string.settings_filter_lists_never)
+    FilterListsSummary.Today -> stringResource(R.string.settings_filter_lists_today)
+    is FilterListsSummary.DaysAgo ->
+        pluralStringResource(R.plurals.settings_filter_lists_days_ago, summary.days, summary.days)
 }
 
 @Composable
