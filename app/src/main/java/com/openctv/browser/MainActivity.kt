@@ -106,7 +106,7 @@ class MainActivity : ComponentActivity() {
                                             settings = settings,
                                             adBlock = adBlock,
                                             bookmarks = bookmarks,
-                                            onNotice = browser::showNotice,
+                                            onWriteFailed = browser::onMenuWriteFailed,
                                         )
                                     }
                                     BrowserMenu(

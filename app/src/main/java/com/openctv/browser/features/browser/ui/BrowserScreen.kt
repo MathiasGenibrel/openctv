@@ -120,7 +120,9 @@ fun BrowserScreen(
             else -> null
         }
         bottomMessage?.let { BottomSnackbar(it) }
-        if (layers.isMenuOpen) menu()
+        // Plein écran : le menu (son Retour, son piège à focus) laisse la main au lecteur, et revient après.
+        val isMenuShown = layers.isMenuOpen && !layers.isFullscreen
+        if (isMenuShown) menu()
         layers.addressInput?.let { addressInput(it) }
         fullscreen.view?.let { FullscreenLayer(it) }
     }

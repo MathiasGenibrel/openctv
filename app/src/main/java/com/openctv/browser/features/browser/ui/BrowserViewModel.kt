@@ -15,6 +15,7 @@ import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.ToolbarState
+import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.domain.backAction
 import com.openctv.browser.features.browser.domain.browserHudOf
 import com.openctv.browser.features.browser.domain.siteLabelOf
@@ -177,7 +178,9 @@ class BrowserViewModel(
         _layers.update { it.copy(isFullscreen = false) }
     }
 
+    /** Bouton Menu de la barre : sans effet sous une autre surcouche (saisie, plein écran vidéo). */
     fun openMenu() {
+        if (_layers.value.isOverlayOpen) return
         _layers.update { it.copy(isMenuOpen = true) }
     }
 
@@ -238,8 +241,17 @@ class BrowserViewModel(
         }
     }
 
-    /** Affiche un message bref en bas d'écran (aussi utilisé par le menu pour ses échecs d'écriture). */
-    fun showNotice(notice: BrowserNotice) {
+    /** Le menu n'a pas pu enregistrer un choix : un message bref l'explique, sans prendre le focus. */
+    fun onMenuWriteFailed(failure: MenuWriteFailure) {
+        val notice = when (failure) {
+            MenuWriteFailure.AdBlock -> BrowserNotice.AdBlockFailed
+            MenuWriteFailure.Bookmark -> BrowserNotice.BookmarkFailed
+            MenuWriteFailure.Setting -> BrowserNotice.SettingFailed
+        }
+        showNotice(notice)
+    }
+
+    private fun showNotice(notice: BrowserNotice) {
         noticeJob?.cancel()
         noticeJob = viewModelScope.launch {
             _notice.value = notice

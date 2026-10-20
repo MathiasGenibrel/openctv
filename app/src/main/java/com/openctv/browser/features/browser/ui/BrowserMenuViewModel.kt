@@ -8,7 +8,7 @@ import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.browser.domain.AdBlockStatus
 import com.openctv.browser.features.browser.domain.BrowserMenuPanel
 import com.openctv.browser.features.browser.domain.BrowserMenuState
-import com.openctv.browser.features.browser.domain.BrowserNotice
+import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.domain.adBlockStatusOf
 import com.openctv.browser.features.browser.domain.siteLabelOf
 import com.openctv.browser.features.settings.domain.CursorSpeed
@@ -28,14 +28,14 @@ import kotlinx.coroutines.launch
 /**
  * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori, moteur de recherche et vitesse
  * du curseur. Actualiser et Accueil sont des ordres du navigateur (`BrowserViewModel`), pas d'ici.
- * Un échec d'écriture est remonté par [onNotice] ; l'affichage reste sur la valeur réellement stockée.
+ * Un échec d'écriture est remonté par [onWriteFailed] ; l'affichage reste sur la valeur réellement stockée.
  */
 class BrowserMenuViewModel(
     private val pageUrl: StateFlow<String>,
     private val settings: SettingsContract,
     private val adBlock: AdBlockContract,
     private val bookmarks: BookmarksContract,
-    private val onNotice: (BrowserNotice) -> Unit,
+    private val onWriteFailed: (MenuWriteFailure) -> Unit,
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<BrowserMenuPanel?>(null)
@@ -74,7 +74,7 @@ class BrowserMenuViewModel(
         val shouldEnable = !state.value.isAdBlockActive
         val url = pageUrl.value
         viewModelScope.launch {
-            if (adBlock.setEnabledForSite(url, shouldEnable) is Resource.Error) onNotice(BrowserNotice.AdBlockFailed)
+            if (adBlock.setEnabledForSite(url, shouldEnable) is Resource.Error) onWriteFailed(MenuWriteFailure.AdBlock)
         }
     }
 
@@ -83,7 +83,7 @@ class BrowserMenuViewModel(
         val isAlreadyBookmarked = state.value.isBookmarked
         viewModelScope.launch {
             val result = if (isAlreadyBookmarked) bookmarks.remove(url) else bookmarks.add(url, siteLabelOf(url))
-            if (result is Resource.Error) onNotice(BrowserNotice.BookmarkFailed)
+            if (result is Resource.Error) onWriteFailed(MenuWriteFailure.Bookmark)
         }
     }
 
@@ -108,7 +108,7 @@ class BrowserMenuViewModel(
 
     private fun save(write: suspend () -> Resource<Unit>) {
         viewModelScope.launch {
-            if (write() is Resource.Error) onNotice(BrowserNotice.SettingFailed)
+            if (write() is Resource.Error) onWriteFailed(MenuWriteFailure.Setting)
         }
     }
 

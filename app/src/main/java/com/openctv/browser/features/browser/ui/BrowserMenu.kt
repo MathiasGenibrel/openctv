@@ -29,6 +29,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.ListGroup
+import com.openctv.browser.core.designsystem.ListGroupStyle
+import com.openctv.browser.core.designsystem.ListNavigationRow
+import com.openctv.browser.core.designsystem.ListRadioOptions
+import com.openctv.browser.core.designsystem.ListRow
+import com.openctv.browser.core.designsystem.ListSwitchRow
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvTheme
@@ -116,8 +122,8 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
         modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp, horizontal = 4.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        MenuGroup {
-            MenuSwitchRow(
+        ListGroup(style = ListGroupStyle.Vibrant) {
+            ListSwitchRow(
                 icon = OpenCtvIcons.Shield,
                 label = stringResource(R.string.browser_menu_ad_block),
                 supporting = adBlockSummary(state.adBlock),
@@ -126,26 +132,26 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
                 modifier = Modifier.focusRequester(rowFocus.adBlock),
             )
             val bookmarkLabel = if (state.isBookmarked) R.string.browser_toolbar_bookmark_remove else R.string.browser_toolbar_bookmark_add
-            MenuRow(
+            ListRow(
                 icon = if (state.isBookmarked) OpenCtvIcons.StarFilled else OpenCtvIcons.Star,
                 label = stringResource(bookmarkLabel),
                 supporting = state.site,
                 onClick = actions.onToggleBookmark,
             )
         }
-        MenuGroup {
-            MenuRow(OpenCtvIcons.Refresh, stringResource(R.string.browser_menu_reload), onClick = actions.onReload)
-            MenuRow(OpenCtvIcons.Home, stringResource(R.string.browser_menu_home), onClick = actions.onHome)
+        ListGroup(style = ListGroupStyle.Vibrant) {
+            ListRow(OpenCtvIcons.Refresh, stringResource(R.string.browser_menu_reload), onClick = actions.onReload)
+            ListRow(OpenCtvIcons.Home, stringResource(R.string.browser_menu_home), onClick = actions.onHome)
         }
-        MenuGroup {
-            MenuNavigationRow(
+        ListGroup(style = ListGroupStyle.Vibrant) {
+            ListNavigationRow(
                 icon = OpenCtvIcons.TravelExplore,
                 label = stringResource(R.string.settings_search_engine),
                 value = state.searchEngine.displayName,
                 onClick = { rowFocus.open(BrowserMenuPanel.SearchEngine, actions.onOpenPanel) },
                 modifier = Modifier.focusRequester(rowFocus.of(BrowserMenuPanel.SearchEngine)),
             )
-            MenuNavigationRow(
+            ListNavigationRow(
                 icon = OpenCtvIcons.Speed,
                 label = stringResource(R.string.settings_cursor_speed),
                 value = stringResource(state.cursorSpeed.labelRes()),
@@ -218,24 +224,12 @@ private fun <T> ColumnScope.MenuOptions(
     supporting: @Composable (T) -> String?,
     onSelect: (T) -> Unit,
 ) {
-    val selectedFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { selectedFocus.requestFocus() }
-
     Text(title, style = MaterialTheme.typography.headlineSmall)
     Column(
         modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp, horizontal = 4.dp),
     ) {
-        MenuGroup {
-            options.forEach { option ->
-                val isSelected = option == selected
-                MenuRadioRow(
-                    label = label(option),
-                    isSelected = isSelected,
-                    supporting = supporting(option),
-                    onClick = { onSelect(option) },
-                    modifier = if (isSelected) Modifier.focusRequester(selectedFocus) else Modifier,
-                )
-            }
+        ListGroup(style = ListGroupStyle.Vibrant) {
+            ListRadioOptions(options, selected, label, supporting, onSelect)
         }
     }
     Text(

@@ -7,7 +7,7 @@ import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.adblock.domain.FilterListsState
 import com.openctv.browser.features.browser.domain.AdBlockStatus
 import com.openctv.browser.features.browser.domain.BrowserMenuPanel
-import com.openctv.browser.features.browser.domain.BrowserNotice
+import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.ui.BrowserMenuViewModel
 import com.openctv.browser.features.settings.FakeSettingsStore
 import com.openctv.browser.features.settings.data.SettingsImpl
@@ -39,7 +39,7 @@ class BrowserMenuViewModelTest {
     private val url = "https://www.arte.tv/fr/"
     private val bookmarks = FakeBookmarks()
     private val adBlock = FakeAdBlock()
-    private val notices = mutableListOf<BrowserNotice>()
+    private val failures = mutableListOf<MenuWriteFailure>()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -53,7 +53,7 @@ class BrowserMenuViewModelTest {
             dispatchers = TestDispatcherProvider(StandardTestDispatcher(testScheduler)),
             scope = backgroundScope,
         )
-        return BrowserMenuViewModel(MutableStateFlow(url), settings, adBlock, bookmarks, onNotice = { notices += it })
+        return BrowserMenuViewModel(MutableStateFlow(url), settings, adBlock, bookmarks, onWriteFailed = { failures += it })
             .also { viewModel -> backgroundScope.launch { viewModel.state.collect {} } }
             .also { runCurrent() }
     }
@@ -103,7 +103,7 @@ class BrowserMenuViewModelTest {
         viewModel.toggleAdBlock()
         runCurrent()
 
-        assertThat(notices).containsExactly(BrowserNotice.AdBlockFailed)
+        assertThat(failures).containsExactly(MenuWriteFailure.AdBlock)
         assertThat(viewModel.state.value.isAdBlockActive).isTrue()
     }
 
@@ -130,7 +130,7 @@ class BrowserMenuViewModelTest {
         viewModel.toggleBookmark()
         runCurrent()
 
-        assertThat(notices).containsExactly(BrowserNotice.BookmarkFailed)
+        assertThat(failures).containsExactly(MenuWriteFailure.Bookmark)
         assertThat(viewModel.state.value.isBookmarked).isFalse()
     }
 
@@ -166,7 +166,7 @@ class BrowserMenuViewModelTest {
         viewModel.selectSearchEngine(SearchEngine.Google)
         runCurrent()
 
-        assertThat(notices).containsExactly(BrowserNotice.SettingFailed)
+        assertThat(failures).containsExactly(MenuWriteFailure.Setting)
         assertThat(viewModel.state.value.searchEngine).isEqualTo(SearchEngine.DuckDuckGo)
     }
 

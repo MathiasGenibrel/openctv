@@ -3,6 +3,9 @@ package com.openctv.browser.features.browser.domain
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.SearchEngine
 
+/** Écriture du menu qui a échoué ; le navigateur décide du message affiché (cf. `BrowserViewModel.onMenuWriteFailed`). */
+enum class MenuWriteFailure { AdBlock, Bookmark, Setting }
+
 /** Sous-panneau du menu (radios), ouvert depuis « Moteur de recherche » ou « Vitesse du curseur ». */
 enum class BrowserMenuPanel { SearchEngine, CursorSpeed }
 
