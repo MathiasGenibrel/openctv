@@ -9,6 +9,8 @@ import com.openctv.browser.features.home.domain.BackPressOutcome
 import com.openctv.browser.features.home.domain.DoubleBackPress
 import com.openctv.browser.features.home.domain.HomeFavorite
 import com.openctv.browser.features.home.domain.toHomeFavorite
+import com.openctv.browser.features.settings.domain.SettingsContract
+import com.openctv.browser.features.settings.domain.orDefaults
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -30,6 +32,7 @@ sealed interface HomeEvent {
 
 class HomeViewModel(
     bookmarks: BookmarksContract,
+    settings: SettingsContract,
     private val doubleBackPress: DoubleBackPress = DoubleBackPress(),
 ) : ViewModel() {
 
@@ -43,6 +46,11 @@ class HomeViewModel(
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), Resource.Loading)
+
+    /** Nom du moteur de recherche choisi dans les réglages, affiché dans la barre de recherche. */
+    val searchEngineName: StateFlow<String> = settings.settings
+        .map { it.orDefaults().searchEngine.displayName }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), settings.current.searchEngine.displayName)
 
     private val _isExitHintVisible = MutableStateFlow(false)
 

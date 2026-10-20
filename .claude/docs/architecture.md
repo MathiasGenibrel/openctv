@@ -23,6 +23,11 @@ app/src/main/java/com/openctv/browser/
 Pattern contract obligatoire pour tout nouveau repository : interface `*Contract` + `*Impl`,
 câblés dans un module Koin.
 
+## Injection
+`MainActivity` est la **racine de composition** : elle seule résout les contrats Koin et construit les
+ViewModels (`viewModel { … }` dans la portée de la destination). Les écrans reçoivent leur ViewModel en
+paramètre ; aucune feature n'appelle Koin (`KoinPlatform`, `get()`) directement.
+
 ## Découpage prévu pour OpenCTV
 
 Cette carte est la cible, créée au fil des tâches (déjà en place : `core/common`, `core/di`, `core/designsystem`). Le brief produit

@@ -166,4 +166,18 @@ class BrowserViewModelTest {
         assertThat(siteLabelOf("http://user@example.org:8080/path")).isEqualTo("example.org")
         assertThat(siteLabelOf("https://news.ycombinator.com#top")).isEqualTo("news.ycombinator.com")
     }
+
+    @Test
+    fun `Given pages loading When one finishes and another fails Then only the loaded page is recorded as visited`() {
+        val visited = mutableListOf<String>()
+        val viewModel = BrowserViewModel(url, onPageVisited = { visited += it })
+
+        viewModel.onPageStarted(url)
+        viewModel.onPageFinished(url)
+        viewModel.onPageStarted("https://down.example")
+        viewModel.onLoadError(WebLoadError("https://down.example", LoadErrorCause.Unreachable))
+        viewModel.onPageFinished("data:text/html,error")
+
+        assertThat(visited).containsExactly(url)
+    }
 }

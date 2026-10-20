@@ -17,6 +17,7 @@ turbine = "1.2.1"              # 2025-06-11
 truth = "1.4.5"                # 2025-09-10
 room = "2.8.5"                 # 2026-09-09
 ksp = "2.3.12"                 # 2026-09-09
+datastore = "1.2.1"            # 2026-03-11 (stockage local des réglages, aucun réseau)
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,7 @@ truth = { module = "com.google.truth:truth", version.ref = "truth" }
 androidx-room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 androidx-room-ktx = { module = "androidx.room:room-ktx", version.ref = "room" }
 androidx-room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
+androidx-datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }
