@@ -16,11 +16,15 @@ import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.adblock.domain.AdBlockContract
+import com.openctv.browser.core.navigation.SearchMode
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.browser.ui.BrowserScreen
 import com.openctv.browser.features.browser.ui.BrowserViewModel
 import com.openctv.browser.features.home.ui.HomeScreen
 import com.openctv.browser.features.home.ui.HomeViewModel
+import com.openctv.browser.features.search.domain.RecentSearchesContract
+import com.openctv.browser.features.search.ui.SearchScreen
+import com.openctv.browser.features.search.ui.SearchViewModel
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.ui.FilterListsStatus
 import com.openctv.browser.features.settings.ui.SettingsScreen
@@ -37,6 +41,7 @@ class MainActivity : ComponentActivity() {
     private val settings: SettingsContract by inject()
     private val adBlock: AdBlockContract by inject()
     private val webViewFactory: LockedWebViewFactory by inject()
+    private val recentSearches: RecentSearchesContract by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,10 +73,16 @@ class MainActivity : ComponentActivity() {
                             viewModel = viewModel { HomeViewModel(bookmarks, settings) },
                             onNavigate = { destination = it },
                             onExit = ::finish,
-                            // TODO(#5) saisie d'adresse/recherche.
-                            onOpenSearch = {},
-                            onAddBookmark = {},
+                            onOpenSearch = { destination = Destination.Search(SearchMode.Browse) },
+                            onAddBookmark = { destination = Destination.Search(SearchMode.AddBookmark) },
                             onOpenSettings = { destination = Destination.Settings },
+                        )
+                        is Destination.Search -> SearchScreen(
+                            viewModel = viewModel {
+                                SearchViewModel(current.mode, current.initialText, bookmarks, recentSearches, settings)
+                            },
+                            onNavigate = { destination = it },
+                            onClose = { destination = current.backTarget() },
                         )
                         Destination.Settings -> SettingsScreen(
                             viewModel = viewModel { SettingsViewModel(settings, bookmarks) },

@@ -7,6 +7,7 @@ import com.openctv.browser.core.network.networkModule
 import com.openctv.browser.core.webview.webViewModule
 import com.openctv.browser.features.adblock.di.adBlockModule
 import com.openctv.browser.features.bookmarks.di.bookmarksModule
+import com.openctv.browser.features.search.di.searchModule
 import com.openctv.browser.features.settings.di.settingsModule
 import org.koin.dsl.module
 
@@ -15,4 +16,6 @@ val appModule = module {
     single<DispatcherProvider> { DefaultDispatcherProvider() }
 }
 
-val appModules = listOf(appModule, networkModule, webViewModule, adBlockModule, databaseModule, bookmarksModule, settingsModule)
+val appModules = listOf(
+    appModule, networkModule, webViewModule, adBlockModule, databaseModule, bookmarksModule, settingsModule, searchModule,
+)

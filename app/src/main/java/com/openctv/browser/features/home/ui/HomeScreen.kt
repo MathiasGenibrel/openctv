@@ -75,7 +75,7 @@ import com.openctv.browser.features.home.domain.HomeFavorite
 
 private const val GridColumns = 4
 
-/** Accueil. [onOpenSearch] et [onAddBookmark] sont raccordés par l'écran de recherche (#5). */
+/** Accueil. [onOpenSearch] ouvre la saisie ; [onAddBookmark] l'ouvre en mode « ajouter un favori ». */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -224,7 +224,7 @@ private fun SearchBar(placeholder: String, onClick: () -> Unit, modifier: Modifi
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            KeyCap("OK")
+            Icon(OpenCtvIcons.Keyboard, contentDescription = null)
         }
     }
 }
@@ -415,7 +415,7 @@ private fun RemoteHints() {
         horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
     ) {
         KeyHint(stringResource(R.string.home_hint_navigate)) { DPadIcon() }
-        KeyHint(stringResource(R.string.home_hint_select)) { KeyCap("OK") }
+        KeyHint(stringResource(R.string.home_hint_select)) { Icon(OpenCtvIcons.Keyboard, contentDescription = null) }
         KeyHint(stringResource(R.string.home_hint_quit)) { KeyCap("⟵") }
     }
 }

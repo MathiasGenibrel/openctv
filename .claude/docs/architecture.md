@@ -43,6 +43,7 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | `features/home/` | Écran d'accueil : grille de favoris, champ de recherche |
 | `features/browser/` | Écran de navigation : WebView, barre d'adresse, résolution URL vs recherche, gestion de la touche Retour |
 | `features/cursor/` | Curseur virtuel : état (position, vitesse, accélération), conversion OK → clic, défilement aux bords. Logique pure testable, indépendante de la WebView. |
+| `features/search/` | Saisie d'adresse/recherche : résolution saisie → URL ou recherche (`InputResolver`), suggestions locales (favoris + recherches récentes, DataStore), écran de saisie |
 | `features/bookmarks/` | Favoris : stockage Room, ajout/retrait |
 | `features/adblock/` | Téléchargement et compilation des listes (EasyList), moteur de décision bloquer/laisser passer, activation par site |
 
