@@ -53,8 +53,12 @@ fun BrowserScreen(
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
-    val webView = remember { webViewFactory.create(context, viewModel) }
-    WebViewLifecycle(webView)
+    // Le plein écran vidéo naît et meurt avec la WebView : rendu à la page avant sa destruction (WebViewLifecycle).
+    val fullscreen = remember {
+        BrowserFullscreen(onShown = viewModel::onFullscreenShown, onHidden = viewModel::onFullscreenHidden)
+    }
+    val webView = remember { webViewFactory.create(context, viewModel, fullscreen) }
+    WebViewLifecycle(webView, fullscreen)
 
     val currentOnClose by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel, webView) {
@@ -66,6 +70,7 @@ fun BrowserScreen(
                 BrowserCommand.GoForward -> webView.goForward()
                 BrowserCommand.Reload -> webView.reload()
                 BrowserCommand.Stop -> webView.stopLoading()
+                BrowserCommand.ExitFullscreen -> fullscreen.exit()
                 BrowserCommand.Close -> currentOnClose()
             }
         }
@@ -75,7 +80,7 @@ fun BrowserScreen(
     // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
     BackHandler(enabled = !layers.isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
-    val focus = rememberBrowserFocus(viewModel, webView, layers)
+    val focus = rememberBrowserFocus(viewModel, webView, layers, fullscreenView = { fullscreen.view })
     val toolbarActions = remember(viewModel) {
         ToolbarActions(
             onBack = viewModel::goBack,
@@ -88,7 +93,7 @@ fun BrowserScreen(
     }
 
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
-    // en bas d'écran, menu, saisie d'adresse.
+    // en bas d'écran, menu, saisie d'adresse, vidéo plein écran (au-dessus de tout).
     Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView) }) {
         BrowserContent(
             pageState = pageState,
@@ -117,6 +122,7 @@ fun BrowserScreen(
         bottomMessage?.let { BottomSnackbar(it) }
         if (layers.isMenuOpen) menu()
         layers.addressInput?.let { addressInput(it) }
+        fullscreen.view?.let { FullscreenLayer(it) }
     }
 }
 

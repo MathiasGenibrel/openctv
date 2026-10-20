@@ -67,4 +67,31 @@ class BrowserLayersTest {
         assertThat(underMenu.isToolbarInteractive).isTrue()
         assertThat(underMenu.isInterfaceHelpShown).isFalse()
     }
+
+    @Test
+    fun `Given a video in fullscreen over every other layer When Back is pressed Then only the fullscreen exits`() {
+        val layers = everythingOpen.copy(isFullscreen = true)
+
+        assertThat(layers.backAction(canGoBack = true)).isEqualTo(BackAction.ExitFullscreen)
+        assertThat(layers.backAction(canGoBack = false)).isEqualTo(BackAction.ExitFullscreen)
+    }
+
+    @Test
+    fun `Given a video in fullscreen When the interface state is computed Then no toolbar or help covers the player`() {
+        val fullscreen = BrowserLayers(mode = BrowserMode.Interface, isFullscreen = true)
+
+        val loading = browserHudOf(fullscreen, PageState.Loading("youtube.com", 0.5f))
+        val loaded = browserHudOf(fullscreen, PageState.Loaded("youtube.com"))
+
+        listOf(loading, loaded).forEach { hud ->
+            assertThat(hud.isToolbarShown).isFalse()
+            assertThat(hud.isToolbarInteractive).isFalse()
+            assertThat(hud.isInterfaceHelpShown).isFalse()
+        }
+    }
+
+    @Test
+    fun `Given a video in fullscreen When the layers are read Then the fullscreen counts as an open overlay`() {
+        assertThat(BrowserLayers(isFullscreen = true).isOverlayOpen).isTrue()
+    }
 }

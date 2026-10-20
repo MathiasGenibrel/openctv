@@ -541,4 +541,39 @@ class BrowserViewModelTest {
             runCurrent()
             assertThat(viewModel.notice.value).isNull()
         }
+
+    @Test
+    fun `Given a page When a video goes fullscreen and the player hides it Then the fullscreen layer follows`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+
+        viewModel.onFullscreenShown()
+        assertThat(viewModel.layers.value.isFullscreen).isTrue()
+
+        viewModel.onFullscreenHidden()
+        assertThat(viewModel.layers.value.isFullscreen).isFalse()
+    }
+
+    @Test
+    fun `Given a video in fullscreen When the user presses Back Then the player is asked to exit and the browser stays`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onFullscreenShown()
+
+        viewModel.onBack(canGoBack = true)
+
+        viewModel.commands.test {
+            assertThat(awaitItem()).isEqualTo(BrowserCommand.ExitFullscreen)
+            expectNoEvents()
+        }
+        assertThat(viewModel.layers.value.isFullscreen).isTrue()
+    }
+
+    @Test
+    fun `Given a video in fullscreen When the user presses Up or Menu Then the keys are left to the player`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onFullscreenShown()
+
+        assertThat(viewModel.onDpadUp(canScrollUp = false)).isFalse()
+        assertThat(viewModel.onMenuKey()).isFalse()
+        assertThat(viewModel.layers.value.isInterfaceMode).isFalse()
+    }
 }

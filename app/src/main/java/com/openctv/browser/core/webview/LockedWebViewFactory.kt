@@ -17,7 +17,7 @@ class LockedWebViewFactory(
 ) {
     // JavaScript est indispensable au web moderne ; le reste est verrouillé ci-dessous.
     @SuppressLint("SetJavaScriptEnabled")
-    fun create(context: Context, listener: WebPageListener): WebView =
+    fun create(context: Context, listener: WebPageListener, fullscreenHost: FullscreenHost): WebView =
         WebView(context).apply {
             settings.apply {
                 javaScriptEnabled = true
@@ -37,6 +37,6 @@ class LockedWebViewFactory(
                 }
             }
             webViewClient = SecureWebViewClient(listener, requestInterceptor)
-            webChromeClient = SecureWebChromeClient(listener)
+            webChromeClient = SecureWebChromeClient(listener, fullscreenHost)
         }
 }

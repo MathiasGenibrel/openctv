@@ -11,6 +11,8 @@ data class BrowserHud(
 )
 
 fun browserHudOf(layers: BrowserLayers, pageState: PageState): BrowserHud {
+    // Vidéo plein écran : aucune interface OpenCTV par-dessus le lecteur.
+    if (layers.isFullscreen) return BrowserHud(isToolbarShown = false, isToolbarInteractive = false, isInterfaceHelpShown = false)
     val isLoading = pageState is PageState.Loading
     return BrowserHud(
         isToolbarShown = layers.isInterfaceMode || isLoading,

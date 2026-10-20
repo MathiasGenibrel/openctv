@@ -47,6 +47,9 @@ sealed interface BrowserCommand {
     data object Reload : BrowserCommand
     data object Stop : BrowserCommand
 
+    /** Demander au lecteur de quitter le plein écran (la vue appelle `onCustomViewHidden`). */
+    data object ExitFullscreen : BrowserCommand
+
     /** Quitter l'écran de navigation (retour à l'accueil). */
     data object Close : BrowserCommand
 }
@@ -117,6 +120,7 @@ class BrowserViewModel(
     /** Retour retire la couche la plus haute, puis recule dans l'historique, puis revient à l'accueil ([backAction]). */
     fun onBack(canGoBack: Boolean) {
         when (_layers.value.backAction(canGoBack)) {
+            BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
             BackAction.CloseAddressInput -> closeAddressInput()
             BackAction.CloseMenu -> closeMenu()
             BackAction.ExitInterface -> exitInterfaceMode()
@@ -161,6 +165,16 @@ class BrowserViewModel(
         if (_layers.value.isOverlayOpen) return false
         enterInterfaceMode()
         return true
+    }
+
+    /** La page est passée en plein écran vidéo (la vue détient la View du lecteur). */
+    fun onFullscreenShown() {
+        _layers.update { it.copy(isFullscreen = true) }
+    }
+
+    /** Le plein écran est terminé (sortie demandée par Retour ou par la page elle-même). */
+    fun onFullscreenHidden() {
+        _layers.update { it.copy(isFullscreen = false) }
     }
 
     fun openMenu() {
