@@ -9,6 +9,9 @@ import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.home.domain.DoubleBackPress
 import com.openctv.browser.features.home.ui.HomeEvent
 import com.openctv.browser.features.home.ui.HomeViewModel
+import com.openctv.browser.features.settings.domain.SearchEngine
+import com.openctv.browser.features.settings.domain.Settings
+import com.openctv.browser.features.settings.domain.SettingsContract
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Clock
@@ -17,6 +20,7 @@ import java.time.Instant
 import java.time.ZoneOffset
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
@@ -31,6 +35,8 @@ import org.junit.Test
 class HomeViewModelTest {
 
     private val bookmarks = mockk<BookmarksContract>()
+    private val storedSettings = MutableStateFlow<Resource<Settings>>(Resource.Success(Settings()))
+    private val settings = mockk<SettingsContract> { every { settings } returns storedSettings }
     private val clock = MutableClock()
 
     @Before
@@ -39,7 +45,7 @@ class HomeViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun viewModel() = HomeViewModel(bookmarks, DoubleBackPress(clock, Duration.ofSeconds(2)))
+    private fun viewModel() = HomeViewModel(bookmarks, settings, DoubleBackPress(clock, Duration.ofSeconds(2)))
 
     private val arte = Bookmark("https://www.arte.tv/fr", "Arte", Instant.EPOCH)
 
@@ -85,6 +91,26 @@ class HomeViewModelTest {
                 viewModel.onOpenFavorite(favorite)
                 assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Browser("https://www.arte.tv/fr")))
             }
+        }
+    }
+
+    @Test
+    fun `Given Qwant chosen in the settings When the home opens Then the search bar names Qwant`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        storedSettings.value = Resource.Success(Settings(searchEngine = SearchEngine.Qwant))
+
+        viewModel().searchEngineName.test {
+            assertThat(expectMostRecentItem()).isEqualTo("Qwant")
+        }
+    }
+
+    @Test
+    fun `Given unreadable settings When the home opens Then the search bar names the default engine`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        storedSettings.value = Resource.Error("disk")
+
+        viewModel().searchEngineName.test {
+            assertThat(expectMostRecentItem()).isEqualTo("DuckDuckGo")
         }
     }
 

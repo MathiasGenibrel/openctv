@@ -1,6 +1,5 @@
 package com.openctv.browser.features.settings.ui
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,18 +11,19 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
 import com.openctv.browser.core.designsystem.OpenCtvColors
+import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.focusRingBorder
@@ -40,9 +40,10 @@ internal fun SettingsGroup(modifier: Modifier = Modifier, content: @Composable (
     ) { content() }
 }
 
-/** Ligne focalisable : libellé + valeur courante, et [trailing] (chevron par défaut). */
+/** Ligne focalisable : [icon], libellé + valeur courante, et [trailing] (chevron par défaut). */
 @Composable
 internal fun SettingsRow(
+    icon: Painter,
     label: String,
     value: String,
     onClick: () -> Unit,
@@ -62,6 +63,7 @@ internal fun SettingsRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            Icon(icon, contentDescription = null)
             Column(modifier = Modifier.weight(1f)) {
                 Text(label, style = MaterialTheme.typography.titleMedium)
                 Text(value, style = MaterialTheme.typography.bodyMedium, color = OpenCtvColors.OnSurfaceVariant)
@@ -74,6 +76,7 @@ internal fun SettingsRow(
 /** Ligne à interrupteur : OK bascule la valeur. */
 @Composable
 internal fun SettingsSwitchRow(
+    icon: Painter,
     label: String,
     value: String,
     isChecked: Boolean,
@@ -81,6 +84,7 @@ internal fun SettingsSwitchRow(
     modifier: Modifier = Modifier,
 ) {
     SettingsRow(
+        icon = icon,
         label = label,
         value = value,
         onClick = { onCheckedChange(!isChecked) },
@@ -138,16 +142,14 @@ private fun rowColors() = ClickableSurfaceDefaults.colors(
 
 @Composable
 private fun Chevron() {
-    Text("›", style = MaterialTheme.typography.headlineSmall, color = OpenCtvColors.OnSurfaceVariant)
+    Icon(OpenCtvIcons.ChevronRight, contentDescription = null, tint = OpenCtvColors.OnSurfaceVariant)
 }
 
 @Composable
-private fun RadioMark(isSelected: Boolean, modifier: Modifier = Modifier) {
-    val color = if (isSelected) OpenCtvColors.Primary else OpenCtvColors.Outline
-    Canvas(modifier.size(24.dp)) {
-        drawCircle(color, radius = size.minDimension / 2 - 1.dp.toPx(), style = Stroke(2.dp.toPx()))
-        if (isSelected) drawCircle(color, radius = 6.dp.toPx(), center = Offset(size.width / 2, size.height / 2))
-    }
+private fun RadioMark(isSelected: Boolean) {
+    val icon = if (isSelected) OpenCtvIcons.RadioButtonChecked else OpenCtvIcons.RadioButtonUnchecked
+    val tint = if (isSelected) OpenCtvColors.Primary else OpenCtvColors.Outline
+    Icon(icon, contentDescription = null, tint = tint)
 }
 
 @Preview(device = Devices.TV_1080p)
@@ -156,8 +158,8 @@ private fun SettingsComponentsPreview() {
     OpenCtvTheme {
         Column(modifier = Modifier.padding(32.dp).size(width = 560.dp, height = 480.dp)) {
             SettingsGroup {
-                SettingsRow("Page de démarrage", "Écran d'accueil OpenCTV", onClick = {})
-                SettingsSwitchRow("Bloqueur de pubs", "Activé", isChecked = true, onCheckedChange = {})
+                SettingsRow(OpenCtvIcons.Home, "Page de démarrage", "Écran d'accueil OpenCTV", onClick = {})
+                SettingsSwitchRow(OpenCtvIcons.Shield, "Bloqueur de pubs", "Activé", isChecked = true, onCheckedChange = {})
                 RadioOptionRow("DuckDuckGo", isSelected = true, onClick = {}, supporting = "Par défaut · Sans pistage")
             }
         }

@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
                     when (current) {
                         Destination.Home -> {
                             val viewModel: HomeViewModel = viewModel(
-                                factory = viewModelFactory { initializer { HomeViewModel(bookmarks) } },
+                                factory = viewModelFactory { initializer { HomeViewModel(bookmarks, settings) } },
                             )
                             HomeScreen(
                                 viewModel = viewModel,

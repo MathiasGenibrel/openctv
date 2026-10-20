@@ -75,10 +75,7 @@ import com.openctv.browser.features.home.domain.HomeFavorite
 
 private const val GridColumns = 4
 
-/**
- * Accueil. [onOpenSearch], [onAddBookmark] et [onOpenSettings] sont raccordés par les écrans de
- * recherche (#5) et de réglages (#11).
- */
+/** Accueil. [onOpenSearch] et [onAddBookmark] sont raccordés par l'écran de recherche (#5). */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
@@ -88,9 +85,9 @@ fun HomeScreen(
     onAddBookmark: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
-    searchEngineName: String = "DuckDuckGo",
 ) {
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
+    val searchEngineName by viewModel.searchEngineName.collectAsStateWithLifecycle()
     val isExitHintVisible by viewModel.isExitHintVisible.collectAsStateWithLifecycle()
 
     val currentOnNavigate by rememberUpdatedState(onNavigate)

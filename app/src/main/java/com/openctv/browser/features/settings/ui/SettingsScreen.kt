@@ -42,14 +42,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.OpenCtvColors
+import com.openctv.browser.core.designsystem.OpenCtvIconButton
+import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
@@ -162,17 +162,11 @@ private fun SettingsContent(
 @Composable
 private fun IntroColumn(isSaveFailed: Boolean, onClose: () -> Unit, modifier: Modifier = Modifier) {
     Column(modifier = modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        Button(
+        OpenCtvIconButton(
+            icon = OpenCtvIcons.ArrowBack,
+            contentDescription = stringResource(R.string.settings_back),
             onClick = onClose,
-            shape = ButtonDefaults.shape(CircleShape),
-            border = ButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
-            colors = ButtonDefaults.colors(
-                containerColor = OpenCtvColors.SecondaryContainer,
-                contentColor = OpenCtvColors.OnSecondaryContainer,
-                focusedContainerColor = OpenCtvColors.SecondaryContainer,
-                focusedContentColor = OpenCtvColors.OnSecondaryContainer,
-            ),
-        ) { Text("←  " + stringResource(R.string.settings_back)) }
+        )
         Spacer(Modifier.height(32.dp))
         Text(
             text = stringResource(R.string.settings_title),
@@ -210,12 +204,14 @@ private fun SettingsList(
     ) {
         SettingsGroup {
             SettingsRow(
+                icon = OpenCtvIcons.Home,
                 label = stringResource(R.string.settings_start_page),
                 value = startPageSummary(settings.startPage),
                 onClick = { onOpenPanel(SettingsPanel.StartPage) },
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.StartPage)),
             )
             SettingsRow(
+                icon = OpenCtvIcons.TravelExplore,
                 label = stringResource(R.string.settings_search_engine),
                 value = settings.searchEngine.displayName,
                 onClick = { onOpenPanel(SettingsPanel.SearchEngine) },
@@ -224,12 +220,14 @@ private fun SettingsList(
         }
         SettingsGroup {
             SettingsRow(
+                icon = OpenCtvIcons.Timer,
                 label = stringResource(R.string.settings_hud_hide_delay),
                 value = stringResource(settings.hudHideDelay.labelRes()),
                 onClick = { onOpenPanel(SettingsPanel.HudHideDelay) },
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.HudHideDelay)),
             )
             SettingsRow(
+                icon = OpenCtvIcons.Speed,
                 label = stringResource(R.string.settings_cursor_speed),
                 value = stringResource(settings.cursorSpeed.labelRes()),
                 onClick = { onOpenPanel(SettingsPanel.CursorSpeed) },
@@ -239,6 +237,7 @@ private fun SettingsList(
         SettingsGroup {
             val adBlockValue = if (settings.isAdBlockEnabled) R.string.settings_ad_block_on else R.string.settings_ad_block_off
             SettingsSwitchRow(
+                icon = OpenCtvIcons.Shield,
                 label = stringResource(R.string.settings_ad_block),
                 value = stringResource(adBlockValue),
                 isChecked = settings.isAdBlockEnabled,
@@ -246,6 +245,7 @@ private fun SettingsList(
             )
             // Pas encore d'action : la mise à jour des listes arrive avec le bloqueur.
             SettingsRow(
+                icon = OpenCtvIcons.FilterList,
                 label = stringResource(R.string.settings_filter_lists),
                 value = stringResource(R.string.settings_filter_lists_never),
                 onClick = {},
