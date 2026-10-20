@@ -15,20 +15,27 @@ data class BrowserHud(
     /**
      * Interface masquée après une inactivité (fondu) : barre, aides et pointeur disparaissent, mais restent
      * en place (focus et position du pointeur conservés). Jamais sous une surcouche, pendant un chargement,
-     * sur une erreur ni en plein écran.
+     * sur une erreur, pendant qu'un message bref ([BrowserNotice]) est affiché, ni en plein écran.
      */
     val isHidden: Boolean = false,
     /** Le pointeur est dessiné : [isCursorVisible] et interface non masquée. Il garde les touches même masqué. */
     val isCursorShown: Boolean = false,
 )
 
-fun browserHudOf(layers: BrowserLayers, pageState: PageState, isCursorHelpRequested: Boolean = false, isIdle: Boolean = false): BrowserHud {
+fun browserHudOf(
+    layers: BrowserLayers,
+    pageState: PageState,
+    isCursorHelpRequested: Boolean = false,
+    isIdle: Boolean = false,
+    isNoticeShown: Boolean = false,
+): BrowserHud {
     // Vidéo plein écran : aucune interface OpenCTV par-dessus le lecteur.
     if (layers.isFullscreen) return BrowserHud(isToolbarShown = false, isToolbarInteractive = false, isInterfaceHelpShown = false)
     val isLoading = pageState is PageState.Loading
     val isCursorVisible = !layers.isInterfaceMode && !layers.isOverlayOpen && pageState !is PageState.Error
     val isError = pageState is PageState.Error
-    val canHide = !layers.isOverlayOpen && !isLoading && !isError
+    // Un message bref reste lisible toute sa durée : le masquage attend qu'il s'efface.
+    val canHide = !layers.isOverlayOpen && !isLoading && !isError && !isNoticeShown
     val isHidden = isIdle && canHide
     return BrowserHud(
         isToolbarShown = layers.isInterfaceMode || isLoading,

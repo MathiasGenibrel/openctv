@@ -34,6 +34,7 @@ class BrowserHudAutoHideTest {
 
     private val url = "https://www.arte.tv/fr/"
     private var hideDelay: Duration? = 5.seconds
+    private val bookmarks = FakeBookmarks()
     private val okPress = RemoteKey(code = 23L, phase = KeyPhase.Down)
     private val backPress = RemoteKey(code = 4L, phase = KeyPhase.Down, isBack = true)
 
@@ -50,7 +51,7 @@ class BrowserHudAutoHideTest {
 
     /** Page chargée, interface observée (le HUD n'est calculé que s'il a un abonné). */
     private fun TestScope.loadedViewModel(): BrowserViewModel {
-        val viewModel = BrowserViewModel(url, FakeBookmarks(), hudHideDelay = { hideDelay })
+        val viewModel = BrowserViewModel(url, bookmarks, hudHideDelay = { hideDelay })
         backgroundScope.launch { viewModel.hud.collect {} }
         viewModel.onPageStarted(url)
         viewModel.onPageFinished(url)
@@ -253,6 +254,28 @@ class BrowserHudAutoHideTest {
             assertThat(isDownSwallowed).isTrue()
             assertThat(isUpSwallowed).isTrue()
             assertThat(isNextPressSwallowed).isFalse()
+        }
+
+    @Test
+    fun `Given a 3 second delay When a 4 second message appears Then the HUD stays until the message ends and the delay restarts`() =
+        runTest {
+            hideDelay = 3.seconds
+            val viewModel = loadedViewModel()
+            bookmarks.failure = "Stockage indisponible"
+            idleFor(2_000)
+
+            viewModel.toggleBookmark()
+            idleFor(3_999)
+            assertThat(viewModel.notice.value).isNotNull()
+            assertThat(viewModel.hud.value.isHidden).isFalse()
+            idleFor(1)
+            assertThat(viewModel.notice.value).isNull()
+            assertThat(viewModel.hud.value.isHidden).isFalse()
+
+            idleFor(2_999)
+            assertThat(viewModel.hud.value.isHidden).isFalse()
+            idleFor(1)
+            assertThat(viewModel.hud.value.isHidden).isTrue()
         }
 
     private companion object {

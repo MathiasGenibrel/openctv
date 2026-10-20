@@ -94,13 +94,21 @@ class BrowserViewModel(
     private val _isCursorHelpRequested = MutableStateFlow(true)
     private var cursorHelpJob: Job? = null
 
+    private val _notice = MutableStateFlow<BrowserNotice?>(null)
+    private var noticeJob: Job? = null
+
+    /** Message bref (échec d'un favori…), effacé seul après [NOTICE_DURATION]. `null` = aucun. */
+    val notice: StateFlow<BrowserNotice?> = _notice.asStateFlow()
+
     private val autoHide = HudAutoHide(viewModelScope, hudHideDelay)
     private val revealKeys = RevealKeyGuard()
 
     /** Barre d'outils, aide et pointeur affichés par-dessus la page (masqués à l'inactivité, cf. [HudAutoHide]). */
     val hud: StateFlow<BrowserHud> = combine(
-        _layers, _pageState, _isCursorHelpRequested, autoHide.isIdle, ::browserHudOf,
-    ).stateIn(
+        _layers, _pageState, _isCursorHelpRequested, autoHide.isIdle, _notice,
+    ) { layers, pageState, isCursorHelpRequested, isIdle, notice ->
+        browserHudOf(layers, pageState, isCursorHelpRequested, isIdle, isNoticeShown = notice != null)
+    }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         currentHud(),
@@ -108,16 +116,18 @@ class BrowserViewModel(
 
     init {
         showCursorHelp()
-        // Un changement de couche ou d'état de la page (menu fermé, chargement fini…) compte comme une activité :
-        // l'interface ne se masque jamais juste après, et le délai repart de zéro.
+        // Un changement de couche, d'état de la page (menu fermé, chargement fini…) ou de message bref (affiché,
+        // effacé) compte comme une activité : l'interface ne se masque jamais juste après, le délai repart de zéro.
         viewModelScope.launch {
             val pageStateKind = _pageState.map { it::class }.distinctUntilChanged()
-            combine(_layers, pageStateKind) { _, _ -> }.collect { autoHide.onUserActivity() }
+            val isNoticeShown = _notice.map { it != null }.distinctUntilChanged()
+            combine(_layers, pageStateKind, isNoticeShown) { _, _, _ -> }.collect { autoHide.onUserActivity() }
         }
     }
 
     private fun currentHud() = browserHudOf(
         _layers.value, _pageState.value, _isCursorHelpRequested.value, autoHide.isIdle.value,
+        isNoticeShown = _notice.value != null,
     )
 
     /**
@@ -131,12 +141,6 @@ class BrowserViewModel(
         autoHide.onUserActivity()
         return revealKeys.swallows(key, isHudHidden = wasHidden)
     }
-
-    private val _notice = MutableStateFlow<BrowserNotice?>(null)
-    private var noticeJob: Job? = null
-
-    /** Message bref (échec d'un favori…), effacé seul après [NOTICE_DURATION]. `null` = aucun. */
-    val notice: StateFlow<BrowserNotice?> = _notice.asStateFlow()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private val isBookmarked: StateFlow<Boolean> = _pageUrl

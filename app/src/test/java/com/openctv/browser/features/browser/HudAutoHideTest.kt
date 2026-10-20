@@ -118,6 +118,14 @@ class HudAutoHideTest {
     }
 
     @Test
+    fun `Given a short message is shown When the user is idle Then the HUD stays so the message can be read`() {
+        val hud = browserHudOf(BrowserLayers(), loaded, isIdle = true, isNoticeShown = true)
+
+        assertThat(hud.isHidden).isFalse()
+        assertThat(hud.isCursorShown).isTrue()
+    }
+
+    @Test
     fun `Given a fullscreen video When the user is idle Then there is no OpenCTV interface to hide`() {
         val hud = browserHudOf(BrowserLayers(isFullscreen = true), loaded, isIdle = true)
 
