@@ -23,7 +23,11 @@ sealed interface BrowserCommand {
     data object Close : BrowserCommand
 }
 
-class BrowserViewModel(initialUrl: String) : ViewModel(), WebPageListener {
+class BrowserViewModel(
+    initialUrl: String,
+    /** Appelé à chaque page chargée avec succès (alimente « Reprendre la dernière page »). */
+    private val onPageVisited: (String) -> Unit = {},
+) : ViewModel(), WebPageListener {
     private var currentUrl: String = initialUrl
 
     private val _pageState = MutableStateFlow(freshStateFor(initialUrl))
@@ -67,7 +71,10 @@ class BrowserViewModel(initialUrl: String) : ViewModel(), WebPageListener {
         val state = _pageState.value
         // Après une erreur, WebView termine quand même « la page » (sa page d'erreur interne).
         val isShowingError = state is PageState.Error
-        if (!isShowingError) _pageState.value = PageState.Loaded(siteLabelOf(url))
+        if (!isShowingError) {
+            _pageState.value = PageState.Loaded(siteLabelOf(url))
+            onPageVisited(url)
+        }
     }
 
     override fun onLoadError(error: WebLoadError) {

@@ -54,6 +54,8 @@ import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.browser.domain.PageState
+import com.openctv.browser.features.settings.domain.SettingsContract
+import org.koin.mp.KoinPlatform
 
 /**
  * Écran de navigation pour [url]. [toolbar] est l'emplacement de la barre d'outils (ajoutée par une
@@ -68,7 +70,12 @@ fun BrowserScreen(
 ) {
     // Portée = la destination (cf. DestinationHost) : un ViewModel neuf à chaque ouverture.
     val viewModel: BrowserViewModel = viewModel(
-        factory = viewModelFactory { initializer { BrowserViewModel(url) } },
+        factory = viewModelFactory {
+            initializer {
+                val settings = KoinPlatform.getKoin().get<SettingsContract>()
+                BrowserViewModel(url, onPageVisited = settings::recordLastPage)
+            }
+        },
     )
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
 

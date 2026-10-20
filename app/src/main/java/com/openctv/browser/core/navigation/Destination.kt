@@ -8,13 +8,37 @@ import androidx.compose.runtime.saveable.Saver
  */
 sealed interface Destination {
     data object Home : Destination
+    data object Settings : Destination
     data class Browser(val url: String) : Destination
 
     companion object {
-        /** Chaîne vide = accueil, sinon l'URL du navigateur. */
-        val Saver: Saver<Destination, String> = Saver(
-            save = { (it as? Browser)?.url ?: "" },
-            restore = { if (it.isEmpty()) Home else Browser(it) },
+        private const val HomeToken = "home"
+        private const val SettingsToken = "settings"
+        private const val BrowserPrefix = "browser:"
+
+        internal fun encode(destination: Destination): String = when (destination) {
+            Home -> HomeToken
+            Settings -> SettingsToken
+            is Browser -> BrowserPrefix + destination.url
+        }
+
+        /** Jeton inconnu (ancienne sauvegarde) : accueil. */
+        internal fun decode(token: String): Destination = when {
+            token == SettingsToken -> Settings
+            token.startsWith(BrowserPrefix) -> Browser(token.removePrefix(BrowserPrefix))
+            else -> Home
+        }
+
+        val Saver: Saver<Destination, String> = Saver(save = { encode(it) }, restore = { decode(it) })
+
+        /**
+         * Pour une destination encore inconnue (`null` = lancement en cours de résolution) : rien n'est
+         * sauvegardé, la résolution reprend donc au lancement. Une fois la destination connue, elle est
+         * restaurée telle quelle après une recréation de l'activité.
+         */
+        val NullableSaver: Saver<Destination?, String> = Saver(
+            save = { destination -> destination?.let { encode(it) } },
+            restore = { decode(it) },
         )
     }
 }
