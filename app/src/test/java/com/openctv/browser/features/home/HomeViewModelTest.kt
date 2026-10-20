@@ -7,8 +7,11 @@ import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.home.domain.DoubleBackPress
+import com.openctv.browser.features.home.domain.HomeFocus
 import com.openctv.browser.features.home.ui.HomeEvent
 import com.openctv.browser.features.home.ui.HomeViewModel
+import com.openctv.browser.features.search.domain.SearchMode
+import com.openctv.browser.features.search.domain.SearchRequest
 import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.SettingsContract
@@ -168,6 +171,84 @@ class HomeViewModelTest {
         assertThat(viewModel.isExitHintVisible.value).isTrue()
         advanceTimeBy(2)
         assertThat(viewModel.isExitHintVisible.value).isFalse()
+    }
+
+    @Test
+    fun `Given the user opened Arte from the grid When he comes back home Then the Arte tile gets the focus back`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+
+        viewModel.favorites.test {
+            val favorite = (expectMostRecentItem() as Resource.Success).data.first()
+            viewModel.onFocused(HomeFocus.Favorite(favorite.url))
+            viewModel.onOpenFavorite(favorite)
+        }
+
+        assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Favorite("https://www.arte.tv/fr"))
+    }
+
+    @Test
+    fun `Given the add tile When the user adds a favorite and the input closes Then the focus returns to the add tile`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+
+        viewModel.favorites.test {
+            expectMostRecentItem()
+            viewModel.onFocused(HomeFocus.Add)
+            viewModel.onAddBookmark()
+            assertThat(viewModel.searchInput.value).isEqualTo(SearchRequest(SearchMode.AddBookmark))
+
+            viewModel.onSearchClosed()
+
+            assertThat(viewModel.searchInput.value).isNull()
+            assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Add)
+        }
+    }
+
+    @Test
+    fun `Given the search open from the home When the user validates an address Then it closes and the browser opens it`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+        viewModel.onOpenSearch()
+        assertThat(viewModel.searchInput.value).isEqualTo(SearchRequest(SearchMode.Browse))
+
+        viewModel.events.test {
+            viewModel.onAddressChosen("https://arte.tv")
+
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Browser("https://arte.tv")))
+        }
+        assertThat(viewModel.searchInput.value).isNull()
+    }
+
+    @Test
+    fun `Given the settings button When the user opens the settings Then the settings destination is requested`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onOpenSettings()
+
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Settings))
+        }
+    }
+
+    @Test
+    fun `Given the exit warning When the user leaves the home and comes back Then the next Back only warns`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onBack()
+            viewModel.onOpenSettings()
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Settings))
+            assertThat(viewModel.isExitHintVisible.value).isFalse()
+
+            clock.advance(Duration.ofSeconds(1))
+            viewModel.onBack()
+
+            assertThat(viewModel.isExitHintVisible.value).isTrue()
+            expectNoEvents()
+        }
     }
 
     private class MutableClock : Clock() {

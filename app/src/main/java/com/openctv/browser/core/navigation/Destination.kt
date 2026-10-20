@@ -5,6 +5,9 @@ import androidx.compose.runtime.saveable.Saver
 /**
  * Destinations de plus haut niveau, hissées dans l'activité. Volontairement minimal : l'accueil et la
  * barre d'outils s'appuient dessus sans dépendance de navigation supplémentaire.
+ *
+ * La saisie d'adresse / recherche n'est pas une destination : c'est une surcouche de l'écran qui l'ouvre
+ * (accueil ou navigateur), qui reste ainsi vivant dessous (page, historique et focus conservés).
  */
 sealed interface Destination {
     data object Home : Destination
@@ -22,7 +25,7 @@ sealed interface Destination {
             is Browser -> BrowserPrefix + destination.url
         }
 
-        /** Jeton inconnu (ancienne sauvegarde) : accueil. */
+        /** Jeton inconnu (ancienne sauvegarde, dont l'ex-destination « search: ») : accueil. */
         internal fun decode(token: String): Destination = when {
             token == SettingsToken -> Settings
             token.startsWith(BrowserPrefix) -> Browser(token.removePrefix(BrowserPrefix))

@@ -57,4 +57,13 @@
     <string name="settings_cursor_slow">Lente</string>
     <string name="settings_cursor_normal">Normale</string>
     <string name="settings_cursor_fast">Rapide</string>
+    <string name="search_back">Retour</string>
+    <string name="search_clear">Effacer la saisie</string>
+    <string name="search_placeholder">Rechercher sur %1$s ou saisir une adresse</string>
+    <string name="search_add_placeholder">Adresse du site à ajouter</string>
+    <string name="search_favorite_action">Favori · ouvrir</string>
+    <string name="search_recent_action">Rechercher</string>
+    <string name="search_clear_recents">Effacer les recherches récentes</string>
+    <string name="search_problem_not_an_address">Saisissez une adresse de site, par exemple arte.tv.</string>
+    <string name="search_problem_save_failed">Impossible d\'enregistrer ce favori.</string>
 </resources>

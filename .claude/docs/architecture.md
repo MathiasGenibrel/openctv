@@ -28,6 +28,17 @@ câblés dans un module Koin.
 ViewModels (`viewModel { … }` dans la portée de la destination). Les écrans reçoivent leur ViewModel en
 paramètre ; aucune feature n'appelle Koin (`KoinPlatform`, `get()`) directement.
 
+Exception : le `HomeViewModel` vit avec l'activité (l'accueil est la racine de la navigation) pour
+mémoriser l'élément focalisé et le restaurer au retour (`HomeFocus`).
+
+## Surcouches
+Un écran qui doit rester vivant sous un autre (la page web sous la saisie d'adresse : WebView,
+historique, défilement) ne change pas de destination : il affiche une **surcouche**. Son ViewModel en
+expose l'état (`BrowserViewModel.addressInput`, `HomeViewModel.searchInput`) ; l'écran reçoit le
+contenu de la surcouche en slot depuis `MainActivity` (aucune feature n'importe l'`ui/` d'une autre), la
+place dans une portée `ScopedViewModels`, la rend modale (`Modifier.focusTrap()`) et rend le focus à
+l'élément d'origine à sa fermeture.
+
 ## Découpage prévu pour OpenCTV
 
 Cette carte est la cible, créée au fil des tâches (déjà en place : `core/common`, `core/di`, `core/designsystem`). Le brief produit
@@ -43,6 +54,7 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | `features/home/` | Écran d'accueil : grille de favoris, champ de recherche |
 | `features/browser/` | Écran de navigation : WebView, barre d'adresse, résolution URL vs recherche, gestion de la touche Retour |
 | `features/cursor/` | Curseur virtuel : état (position, vitesse, accélération), conversion OK → clic, défilement aux bords. Logique pure testable, indépendante de la WebView. |
+| `features/search/` | Saisie d'adresse/recherche : résolution saisie → URL ou recherche (`InputResolver`), suggestions locales (favoris + recherches récentes, DataStore), écran de saisie |
 | `features/bookmarks/` | Favoris : stockage Room, ajout/retrait |
 | `features/adblock/` | Téléchargement et compilation des listes (EasyList), moteur de décision bloquer/laisser passer, activation par site |
 

@@ -23,4 +23,13 @@ object BookmarkUrl {
         val query = uri.rawQuery?.let { "?$it" } ?: ""
         return "$scheme://$host$port$path$query"
     }
+
+    /**
+     * Nom lisible du site : hôte sans `www.` (`https://www.arte.tv/fr` -> `arte.tv`), ou l'URL entière
+     * si elle n'a pas d'hôte. Sert de titre par défaut à un favori.
+     */
+    fun siteName(url: String): String {
+        val host = runCatching { URI(url).host }.getOrNull() ?: return url
+        return host.removePrefix("www.")
+    }
 }
