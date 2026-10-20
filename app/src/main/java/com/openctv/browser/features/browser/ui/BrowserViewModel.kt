@@ -210,6 +210,20 @@ class BrowserViewModel(
         }
     }
 
+    /** « Actualiser la page » du menu : recharge la page (ou réessaie après une erreur) et ferme le menu. */
+    fun reloadFromMenu() {
+        closeMenu()
+        when (_pageState.value) {
+            is PageState.Error -> retry()
+            is PageState.Loading, is PageState.Loaded -> _commands.trySend(BrowserCommand.Reload)
+        }
+    }
+
+    /** « Accueil » du menu : quitte le navigateur (la WebView et son historique sont libérés avec l'écran). */
+    fun goHome() {
+        _commands.trySend(BrowserCommand.Close)
+    }
+
     /**
      * Favori : retire la page courante si elle l'est déjà, sinon l'ajoute (titre = domaine). Un échec du
      * stockage est signalé par [BrowserNotice.BookmarkFailed] ; l'étoile reste sur l'état réel.
@@ -224,7 +238,8 @@ class BrowserViewModel(
         }
     }
 
-    private fun showNotice(notice: BrowserNotice) {
+    /** Affiche un message bref en bas d'écran (aussi utilisé par le menu pour ses échecs d'écriture). */
+    fun showNotice(notice: BrowserNotice) {
         noticeJob?.cancel()
         noticeJob = viewModelScope.launch {
             _notice.value = notice

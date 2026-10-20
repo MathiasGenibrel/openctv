@@ -137,4 +137,6 @@ private fun BottomSnackbar(text: String) {
 
 private fun noticeTextRes(notice: BrowserNotice): Int = when (notice) {
     BrowserNotice.BookmarkFailed -> R.string.browser_notice_bookmark_failed
+    BrowserNotice.AdBlockFailed -> R.string.browser_notice_adblock_failed
+    BrowserNotice.SettingFailed -> R.string.browser_notice_setting_failed
 }

@@ -30,6 +30,19 @@
     <string name="browser_toolbar_bookmark_remove">Retirer des favoris</string>
     <string name="browser_toolbar_menu">Menu</string>
     <string name="browser_notice_bookmark_failed">Le favori n\'a pas pu être enregistré.</string>
+    <string name="browser_notice_adblock_failed">Le réglage du bloqueur n\'a pas pu être enregistré.</string>
+    <string name="browser_notice_setting_failed">Le réglage n\'a pas pu être enregistré.</string>
+    <string name="browser_menu_title">Menu</string>
+    <string name="browser_menu_ad_block">Bloqueur de pubs</string>
+    <plurals name="browser_menu_ad_block_count">
+        <item quantity="one">%d requête bloquée sur ce site</item>
+        <item quantity="other">%d requêtes bloquées sur ce site</item>
+    </plurals>
+    <string name="browser_menu_ad_block_site_off">Désactivé sur ce site</string>
+    <string name="browser_menu_ad_block_global_off">Désactivé pour tous les sites</string>
+    <string name="browser_menu_reload">Actualiser la page</string>
+    <string name="browser_menu_home">Accueil</string>
+    <string name="browser_menu_back_hint">Retour pour fermer le menu</string>
     <string name="browser_interface_help">Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page</string>
     <string name="settings_title">Réglages</string>
     <string name="settings_back">Retour</string>

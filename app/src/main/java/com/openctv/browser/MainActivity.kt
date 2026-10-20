@@ -19,6 +19,8 @@ import com.openctv.browser.core.navigation.ScopedViewModels
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
+import com.openctv.browser.features.browser.ui.BrowserMenu
+import com.openctv.browser.features.browser.ui.BrowserMenuViewModel
 import com.openctv.browser.features.browser.ui.BrowserScreen
 import com.openctv.browser.features.browser.ui.BrowserViewModel
 import com.openctv.browser.features.home.ui.HomeScreen
@@ -97,6 +99,23 @@ class MainActivity : ComponentActivity() {
                                 webViewFactory = webViewFactory,
                                 viewModel = browser,
                                 onClose = { destination = Destination.Home },
+                                menu = {
+                                    val menu = viewModel {
+                                        BrowserMenuViewModel(
+                                            pageUrl = browser.pageUrl,
+                                            settings = settings,
+                                            adBlock = adBlock,
+                                            bookmarks = bookmarks,
+                                            onNotice = browser::showNotice,
+                                        )
+                                    }
+                                    BrowserMenu(
+                                        viewModel = menu,
+                                        onReload = browser::reloadFromMenu,
+                                        onHome = browser::goHome,
+                                        onClose = browser::closeMenu,
+                                    )
+                                },
                                 addressInput = { request ->
                                     SearchInput(
                                         request,
