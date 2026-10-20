@@ -94,4 +94,37 @@ class BrowserLayersTest {
     fun `Given a video in fullscreen When the layers are read Then the fullscreen counts as an open overlay`() {
         assertThat(BrowserLayers(isFullscreen = true).isOverlayOpen).isTrue()
     }
+
+    @Test
+    fun `Given the page mode without overlay When the page is shown Then the cursor is visible with its help`() {
+        val hud = browserHudOf(BrowserLayers(), PageState.Loaded("arte.tv"), isCursorHelpRequested = true)
+
+        assertThat(hud.isCursorVisible).isTrue()
+        assertThat(hud.isCursorHelpShown).isTrue()
+    }
+
+    @Test
+    fun `Given the interface mode or an overlay or an error or a fullscreen video Then the cursor is hidden`() {
+        val loaded = PageState.Loaded("arte.tv")
+        val hidden = listOf(
+            browserHudOf(BrowserLayers(mode = BrowserMode.Interface), loaded, true),
+            browserHudOf(BrowserLayers(isMenuOpen = true), loaded, true),
+            browserHudOf(BrowserLayers(addressInput = input), loaded, true),
+            browserHudOf(BrowserLayers(isFullscreen = true), loaded, true),
+            browserHudOf(BrowserLayers(), PageState.Error("arte.tv", LoadErrorCause.Unreachable), true),
+        )
+
+        hidden.forEach { hud ->
+            assertThat(hud.isCursorVisible).isFalse()
+            assertThat(hud.isCursorHelpShown).isFalse()
+        }
+    }
+
+    @Test
+    fun `Given the cursor help expired When the page mode is shown Then the help is gone but the cursor stays`() {
+        val hud = browserHudOf(BrowserLayers(), PageState.Loaded("arte.tv"), isCursorHelpRequested = false)
+
+        assertThat(hud.isCursorVisible).isTrue()
+        assertThat(hud.isCursorHelpShown).isFalse()
+    }
 }
