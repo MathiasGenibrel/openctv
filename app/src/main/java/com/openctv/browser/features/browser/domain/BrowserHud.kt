@@ -22,4 +22,4 @@ fun browserHudOf(layers: BrowserLayers, pageState: PageState): BrowserHud {
 }
 
 /** Message bref affiché en bas de l'écran, sans prendre le focus (cf. `BrowserViewModel.notice`). */
-enum class BrowserNotice { BookmarkFailed }
+enum class BrowserNotice { BookmarkFailed, AdBlockFailed, SettingFailed }

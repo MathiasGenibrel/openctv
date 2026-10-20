@@ -15,6 +15,7 @@ import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.ToolbarState
+import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.domain.backAction
 import com.openctv.browser.features.browser.domain.browserHudOf
 import com.openctv.browser.features.browser.domain.siteLabelOf
@@ -177,7 +178,9 @@ class BrowserViewModel(
         _layers.update { it.copy(isFullscreen = false) }
     }
 
+    /** Bouton Menu de la barre : sans effet sous une autre surcouche (saisie, plein écran vidéo). */
     fun openMenu() {
+        if (_layers.value.isOverlayOpen) return
         _layers.update { it.copy(isMenuOpen = true) }
     }
 
@@ -210,6 +213,20 @@ class BrowserViewModel(
         }
     }
 
+    /** « Actualiser la page » du menu : recharge la page (ou réessaie après une erreur) et ferme le menu. */
+    fun reloadFromMenu() {
+        closeMenu()
+        when (_pageState.value) {
+            is PageState.Error -> retry()
+            is PageState.Loading, is PageState.Loaded -> _commands.trySend(BrowserCommand.Reload)
+        }
+    }
+
+    /** « Accueil » du menu : quitte le navigateur (la WebView et son historique sont libérés avec l'écran). */
+    fun goHome() {
+        _commands.trySend(BrowserCommand.Close)
+    }
+
     /**
      * Favori : retire la page courante si elle l'est déjà, sinon l'ajoute (titre = domaine). Un échec du
      * stockage est signalé par [BrowserNotice.BookmarkFailed] ; l'étoile reste sur l'état réel.
@@ -222,6 +239,16 @@ class BrowserViewModel(
             val result = if (isAlreadyBookmarked) bookmarks.remove(url) else bookmarks.add(url, siteLabelOf(url))
             if (result is Resource.Error) showNotice(BrowserNotice.BookmarkFailed)
         }
+    }
+
+    /** Le menu n'a pas pu enregistrer un choix : un message bref l'explique, sans prendre le focus. */
+    fun onMenuWriteFailed(failure: MenuWriteFailure) {
+        val notice = when (failure) {
+            MenuWriteFailure.AdBlock -> BrowserNotice.AdBlockFailed
+            MenuWriteFailure.Bookmark -> BrowserNotice.BookmarkFailed
+            MenuWriteFailure.Setting -> BrowserNotice.SettingFailed
+        }
+        showNotice(notice)
     }
 
     private fun showNotice(notice: BrowserNotice) {

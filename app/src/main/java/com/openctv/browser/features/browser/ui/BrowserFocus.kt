@@ -26,7 +26,8 @@ class BrowserFocus(
  * - Une surcouche refermée rend le focus à ce qui l'a ouverte (champ d'adresse, bouton Menu) en mode
  *   interface, à la page sinon.
  * - Un changement de mode déplace le focus entre la page et la barre.
- * - Le plein écran vidéo donne le focus au lecteur, puis le rend à la page en sortant.
+ * - Le plein écran vidéo donne le focus au lecteur, puis le rend à la page en sortant (au menu s'il
+ *   était ouvert : il le reprend lui-même en réapparaissant).
  * - La page = la WebView, ou le bouton Réessayer quand une erreur la remplace.
  */
 @Composable
@@ -41,9 +42,14 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
         val isInterfaceMode = viewModel.layers.value.isInterfaceMode
         if (isInterfaceMode) toolbarTarget.requestFocus() else focusPage()
     }
-    // Entrée en plein écran : focus au lecteur ; sortie : retour à la page (ou à la barre en mode interface).
+    // Entrée en plein écran : focus au lecteur ; sortie : retour au menu ouvert, sinon à la page (ou à la barre).
     OnChanged(layers.isFullscreen) { isFullscreen ->
-        if (isFullscreen) fullscreenView()?.requestFocus() else focusToolbarOr(focus.address)
+        val isMenuOpen = viewModel.layers.value.isMenuOpen
+        when {
+            isFullscreen -> fullscreenView()?.requestFocus()
+            isMenuOpen -> Unit
+            else -> focusToolbarOr(focus.address)
+        }
     }
     AfterClosed(layers.isAddressInputOpen) { focusToolbarOr(focus.address) }
     AfterClosed(layers.isMenuOpen) { focusToolbarOr(focus.menuButton) }

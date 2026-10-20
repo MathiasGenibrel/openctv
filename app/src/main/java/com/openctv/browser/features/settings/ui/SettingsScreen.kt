@@ -45,6 +45,12 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.ListGroup
+import com.openctv.browser.core.designsystem.ListNavigationRow
+import com.openctv.browser.core.designsystem.ListRadioOptions
+import com.openctv.browser.core.designsystem.ListRadioRow
+import com.openctv.browser.core.designsystem.ListRow
+import com.openctv.browser.core.designsystem.ListSwitchRow
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIconButton
 import com.openctv.browser.core.designsystem.OpenCtvIcons
@@ -203,15 +209,15 @@ private fun SettingsList(
         modifier = modifier.fillMaxSize().verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
     ) {
-        SettingsGroup {
-            SettingsRow(
+        ListGroup {
+            ListNavigationRow(
                 icon = OpenCtvIcons.Home,
                 label = stringResource(R.string.settings_start_page),
                 value = startPageSummary(settings.startPage),
                 onClick = { onOpenPanel(SettingsPanel.StartPage) },
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.StartPage)),
             )
-            SettingsRow(
+            ListNavigationRow(
                 icon = OpenCtvIcons.TravelExplore,
                 label = stringResource(R.string.settings_search_engine),
                 value = settings.searchEngine.displayName,
@@ -219,15 +225,15 @@ private fun SettingsList(
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.SearchEngine)),
             )
         }
-        SettingsGroup {
-            SettingsRow(
+        ListGroup {
+            ListNavigationRow(
                 icon = OpenCtvIcons.Timer,
                 label = stringResource(R.string.settings_hud_hide_delay),
                 value = stringResource(settings.hudHideDelay.labelRes()),
                 onClick = { onOpenPanel(SettingsPanel.HudHideDelay) },
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.HudHideDelay)),
             )
-            SettingsRow(
+            ListNavigationRow(
                 icon = OpenCtvIcons.Speed,
                 label = stringResource(R.string.settings_cursor_speed),
                 value = stringResource(settings.cursorSpeed.labelRes()),
@@ -235,22 +241,21 @@ private fun SettingsList(
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.CursorSpeed)),
             )
         }
-        SettingsGroup {
+        ListGroup {
             val adBlockValue = if (settings.isAdBlockEnabled) R.string.settings_ad_block_on else R.string.settings_ad_block_off
-            SettingsSwitchRow(
+            ListSwitchRow(
                 icon = OpenCtvIcons.Shield,
                 label = stringResource(R.string.settings_ad_block),
-                value = stringResource(adBlockValue),
+                supporting = stringResource(adBlockValue),
                 isChecked = settings.isAdBlockEnabled,
-                onCheckedChange = onAdBlockChange,
+                onClick = { onAdBlockChange(!settings.isAdBlockEnabled) },
             )
             // OK = mettre à jour maintenant ; sans effet pendant une mise à jour (le focus reste sur la ligne).
-            SettingsRow(
+            ListRow(
                 icon = OpenCtvIcons.FilterList,
                 label = stringResource(R.string.settings_filter_lists),
-                value = filterListsSummary(filterLists),
+                supporting = filterListsSummary(filterLists),
                 onClick = { if (!filterLists.isUpdating) onRefreshFilterLists() },
-                trailing = {},
             )
         }
     }
@@ -328,21 +333,9 @@ private fun <T> PanelOptions(
     supporting: @Composable (T) -> String?,
     onSelect: (T) -> Unit,
 ) {
-    val selectedFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { selectedFocus.requestFocus() }
-
     PanelTitle(title)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        options.forEach { option ->
-            val isSelected = option == selected
-            RadioOptionRow(
-                label = label(option),
-                isSelected = isSelected,
-                onClick = { onSelect(option) },
-                supporting = supporting(option),
-                modifier = if (isSelected) Modifier.focusRequester(selectedFocus) else Modifier,
-            )
-        }
+        ListRadioOptions(options, selected, label, supporting, onSelect)
     }
 }
 
@@ -362,20 +355,20 @@ private fun StartPagePanel(
     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
         PanelTitle(stringResource(R.string.settings_start_page))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            RadioOptionRow(
+            ListRadioRow(
                 label = stringResource(R.string.settings_start_home),
                 isSelected = current == StartPage.Home,
                 onClick = { onSelectStartPage(StartPage.Home) },
                 supporting = stringResource(R.string.settings_default_badge),
                 modifier = Modifier.focusRequester(initialFocus),
             )
-            RadioOptionRow(
+            ListRadioRow(
                 label = stringResource(R.string.settings_start_last),
                 isSelected = current == StartPage.LastPage,
                 onClick = { onSelectStartPage(StartPage.LastPage) },
             )
             val site = current as? StartPage.Site
-            RadioOptionRow(
+            ListRadioRow(
                 label = stringResource(R.string.settings_start_site),
                 isSelected = site != null,
                 // Sans site déjà choisi, il n'y a rien à valider : on amène à la saisie.

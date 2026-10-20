@@ -6,6 +6,7 @@ import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
+import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.ReloadAction
 import com.openctv.browser.features.browser.domain.siteLabelOf
@@ -575,5 +576,62 @@ class BrowserViewModelTest {
         assertThat(viewModel.onDpadUp(canScrollUp = false)).isFalse()
         assertThat(viewModel.onMenuKey()).isFalse()
         assertThat(viewModel.layers.value.isInterfaceMode).isFalse()
+    }
+
+    @Test
+    fun `Given the menu is open When the user chooses Actualiser Then the menu closes and the page reloads`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageFinished(url)
+        viewModel.openMenu()
+
+        viewModel.reloadFromMenu()
+
+        assertThat(viewModel.layers.value.isMenuOpen).isFalse()
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Reload) }
+    }
+
+    @Test
+    fun `Given an error page When the user chooses Actualiser in the menu Then the address is loaded again`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onLoadError(WebLoadError(url, LoadErrorCause.Unreachable))
+        viewModel.openMenu()
+
+        viewModel.reloadFromMenu()
+
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Load(url)) }
+    }
+
+    @Test
+    fun `Given the menu is open When the user chooses Accueil Then the browser asks to close`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.openMenu()
+
+        viewModel.goHome()
+
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Close) }
+    }
+
+    @Test
+    fun `Given a video in fullscreen When the menu is requested Then it stays closed and Back still exits fullscreen`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onFullscreenShown()
+
+        viewModel.openMenu()
+        viewModel.onBack(canGoBack = true)
+
+        assertThat(viewModel.layers.value.isMenuOpen).isFalse()
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.ExitFullscreen) }
+    }
+
+    @Test
+    fun `Given the menu could not save a setting When it reports the failure Then a brief notice explains it`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+
+        viewModel.onMenuWriteFailed(MenuWriteFailure.Setting)
+
+        assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.SettingFailed)
+        advanceTimeBy(BrowserViewModel.NOTICE_DURATION)
+        runCurrent()
+        assertThat(viewModel.notice.value).isNull()
     }
 }
