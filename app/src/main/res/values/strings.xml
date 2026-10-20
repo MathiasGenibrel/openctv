@@ -8,6 +8,7 @@
     <string name="home_add">Ajouter</string>
     <string name="home_empty_title">Aucun favori pour l\'instant</string>
     <string name="home_empty_add">Ajouter un favori</string>
+    <string name="home_favorites_unavailable">Vos favoris n\'ont pas pu être chargés.</string>
     <string name="home_exit_hint">Appuyez encore sur Retour pour quitter</string>
     <string name="home_hint_navigate">Naviguer</string>
     <string name="home_hint_select">Sélectionner</string>

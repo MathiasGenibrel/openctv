@@ -3,7 +3,6 @@ package com.openctv.browser.features.home.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsFocusedAsState
@@ -27,10 +26,8 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -40,10 +37,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -51,15 +45,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.graphics.shapes.Morph
-import androidx.graphics.shapes.RoundedPolygon
-import androidx.graphics.shapes.circle
-import androidx.graphics.shapes.Cubic
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Icon
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
@@ -71,20 +60,20 @@ import com.openctv.browser.core.designsystem.FocusableTile
 import com.openctv.browser.core.designsystem.KeyCap
 import com.openctv.browser.core.designsystem.KeyHint
 import com.openctv.browser.core.designsystem.OpenCtvButton
-import com.openctv.browser.core.designsystem.OpenCtvButtonStyle
 import com.openctv.browser.core.designsystem.OpenCtvColors
+import com.openctv.browser.core.designsystem.OpenCtvIconButton
+import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.designsystem.focusRingBorder
-import com.openctv.browser.core.designsystem.toPolygon
+import com.openctv.browser.core.designsystem.morphBackground
+import com.openctv.browser.core.designsystem.morphToCircle
 import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.features.home.domain.HomeFavorite
-import kotlinx.coroutines.delay
 
 private const val GridColumns = 4
-private const val ExitHintDurationMs = 2_000L
 
 /**
  * Accueil. [onOpenSearch], [onAddBookmark] et [onOpenSettings] sont raccordés par les écrans de
@@ -102,8 +91,7 @@ fun HomeScreen(
     searchEngineName: String = "DuckDuckGo",
 ) {
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
-    var isExitHintVisible by remember { mutableStateOf(false) }
-    var hintCount by remember { mutableStateOf(0) }
+    val isExitHintVisible by viewModel.isExitHintVisible.collectAsStateWithLifecycle()
 
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnExit by rememberUpdatedState(onExit)
@@ -111,18 +99,8 @@ fun HomeScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is HomeEvent.Navigate -> currentOnNavigate(event.destination)
-                HomeEvent.ShowExitHint -> {
-                    isExitHintVisible = true
-                    hintCount++
-                }
                 HomeEvent.Exit -> currentOnExit()
             }
-        }
-    }
-    LaunchedEffect(hintCount) {
-        if (hintCount > 0) {
-            delay(ExitHintDurationMs)
-            isExitHintVisible = false
         }
     }
 
@@ -181,7 +159,8 @@ internal fun HomeContent(
                     when (favorites) {
                         Resource.Loading -> Unit
                         // Une erreur de stockage ne bloque pas l'accueil : la recherche reste utilisable.
-                        is Resource.Error -> EmptyFavorites(onAdd = onAddBookmark, addFocus = emptyAddFocus)
+                        is Resource.Error ->
+                            EmptyFavorites(onAdd = onAddBookmark, addFocus = emptyAddFocus, isUnavailable = true)
                         is Resource.Success ->
                             if (favorites.data.isEmpty()) {
                                 EmptyFavorites(onAdd = onAddBookmark, addFocus = emptyAddFocus)
@@ -211,9 +190,11 @@ private fun HomeHeader(onOpenSettings: () -> Unit) {
             color = OpenCtvColors.OnSurface,
         )
         Spacer(Modifier.weight(1f))
-        OpenCtvButton(onClick = onOpenSettings, style = OpenCtvButtonStyle.Tonal) {
-            Text(stringResource(R.string.home_settings))
-        }
+        OpenCtvIconButton(
+            icon = OpenCtvIcons.Settings,
+            contentDescription = stringResource(R.string.home_settings),
+            onClick = onOpenSettings,
+        )
     }
 }
 
@@ -238,7 +219,7 @@ private fun SearchBar(placeholder: String, onClick: () -> Unit, modifier: Modifi
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            SearchIcon()
+            Icon(OpenCtvIcons.Search, contentDescription = null)
             Text(
                 text = placeholder,
                 style = MaterialTheme.typography.bodyLarge,
@@ -248,19 +229,6 @@ private fun SearchBar(placeholder: String, onClick: () -> Unit, modifier: Modifi
             )
             KeyCap("OK")
         }
-    }
-}
-
-/** Loupe dessinée : pas de dépendance à une bibliothèque d'icônes pour un seul pictogramme. */
-@Composable
-private fun SearchIcon(tint: Color = OpenCtvColors.OnSurfaceVariant) {
-    Canvas(Modifier.size(24.dp)) {
-        val stroke = 2.5.dp.toPx()
-        val radius = size.minDimension * 0.34f
-        val lensCenter = Offset(size.width * 0.42f, size.height * 0.42f)
-        drawCircle(tint, radius = radius, center = lensCenter, style = Stroke(stroke))
-        val handleStart = lensCenter + Offset(radius * 0.72f, radius * 0.72f)
-        drawLine(tint, handleStart, Offset(size.width * 0.9f, size.height * 0.9f), strokeWidth = stroke)
     }
 }
 
@@ -345,9 +313,9 @@ private val MonogramPalette = listOf(
 /** Monogramme 56 dp : forme Expressive au repos, cercle `primary` au focus (morph spring default spatial). */
 @Composable
 private fun Monogram(favorite: HomeFavorite, isFocused: Boolean) {
-    val resting = remember(favorite.index) { ExpressiveShape.forMonogram(favorite.index).toPolygon() }
-    val morph = remember(resting) { Morph(resting.normalized(), CirclePolygon) }
-    val progress by animateFloatAsState(
+    val morph = remember(favorite.index) { ExpressiveShape.forMonogram(favorite.index).morphToCircle() }
+    // State lu au dessin (morphBackground) : l'animation ne recompose pas la tuile à chaque image.
+    val progress = animateFloatAsState(
         targetValue = if (isFocused) 1f else 0f,
         animationSpec = spring(dampingRatio = 0.8f, stiffness = 380f),
         label = "monogramMorph",
@@ -356,7 +324,7 @@ private fun Monogram(favorite: HomeFavorite, isFocused: Boolean) {
     val container = if (isFocused) OpenCtvColors.Primary else colors.container
     val content = if (isFocused) OpenCtvColors.OnPrimary else colors.onContainer
     Box(
-        modifier = Modifier.size(56.dp).background(container, MorphShape(morph, progress)),
+        modifier = Modifier.size(56.dp).morphBackground(morph, container) { progress.value },
         contentAlignment = Alignment.Center,
     ) {
         Text(
@@ -364,26 +332,6 @@ private fun Monogram(favorite: HomeFavorite, isFocused: Boolean) {
             style = MaterialTheme.typography.headlineSmall,
             color = content,
         )
-    }
-}
-
-private val CirclePolygon: RoundedPolygon = RoundedPolygon.circle(numVertices = 12).normalized()
-
-/** Forme interpolée entre deux polygones normalisés (0..1) à [progress] (0 = départ, 1 = arrivée). */
-private class MorphShape(private val morph: Morph, private val progress: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val path = Path()
-        val cubics: List<Cubic> = morph.asCubics(progress)
-        cubics.forEachIndexed { i, cubic ->
-            if (i == 0) path.moveTo(cubic.anchor0X * size.width, cubic.anchor0Y * size.height)
-            path.cubicTo(
-                cubic.control0X * size.width, cubic.control0Y * size.height,
-                cubic.control1X * size.width, cubic.control1Y * size.height,
-                cubic.anchor1X * size.width, cubic.anchor1Y * size.height,
-            )
-        }
-        path.close()
-        return Outline.Generic(path)
     }
 }
 
@@ -413,7 +361,7 @@ private fun AddTile(onClick: () -> Unit) {
                 Modifier.size(40.dp).background(OpenCtvColors.SecondaryContainer, CircleShape),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("+", style = MaterialTheme.typography.headlineSmall, color = OpenCtvColors.OnSecondaryContainer)
+                Icon(OpenCtvIcons.Add, contentDescription = null, tint = OpenCtvColors.OnSecondaryContainer)
             }
             Text(stringResource(R.string.home_add), style = MaterialTheme.typography.titleMedium)
         }
@@ -422,7 +370,7 @@ private fun AddTile(onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyFavorites(onAdd: () -> Unit, addFocus: FocusRequester) {
+private fun EmptyFavorites(onAdd: () -> Unit, addFocus: FocusRequester, isUnavailable: Boolean = false) {
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -432,7 +380,12 @@ private fun EmptyFavorites(onAdd: () -> Unit, addFocus: FocusRequester) {
             Modifier.size(96.dp).background(OpenCtvColors.TertiaryContainer, ExpressiveShape.SoftBurst.asShape()),
             contentAlignment = Alignment.Center,
         ) {
-            Text("★", style = MaterialTheme.typography.headlineMedium, color = OpenCtvColors.OnTertiaryContainer)
+            Icon(
+                OpenCtvIcons.StarFilled,
+                contentDescription = null,
+                modifier = Modifier.size(40.dp),
+                tint = OpenCtvColors.OnTertiaryContainer,
+            )
         }
         Spacer(Modifier.height(16.dp))
         Text(
@@ -441,6 +394,16 @@ private fun EmptyFavorites(onAdd: () -> Unit, addFocus: FocusRequester) {
             color = OpenCtvColors.OnSurface,
             textAlign = TextAlign.Center,
         )
+        // Erreur de stockage : mention discrète, l'accueil et la recherche restent utilisables.
+        if (isUnavailable) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.home_favorites_unavailable),
+                style = MaterialTheme.typography.bodyMedium,
+                color = OpenCtvColors.OnSurfaceVariant,
+                textAlign = TextAlign.Center,
+            )
+        }
         Spacer(Modifier.height(24.dp))
         OpenCtvButton(onClick = onAdd, modifier = Modifier.focusRequester(addFocus)) {
             Text(stringResource(R.string.home_empty_add))

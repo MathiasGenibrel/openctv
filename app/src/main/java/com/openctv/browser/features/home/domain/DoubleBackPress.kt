@@ -12,7 +12,8 @@ enum class BackPressOutcome { ShowExitHint, Exit }
  */
 class DoubleBackPress(
     private val clock: Clock = Clock.systemUTC(),
-    private val window: Duration = Duration.ofSeconds(2),
+    /** Délai pendant lequel un second appui quitte ; c'est aussi la durée d'affichage de l'avertissement. */
+    val window: Duration = Duration.ofSeconds(2),
 ) {
     private var lastPress: Instant? = null
 

@@ -19,6 +19,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -94,7 +95,7 @@ class HomeViewModelTest {
 
         viewModel.events.test {
             viewModel.onBack()
-            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
+            assertThat(viewModel.isExitHintVisible.value).isTrue()
             expectNoEvents()
         }
     }
@@ -107,8 +108,8 @@ class HomeViewModelTest {
         viewModel.events.test {
             viewModel.onBack()
             clock.advance(Duration.ofSeconds(1))
+            advanceTimeBy(1_000)
             viewModel.onBack()
-            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
             assertThat(awaitItem()).isEqualTo(HomeEvent.Exit)
         }
     }
@@ -121,10 +122,23 @@ class HomeViewModelTest {
         viewModel.events.test {
             viewModel.onBack()
             clock.advance(Duration.ofSeconds(5))
+            advanceTimeBy(5_000)
             viewModel.onBack()
-            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
-            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
+            assertThat(viewModel.isExitHintVisible.value).isTrue()
+            expectNoEvents()
         }
+    }
+
+    @Test
+    fun `Given the exit warning When the exit window elapses Then the warning disappears`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.onBack()
+        advanceTimeBy(1_999)
+        assertThat(viewModel.isExitHintVisible.value).isTrue()
+        advanceTimeBy(2)
+        assertThat(viewModel.isExitHintVisible.value).isFalse()
     }
 
     private class MutableClock : Clock() {
