@@ -1,0 +1,137 @@
+package com.openctv.browser.features.home
+
+import app.cash.turbine.test
+import com.google.common.truth.Truth.assertThat
+import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.navigation.Destination
+import com.openctv.browser.features.bookmarks.domain.Bookmark
+import com.openctv.browser.features.bookmarks.domain.BookmarksContract
+import com.openctv.browser.features.home.domain.DoubleBackPress
+import com.openctv.browser.features.home.ui.HomeEvent
+import com.openctv.browser.features.home.ui.HomeViewModel
+import io.mockk.every
+import io.mockk.mockk
+import java.time.Clock
+import java.time.Duration
+import java.time.Instant
+import java.time.ZoneOffset
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Before
+import org.junit.Test
+
+@OptIn(ExperimentalCoroutinesApi::class)
+class HomeViewModelTest {
+
+    private val bookmarks = mockk<BookmarksContract>()
+    private val clock = MutableClock()
+
+    @Before
+    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+
+    @After
+    fun tearDown() = Dispatchers.resetMain()
+
+    private fun viewModel() = HomeViewModel(bookmarks, DoubleBackPress(clock, Duration.ofSeconds(2)))
+
+    private val arte = Bookmark("https://www.arte.tv/fr", "Arte", Instant.EPOCH)
+
+    @Test
+    fun `Given saved favorites When the home loads Then each favorite shows its name, bare domain and monogram`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+
+        viewModel().favorites.test {
+            val favorites = (expectMostRecentItem() as Resource.Success).data
+            assertThat(favorites).hasSize(1)
+            assertThat(favorites[0].name).isEqualTo("Arte")
+            assertThat(favorites[0].domain).isEqualTo("arte.tv")
+            assertThat(favorites[0].monogram).isEqualTo("A")
+        }
+    }
+
+    @Test
+    fun `Given no favorite When the home loads Then the list is empty so the empty state is shown`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+
+        viewModel().favorites.test {
+            assertThat(expectMostRecentItem()).isEqualTo(Resource.Success(emptyList<Any>()))
+        }
+    }
+
+    @Test
+    fun `Given a storage failure When the home loads Then the error is exposed`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Error("disk"))
+
+        viewModel().favorites.test {
+            assertThat(expectMostRecentItem()).isEqualTo(Resource.Error("disk"))
+        }
+    }
+
+    @Test
+    fun `Given the favorite Arte When the user opens it Then the browser destination targets its url`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+
+        viewModel.favorites.test {
+            val favorite = (expectMostRecentItem() as Resource.Success).data.first()
+            viewModel.events.test {
+                viewModel.onOpenFavorite(favorite)
+                assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Browser("https://www.arte.tv/fr")))
+            }
+        }
+    }
+
+    @Test
+    fun `Given the home When Back is pressed once Then the app stays open and warns`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onBack()
+            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `Given the exit warning When Back is pressed again quickly Then the app exits`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onBack()
+            clock.advance(Duration.ofSeconds(1))
+            viewModel.onBack()
+            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Exit)
+        }
+    }
+
+    @Test
+    fun `Given the exit warning When Back is pressed again too late Then it warns again instead of exiting`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onBack()
+            clock.advance(Duration.ofSeconds(5))
+            viewModel.onBack()
+            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
+            assertThat(awaitItem()).isEqualTo(HomeEvent.ShowExitHint)
+        }
+    }
+
+    private class MutableClock : Clock() {
+        private var now: Instant = Instant.EPOCH
+        fun advance(duration: Duration) { now += duration }
+        override fun instant(): Instant = now
+        override fun getZone() = ZoneOffset.UTC
+        override fun withZone(zone: java.time.ZoneId?): Clock = this
+    }
+}

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ContainedLoadingIndicator
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.LinearWavyProgressIndicator
@@ -42,17 +41,16 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.ExpressiveShape
+import com.openctv.browser.core.designsystem.OpenCtvButton
+import com.openctv.browser.core.designsystem.OpenCtvButtonStyle
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
-import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.browser.domain.PageState
@@ -216,29 +214,12 @@ private fun ErrorContent(state: PageState.Error, onRetry: () -> Unit, onHome: ()
             )
             Spacer(Modifier.height(32.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Button(
-                    onClick = onRetry,
-                    modifier = Modifier.focusRequester(retryFocus),
-                    shape = ButtonDefaults.shape(CircleShape),
-                    border = ButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
-                    colors = ButtonDefaults.colors(
-                        containerColor = OpenCtvColors.Primary,
-                        contentColor = OpenCtvColors.OnPrimary,
-                        focusedContainerColor = OpenCtvColors.Primary,
-                        focusedContentColor = OpenCtvColors.OnPrimary,
-                    ),
-                ) { Text(stringResource(R.string.browser_error_retry)) }
-                Button(
-                    onClick = onHome,
-                    shape = ButtonDefaults.shape(CircleShape),
-                    border = ButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
-                    colors = ButtonDefaults.colors(
-                        containerColor = OpenCtvColors.SecondaryContainer,
-                        contentColor = OpenCtvColors.OnSecondaryContainer,
-                        focusedContainerColor = OpenCtvColors.SecondaryContainer,
-                        focusedContentColor = OpenCtvColors.OnSecondaryContainer,
-                    ),
-                ) { Text(stringResource(R.string.browser_error_home)) }
+                OpenCtvButton(onClick = onRetry, modifier = Modifier.focusRequester(retryFocus)) {
+                    Text(stringResource(R.string.browser_error_retry))
+                }
+                OpenCtvButton(onClick = onHome, style = OpenCtvButtonStyle.Tonal) {
+                    Text(stringResource(R.string.browser_error_home))
+                }
             }
         }
     }
