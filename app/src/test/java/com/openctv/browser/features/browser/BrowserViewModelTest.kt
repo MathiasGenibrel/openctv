@@ -8,6 +8,8 @@ import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.siteLabelOf
 import com.openctv.browser.features.browser.ui.BrowserCommand
 import com.openctv.browser.features.browser.ui.BrowserViewModel
+import com.openctv.browser.features.search.domain.SearchMode
+import com.openctv.browser.features.search.domain.SearchRequest
 import kotlinx.coroutines.test.runTest
 import org.junit.Test
 
@@ -180,4 +182,66 @@ class BrowserViewModelTest {
 
         assertThat(visited).containsExactly(url)
     }
+
+    private fun pageOnScreen(): BrowserViewModel {
+        val viewModel = BrowserViewModel(url)
+        val visited = "https://www.arte.tv/fr/videos/"
+        viewModel.onPageStarted(visited)
+        viewModel.onPageFinished(visited)
+        return viewModel
+    }
+
+    @Test
+    fun `Given a page on screen When the user opens the address input Then it opens prefilled with the page address`() {
+        val viewModel = pageOnScreen()
+
+        viewModel.openAddressInput()
+
+        assertThat(viewModel.addressInput.value)
+            .isEqualTo(SearchRequest(SearchMode.Browse, initialText = "https://www.arte.tv/fr/videos/"))
+    }
+
+    @Test
+    fun `Given the address input open When the user presses Back Then it closes and the page is neither left nor reloaded`() =
+        runTest {
+            val viewModel = pageOnScreen()
+            viewModel.openAddressInput()
+
+            viewModel.commands.test {
+                viewModel.onBack(canGoBack = true)
+
+                assertThat(viewModel.addressInput.value).isNull()
+                assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("arte.tv"))
+                expectNoEvents()
+            }
+        }
+
+    @Test
+    fun `Given the address input closed again When the user presses Back Then the page history goes back as before`() =
+        runTest {
+            val viewModel = pageOnScreen()
+            viewModel.openAddressInput()
+            viewModel.closeAddressInput()
+
+            viewModel.commands.test {
+                viewModel.onBack(canGoBack = true)
+
+                assertThat(awaitItem()).isEqualTo(BrowserCommand.GoBack)
+            }
+        }
+
+    @Test
+    fun `Given the address input open When the user validates an address Then it closes and loads in the same page`() =
+        runTest {
+            val viewModel = pageOnScreen()
+            viewModel.openAddressInput()
+
+            viewModel.commands.test {
+                viewModel.onAddressChosen("https://example.org")
+
+                assertThat(viewModel.addressInput.value).isNull()
+                assertThat(awaitItem()).isEqualTo(BrowserCommand.Load("https://example.org"))
+                expectNoEvents()
+            }
+        }
 }

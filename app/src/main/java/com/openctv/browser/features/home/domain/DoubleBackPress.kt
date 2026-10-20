@@ -17,6 +17,11 @@ class DoubleBackPress(
 ) {
     private var lastPress: Instant? = null
 
+    /** Oublie l'appui précédent : le prochain Retour ne fera que prévenir. */
+    fun reset() {
+        lastPress = null
+    }
+
     fun onBackPressed(): BackPressOutcome {
         val now = clock.instant()
         val previous = lastPress

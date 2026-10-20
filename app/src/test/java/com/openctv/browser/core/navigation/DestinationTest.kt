@@ -8,30 +8,16 @@ class DestinationTest {
     private fun roundTrip(destination: Destination) = Destination.decode(Destination.encode(destination))
 
     @Test
-    fun `Given a search with a prefilled url containing colons When the activity is recreated Then it is restored intact`() {
-        val search = Destination.Search(SearchMode.Browse, "https://example.org:8080/a?b=c:d", SearchOrigin.Browser)
+    fun `Given a page whose url contains colons When the activity is recreated Then the same page is restored`() {
+        val browser = Destination.Browser("https://example.org:8080/a?b=c:d")
 
-        assertThat(roundTrip(search)).isEqualTo(search)
+        assertThat(roundTrip(browser)).isEqualTo(browser)
+        assertThat(roundTrip(Destination.Settings)).isEqualTo(Destination.Settings)
     }
 
     @Test
-    fun `Given the add bookmark search When the activity is recreated Then mode and origin are restored`() {
-        val search = Destination.Search(SearchMode.AddBookmark)
-
-        assertThat(roundTrip(search)).isEqualTo(search)
-    }
-
-    @Test
-    fun `Given a corrupted search token When restored Then the user lands on the home`() {
-        assertThat(Destination.decode("search:Nope:Home:x")).isEqualTo(Destination.Home)
-        assertThat(Destination.decode("search:Browse")).isEqualTo(Destination.Home)
-    }
-
-    @Test
-    fun `Given a search opened from a page When it is closed Then the user returns to that page`() {
-        val search = Destination.Search(SearchMode.Browse, "https://arte.tv", SearchOrigin.Browser)
-
-        assertThat(search.backTarget()).isEqualTo(Destination.Browser("https://arte.tv"))
-        assertThat(Destination.Search().backTarget()).isEqualTo(Destination.Home)
+    fun `Given a token saved while the search was a destination When restored Then the user lands on the home`() {
+        assertThat(Destination.decode("search:Browse:Browser:https://arte.tv")).isEqualTo(Destination.Home)
+        assertThat(Destination.decode("unknown")).isEqualTo(Destination.Home)
     }
 }

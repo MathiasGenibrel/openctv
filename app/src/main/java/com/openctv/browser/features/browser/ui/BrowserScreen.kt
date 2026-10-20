@@ -21,8 +21,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -51,11 +53,16 @@ import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.browser.domain.PageState
+import com.openctv.browser.features.search.domain.SearchRequest
 
 /**
  * Écran de navigation de [viewModel] (portée = la destination, cf. DestinationHost : un ViewModel neuf à
  * chaque ouverture). [toolbar] est l'emplacement de la barre d'outils (ajoutée par une tâche
  * ultérieure) ; la barre de progression s'affiche juste dessous.
+ *
+ * [addressInput] affiche la saisie d'adresse (fournie par la racine de composition) en surcouche quand
+ * [BrowserViewModel.addressInput] est ouverte : la WebView reste vivante dessous, et le focus revient à
+ * l'écran quand la saisie se ferme.
  */
 @Composable
 fun BrowserScreen(
@@ -64,8 +71,11 @@ fun BrowserScreen(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     toolbar: @Composable () -> Unit = {},
+    addressInput: @Composable (SearchRequest) -> Unit = {},
 ) {
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
+    val addressInputRequest by viewModel.addressInput.collectAsStateWithLifecycle()
+    val isAddressInputOpen = addressInputRequest != null
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
@@ -85,16 +95,39 @@ fun BrowserScreen(
     }
 
     // La décision revient au ViewModel ; la vue ne fournit que l'état d'historique de sa WebView.
-    BackHandler { viewModel.onBack(canGoBack = webView.canGoBack()) }
+    // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
+    BackHandler(enabled = !isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
-    BrowserContent(
-        pageState = pageState,
-        pageView = { PageView(webView, isVisible = pageState !is PageState.Error) },
-        onRetry = viewModel::retry,
-        onHome = onClose,
-        modifier = modifier,
-        toolbar = toolbar,
-    )
+    val retryFocus = remember { FocusRequester() }
+    // Saisie refermée : le focus revient à l'écran (#7 : le pointer sur le champ d'adresse de la toolbar).
+    FocusAfterAddressInput(isAddressInputOpen) {
+        val isShowingError = viewModel.pageState.value is PageState.Error
+        if (isShowingError) retryFocus.requestFocus() else webView.requestFocus()
+    }
+
+    Box(modifier.fillMaxSize()) {
+        BrowserContent(
+            pageState = pageState,
+            pageView = { PageView(webView, isVisible = pageState !is PageState.Error) },
+            onRetry = viewModel::retry,
+            onHome = onClose,
+            retryFocus = retryFocus,
+            toolbar = toolbar,
+        )
+        addressInputRequest?.let { addressInput(it) }
+    }
+}
+
+/** Appelle [restoreFocus] à chaque fermeture de la saisie (pas à l'ouverture de l'écran). */
+@Composable
+private fun FocusAfterAddressInput(isAddressInputOpen: Boolean, restoreFocus: () -> Unit) {
+    var wasOpen by remember { mutableStateOf(false) }
+    val currentRestoreFocus by rememberUpdatedState(restoreFocus)
+    LaunchedEffect(isAddressInputOpen) {
+        val isClosing = wasOpen && !isAddressInputOpen
+        wasOpen = isAddressInputOpen
+        if (isClosing) currentRestoreFocus()
+    }
 }
 
 @Composable
@@ -135,13 +168,14 @@ private fun BrowserContent(
     onRetry: () -> Unit,
     onHome: () -> Unit,
     modifier: Modifier = Modifier,
+    retryFocus: FocusRequester = remember { FocusRequester() },
     toolbar: @Composable () -> Unit = {},
 ) {
     Box(modifier = modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
         pageView()
         when (pageState) {
             is PageState.Loading -> if (!pageState.isPageShown) LoadingContent(pageState.site)
-            is PageState.Error -> ErrorContent(pageState, onRetry, onHome)
+            is PageState.Error -> ErrorContent(pageState, onRetry, onHome, retryFocus)
             is PageState.Loaded -> Unit
         }
         OverscanSafeArea {
@@ -175,8 +209,7 @@ private fun LoadingContent(site: String) {
 }
 
 @Composable
-private fun ErrorContent(state: PageState.Error, onRetry: () -> Unit, onHome: () -> Unit) {
-    val retryFocus = remember { FocusRequester() }
+private fun ErrorContent(state: PageState.Error, onRetry: () -> Unit, onHome: () -> Unit, retryFocus: FocusRequester) {
     LaunchedEffect(Unit) { retryFocus.requestFocus() }
 
     Box(Modifier.fillMaxSize().background(OpenCtvColors.Surface), contentAlignment = Alignment.Center) {

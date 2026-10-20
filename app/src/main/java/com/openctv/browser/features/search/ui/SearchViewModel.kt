@@ -3,16 +3,16 @@ package com.openctv.browser.features.search.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
-import com.openctv.browser.core.navigation.Destination
-import com.openctv.browser.core.navigation.SearchMode
+import com.openctv.browser.features.bookmarks.domain.BookmarkUrl
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.search.domain.InputResolver
 import com.openctv.browser.features.search.domain.RecentSearchesContract
 import com.openctv.browser.features.search.domain.ResolvedInput
+import com.openctv.browser.features.search.domain.SearchMode
+import com.openctv.browser.features.search.domain.SearchRequest
 import com.openctv.browser.features.search.domain.Suggestion
 import com.openctv.browser.features.search.domain.SuggestionBuilder
 import com.openctv.browser.features.settings.domain.SettingsContract
-import java.net.URI
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,20 +43,27 @@ data class SearchUiState(
     val problem: SearchProblem?,
 )
 
-/** Effet ponctuel adressé à la vue. */
+/**
+ * Issue de la saisie, adressée à l'écran qui l'a ouverte : c'est lui qui décide où charger l'adresse
+ * (navigateur ouvert depuis l'accueil, ou même WebView depuis la barre d'adresse).
+ */
 sealed interface SearchEvent {
-    data class Navigate(val destination: Destination) : SearchEvent
+    /** Adresse ou page de résultats à ouvrir (toujours `http`/`https`). */
+    data class Open(val url: String) : SearchEvent
+
+    /** Saisie terminée sans rien ouvrir (favori ajouté) : fermer la surcouche. */
+    data object Close : SearchEvent
 }
 
 class SearchViewModel(
-    private val mode: SearchMode,
-    initialText: String,
+    request: SearchRequest,
     private val bookmarks: BookmarksContract,
     private val recents: RecentSearchesContract,
     private val settings: SettingsContract,
 ) : ViewModel() {
+    private val mode: SearchMode = request.mode
 
-    private val _query = MutableStateFlow(initialText)
+    private val _query = MutableStateFlow(request.initialText)
     val query: StateFlow<String> = _query.asStateFlow()
 
     private val problem = MutableStateFlow<SearchProblem?>(null)
@@ -102,7 +109,7 @@ class SearchViewModel(
 
     fun onSuggestionSelected(suggestion: Suggestion) {
         when (suggestion) {
-            is Suggestion.Favorite -> navigate(Destination.Browser(suggestion.url))
+            is Suggestion.Favorite -> send(SearchEvent.Open(suggestion.url))
             is Suggestion.Recent -> open(search(suggestion.query))
         }
     }
@@ -118,7 +125,7 @@ class SearchViewModel(
         viewModelScope.launch {
             // Mémorisation facultative : un échec de stockage n'empêche jamais la recherche.
             if (resolved is ResolvedInput.Search) recents.record(resolved.query)
-            navigate(Destination.Browser(resolved.url))
+            send(SearchEvent.Open(resolved.url))
         }
     }
 
@@ -129,19 +136,16 @@ class SearchViewModel(
             return
         }
         viewModelScope.launch {
-            when (bookmarks.add(resolved.url, title = hostOf(resolved.url))) {
+            when (bookmarks.add(resolved.url, title = BookmarkUrl.siteName(resolved.url))) {
                 is Resource.Error -> problem.value = SearchProblem.SaveFailed
-                else -> navigate(Destination.Home)
+                else -> send(SearchEvent.Close)
             }
         }
     }
 
-    private fun navigate(destination: Destination) {
-        _events.trySend(SearchEvent.Navigate(destination))
+    private fun send(event: SearchEvent) {
+        _events.trySend(event)
     }
-
-    private fun hostOf(url: String): String =
-        runCatching { URI(url).host }.getOrNull()?.removePrefix("www.") ?: url
 
     private companion object {
         const val STOP_TIMEOUT_MS = 5_000L

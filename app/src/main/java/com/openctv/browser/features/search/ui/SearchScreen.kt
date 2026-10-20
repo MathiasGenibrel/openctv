@@ -55,18 +55,25 @@ import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.focusRingBorder
-import com.openctv.browser.core.navigation.Destination
-import com.openctv.browser.core.navigation.SearchMode
+import com.openctv.browser.core.designsystem.focusTrap
+import com.openctv.browser.features.search.domain.SearchMode
 import com.openctv.browser.features.search.domain.Suggestion
 
 /**
- * Saisie d'adresse / recherche. Le clavier système s'ouvre avec l'écran ; D-pad bas depuis le champ
- * atteint les suggestions, OK sur l'une l'exécute. Retour appelle [onClose] (l'écran d'origine).
+ * Saisie d'adresse / recherche, affichée en **surcouche** plein écran de l'écran qui l'ouvre (accueil,
+ * navigateur) : celui-ci reste vivant dessous, et le focus ne peut pas y fuir. Le clavier système s'ouvre
+ * avec la saisie ; D-pad bas depuis le champ atteint les suggestions, OK sur l'une l'exécute.
+ *
+ * [onOpen] reçoit l'adresse à charger ; [onClose] ferme la surcouche (Retour, ou favori ajouté) et
+ * l'écran d'origine rend le focus à l'élément qui l'avait ouverte.
+ *
+ * Retour avec le clavier système ouvert : le premier appui est consommé par l'IME (il ferme le clavier),
+ * le second ferme la saisie. Comportement standard d'Android TV, conservé tel quel.
  */
 @Composable
 fun SearchScreen(
     viewModel: SearchViewModel,
-    onNavigate: (Destination) -> Unit,
+    onOpen: (url: String) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -77,11 +84,13 @@ fun SearchScreen(
         mutableStateOf(TextFieldValue(initial, TextRange(0, initial.length)))
     }
 
-    val currentOnNavigate by rememberUpdatedState(onNavigate)
+    val currentOnOpen by rememberUpdatedState(onOpen)
+    val currentOnClose by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel) {
         viewModel.events.collect { event ->
             when (event) {
-                is SearchEvent.Navigate -> currentOnNavigate(event.destination)
+                is SearchEvent.Open -> currentOnOpen(event.url)
+                SearchEvent.Close -> currentOnClose()
             }
         }
     }
@@ -128,8 +137,10 @@ internal fun SearchContent(
         keyboard?.show()
     }
 
-    OverscanSafeArea(modifier) {
-        Column(Modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
+    // Fond opaque jusqu'aux bords (avant la marge d'overscan) : l'écran d'origine, vivant dessous, ne
+    // transparaît pas ; le focus ne peut pas y fuir.
+    OverscanSafeArea(modifier.background(OpenCtvColors.Surface).focusTrap()) {
+        Column(Modifier.fillMaxSize()) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 OpenCtvIconButton(
                     icon = OpenCtvIcons.ArrowBack,

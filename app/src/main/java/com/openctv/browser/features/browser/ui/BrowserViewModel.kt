@@ -7,6 +7,8 @@ import com.openctv.browser.core.webview.WebNavigationPolicy
 import com.openctv.browser.core.webview.WebPageListener
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.siteLabelOf
+import com.openctv.browser.features.search.domain.SearchMode
+import com.openctv.browser.features.search.domain.SearchRequest
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,6 +38,14 @@ class BrowserViewModel(
     private val _commands = Channel<BrowserCommand>(Channel.BUFFERED)
     val commands: Flow<BrowserCommand> = _commands.receiveAsFlow()
 
+    private val _addressInput = MutableStateFlow<SearchRequest?>(null)
+
+    /**
+     * Saisie d'adresse ouverte en surcouche de la page (`null` = fermée). La page, sa WebView et son
+     * historique restent vivants dessous : fermer la saisie ne recharge rien.
+     */
+    val addressInput: StateFlow<SearchRequest?> = _addressInput.asStateFlow()
+
     /**
      * Une WebView vierge vient d'être créée (ouverture de l'écran, ou recréation de l'activité alors
      * que ce ViewModel survit) : elle charge la page courante.
@@ -44,10 +54,31 @@ class BrowserViewModel(
 
     fun retry() = load(currentUrl)
 
-    /** Retour : reculer dans l'historique de la page, sinon revenir à l'accueil. */
+    /** Retour : fermer la saisie ouverte, sinon reculer dans l'historique de la page, sinon revenir à l'accueil. */
     fun onBack(canGoBack: Boolean) {
+        val isAddressInputOpen = _addressInput.value != null
+        if (isAddressInputOpen) {
+            closeAddressInput()
+            return
+        }
         val command = if (canGoBack) BrowserCommand.GoBack else BrowserCommand.Close
         _commands.trySend(command)
+    }
+
+    /** Ouvre la saisie par-dessus la page, pré-remplie avec son adresse (OK sur le champ d'adresse, #7). */
+    fun openAddressInput() {
+        _addressInput.value = SearchRequest(SearchMode.Browse, initialText = currentUrl)
+    }
+
+    /** Ferme la saisie sans rien charger : la page est intacte, l'écran rend le focus (cf. BrowserScreen). */
+    fun closeAddressInput() {
+        _addressInput.value = null
+    }
+
+    /** Adresse ou recherche validée dans la saisie : chargée dans la même WebView (historique conservé). */
+    fun onAddressChosen(url: String) {
+        closeAddressInput()
+        load(url)
     }
 
     override fun onPageStarted(url: String) {

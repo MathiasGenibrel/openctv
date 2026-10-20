@@ -19,8 +19,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
@@ -28,11 +30,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -72,23 +76,29 @@ import com.openctv.browser.core.designsystem.morphBackground
 import com.openctv.browser.core.designsystem.morphToCircle
 import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.features.home.domain.HomeFavorite
+import com.openctv.browser.features.home.domain.HomeFocus
+import com.openctv.browser.features.search.domain.SearchRequest
 
 private const val GridColumns = 4
 
-/** Accueil. [onOpenSearch] ouvre la saisie ; [onAddBookmark] l'ouvre en mode « ajouter un favori ». */
+/**
+ * Accueil. La barre de recherche et l'ajout de favori ouvrent la saisie ([searchInput], fournie par la
+ * racine de composition) en surcouche : l'accueil reste vivant dessous et, à sa fermeture comme au
+ * retour d'un autre écran, le focus revient à l'élément qui l'avait quitté ([HomeViewModel.focusToRestore]).
+ */
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel,
     onNavigate: (Destination) -> Unit,
     onExit: () -> Unit,
-    onOpenSearch: () -> Unit,
-    onAddBookmark: () -> Unit,
-    onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    searchInput: @Composable (SearchRequest) -> Unit = {},
 ) {
     val favorites by viewModel.favorites.collectAsStateWithLifecycle()
     val searchEngineName by viewModel.searchEngineName.collectAsStateWithLifecycle()
     val isExitHintVisible by viewModel.isExitHintVisible.collectAsStateWithLifecycle()
+    val searchRequest by viewModel.searchInput.collectAsStateWithLifecycle()
+    val isSearchOpen = searchRequest != null
 
     val currentOnNavigate by rememberUpdatedState(onNavigate)
     val currentOnExit by rememberUpdatedState(onExit)
@@ -101,18 +111,55 @@ fun HomeScreen(
         }
     }
 
-    BackHandler { viewModel.onBack() }
+    // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
+    BackHandler(enabled = !isSearchOpen) { viewModel.onBack() }
 
-    HomeContent(
-        favorites = favorites,
-        isExitHintVisible = isExitHintVisible,
-        searchPlaceholder = stringResource(R.string.home_search_placeholder, searchEngineName),
-        onOpenFavorite = viewModel::onOpenFavorite,
-        onOpenSearch = onOpenSearch,
-        onAddBookmark = onAddBookmark,
-        onOpenSettings = onOpenSettings,
-        modifier = modifier,
-    )
+    Box(modifier.fillMaxSize()) {
+        HomeContent(
+            favorites = favorites,
+            isExitHintVisible = isExitHintVisible,
+            searchPlaceholder = stringResource(R.string.home_search_placeholder, searchEngineName),
+            onOpenFavorite = viewModel::onOpenFavorite,
+            onOpenSearch = viewModel::onOpenSearch,
+            onAddBookmark = viewModel::onAddBookmark,
+            onOpenSettings = viewModel::onOpenSettings,
+            isSearchOpen = isSearchOpen,
+            focusToRestore = viewModel::focusToRestore,
+            onFocused = viewModel::onFocused,
+        )
+        searchRequest?.let { searchInput(it) }
+    }
+}
+
+/** Un [FocusRequester] par élément mémorisable de l'accueil ; l'élément signale qu'il prend le focus. */
+private class HomeFocusTargets(private val onFocused: (HomeFocus) -> Unit) {
+    private val requesters = mutableMapOf<HomeFocus, FocusRequester>()
+
+    fun requester(focus: HomeFocus): FocusRequester = requesters.getOrPut(focus) { FocusRequester() }
+
+    fun modifier(focus: HomeFocus): Modifier = Modifier
+        .focusRequester(requester(focus))
+        .onFocusChanged { if (it.isFocused) onFocused(focus) }
+}
+
+/** Position dans la grille (favoris puis tuile « Ajouter ») ; `null` hors grille. */
+private fun gridIndexOf(focus: HomeFocus, favorites: Resource<List<HomeFavorite>>): Int? {
+    val shown = (favorites as? Resource.Success)?.data?.takeIf { it.isNotEmpty() } ?: return null
+    return when (focus) {
+        is HomeFocus.Favorite -> shown.indexOfFirst { it.url == focus.url }.takeIf { it >= 0 }
+        HomeFocus.Add -> shown.size
+        HomeFocus.Search, HomeFocus.Settings -> null
+    }
+}
+
+/** Fait défiler la grille jusqu'à [index] s'il n'est pas affiché : un élément non composé ne prend pas le focus. */
+private suspend fun LazyGridState.bringIntoView(index: Int) {
+    withFrameNanos { } // grille mesurée
+    val isVisible = layoutInfo.visibleItemsInfo.any { it.index == index }
+    if (!isVisible) {
+        scrollToItem(index)
+        withFrameNanos { }
+    }
 }
 
 @Composable
@@ -125,20 +172,30 @@ internal fun HomeContent(
     onAddBookmark: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    isSearchOpen: Boolean = false,
+    focusToRestore: () -> HomeFocus = { HomeFocus.Search },
+    onFocused: (HomeFocus) -> Unit = {},
 ) {
-    val searchFocus = remember { FocusRequester() }
-    val emptyAddFocus = remember { FocusRequester() }
+    val currentOnFocused by rememberUpdatedState(onFocused)
+    val focusTargets = remember { HomeFocusTargets { currentOnFocused(it) } }
+    val gridState = rememberLazyGridState()
+    val isLoaded = favorites !is Resource.Loading
     val isEmpty = favorites is Resource.Success && favorites.data.isEmpty()
 
-    // Focus initial : la recherche ; l'état vide donne le focus à son bouton d'ajout.
-    LaunchedEffect(isEmpty) {
-        if (isEmpty) emptyAddFocus.requestFocus() else searchFocus.requestFocus()
+    // Focus à l'ouverture, au chargement des favoris et à la fermeture de la saisie : l'élément mémorisé
+    // (cf. HomeFocus.restore), sinon la recherche, ou le bouton d'ajout de l'état vide.
+    val currentFavorites by rememberUpdatedState(favorites)
+    LaunchedEffect(isSearchOpen, isLoaded, isEmpty) {
+        if (isSearchOpen) return@LaunchedEffect
+        val target = focusToRestore()
+        gridIndexOf(target, currentFavorites)?.let { gridState.bringIntoView(it) }
+        focusTargets.requester(target).requestFocus()
     }
 
     OverscanSafeArea(modifier) {
         Box(Modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
             Column(Modifier.fillMaxSize()) {
-                HomeHeader(onOpenSettings = onOpenSettings)
+                HomeHeader(onOpenSettings = onOpenSettings, settingsModifier = focusTargets.modifier(HomeFocus.Settings))
                 Spacer(Modifier.height(16.dp))
                 Text(
                     text = stringResource(R.string.home_title),
@@ -149,20 +206,23 @@ internal fun HomeContent(
                 SearchBar(
                     placeholder = searchPlaceholder,
                     onClick = onOpenSearch,
-                    modifier = Modifier.focusRequester(searchFocus),
+                    modifier = focusTargets.modifier(HomeFocus.Search),
                 )
                 Spacer(Modifier.height(16.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     when (favorites) {
                         Resource.Loading -> Unit
                         // Une erreur de stockage ne bloque pas l'accueil : la recherche reste utilisable.
-                        is Resource.Error ->
-                            EmptyFavorites(onAdd = onAddBookmark, addFocus = emptyAddFocus, isUnavailable = true)
+                        is Resource.Error -> EmptyFavorites(
+                            onAdd = onAddBookmark,
+                            addModifier = focusTargets.modifier(HomeFocus.Add),
+                            isUnavailable = true,
+                        )
                         is Resource.Success ->
                             if (favorites.data.isEmpty()) {
-                                EmptyFavorites(onAdd = onAddBookmark, addFocus = emptyAddFocus)
+                                EmptyFavorites(onAdd = onAddBookmark, addModifier = focusTargets.modifier(HomeFocus.Add))
                             } else {
-                                FavoritesGrid(favorites.data, onOpenFavorite, onAddBookmark)
+                                FavoritesGrid(favorites.data, gridState, focusTargets, onOpenFavorite, onAddBookmark)
                             }
                     }
                 }
@@ -177,7 +237,7 @@ internal fun HomeContent(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HomeHeader(onOpenSettings: () -> Unit) {
+private fun HomeHeader(onOpenSettings: () -> Unit, settingsModifier: Modifier = Modifier) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(36.dp).background(OpenCtvColors.Primary, ExpressiveShape.Cookie9.asShape()))
         Spacer(Modifier.width(12.dp))
@@ -191,6 +251,7 @@ private fun HomeHeader(onOpenSettings: () -> Unit) {
             icon = OpenCtvIcons.Settings,
             contentDescription = stringResource(R.string.home_settings),
             onClick = onOpenSettings,
+            modifier = settingsModifier,
         )
     }
 }
@@ -232,6 +293,8 @@ private fun SearchBar(placeholder: String, onClick: () -> Unit, modifier: Modifi
 @Composable
 private fun FavoritesGrid(
     favorites: List<HomeFavorite>,
+    gridState: LazyGridState,
+    focusTargets: HomeFocusTargets,
     onOpenFavorite: (HomeFavorite) -> Unit,
     onAddBookmark: () -> Unit,
 ) {
@@ -254,15 +317,20 @@ private fun FavoritesGrid(
         // contentPadding : la tuile focalisée grandit et son anneau déborde ; la grille ne doit pas le rogner.
         LazyVerticalGrid(
             columns = GridCells.Fixed(GridColumns),
+            state = gridState,
             contentPadding = PaddingValues(8.dp),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(favorites, key = { it.url }) { favorite ->
-                FavoriteTile(favorite, onClick = { onOpenFavorite(favorite) })
+                FavoriteTile(
+                    favorite,
+                    onClick = { onOpenFavorite(favorite) },
+                    modifier = focusTargets.modifier(HomeFocus.Favorite(favorite.url)),
+                )
             }
-            item(key = "add") { AddTile(onClick = onAddBookmark) }
+            item(key = "add") { AddTile(onClick = onAddBookmark, modifier = focusTargets.modifier(HomeFocus.Add)) }
         }
     }
 }
@@ -270,10 +338,10 @@ private fun FavoritesGrid(
 private val TileModifier = Modifier.fillMaxWidth().height(96.dp)
 
 @Composable
-private fun FavoriteTile(favorite: HomeFavorite, onClick: () -> Unit) {
+private fun FavoriteTile(favorite: HomeFavorite, onClick: () -> Unit, modifier: Modifier = Modifier) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    FocusableTile(onClick = onClick, modifier = TileModifier, interactionSource = interactionSource) {
+    FocusableTile(onClick = onClick, modifier = modifier.then(TileModifier), interactionSource = interactionSource) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -333,10 +401,10 @@ private fun Monogram(favorite: HomeFavorite, isFocused: Boolean) {
 }
 
 @Composable
-private fun AddTile(onClick: () -> Unit) {
+private fun AddTile(onClick: () -> Unit, modifier: Modifier = Modifier) {
     val dashColor = OpenCtvColors.OutlineVariant
     val density = LocalDensity.current
-    FocusableTile(onClick = onClick, modifier = TileModifier) {
+    FocusableTile(onClick = onClick, modifier = modifier.then(TileModifier)) {
         Row(
             Modifier
                 .fillMaxSize()
@@ -367,7 +435,7 @@ private fun AddTile(onClick: () -> Unit) {
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun EmptyFavorites(onAdd: () -> Unit, addFocus: FocusRequester, isUnavailable: Boolean = false) {
+private fun EmptyFavorites(onAdd: () -> Unit, addModifier: Modifier, isUnavailable: Boolean = false) {
     Column(
         Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
@@ -402,7 +470,7 @@ private fun EmptyFavorites(onAdd: () -> Unit, addFocus: FocusRequester, isUnavai
             )
         }
         Spacer(Modifier.height(24.dp))
-        OpenCtvButton(onClick = onAdd, modifier = Modifier.focusRequester(addFocus)) {
+        OpenCtvButton(onClick = onAdd, modifier = addModifier) {
             Text(stringResource(R.string.home_empty_add))
         }
     }

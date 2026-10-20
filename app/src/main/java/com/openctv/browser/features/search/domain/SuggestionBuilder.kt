@@ -1,7 +1,7 @@
 package com.openctv.browser.features.search.domain
 
 import com.openctv.browser.features.bookmarks.domain.Bookmark
-import java.net.URI
+import com.openctv.browser.features.bookmarks.domain.BookmarkUrl
 
 /**
  * Suggestions locales : favoris correspondants puis recherches récentes. Aucun appel réseau.
@@ -19,7 +19,7 @@ object SuggestionBuilder {
         val favorites = bookmarks
             .filter { it.matches(needle) }
             .take(MaxFavorites)
-            .map { Suggestion.Favorite(url = it.url, title = it.title.ifBlank { hostOf(it.url) }) }
+            .map { Suggestion.Favorite(url = it.url, title = it.title.ifBlank { BookmarkUrl.siteName(it.url) }) }
         val matchingRecents = recents
             .filter { it.lowercase().contains(needle) && !it.equals(needle, ignoreCase = true) }
             .take(MaxRecents)
@@ -32,7 +32,4 @@ object SuggestionBuilder {
         val addressMatches = url.substringAfter("://").lowercase().contains(needle)
         return titleMatches || addressMatches
     }
-
-    private fun hostOf(url: String): String =
-        runCatching { URI(url).host }.getOrNull()?.removePrefix("www.") ?: url
 }

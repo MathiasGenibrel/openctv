@@ -3,11 +3,11 @@ package com.openctv.browser.features.search
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.Resource
-import com.openctv.browser.core.navigation.Destination
-import com.openctv.browser.core.navigation.SearchMode
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.search.domain.RecentSearchesContract
+import com.openctv.browser.features.search.domain.SearchMode
+import com.openctv.browser.features.search.domain.SearchRequest
 import com.openctv.browser.features.search.domain.Suggestion
 import com.openctv.browser.features.search.ui.SearchEvent
 import com.openctv.browser.features.search.ui.SearchProblem
@@ -59,7 +59,7 @@ class SearchViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(mode: SearchMode = SearchMode.Browse, initialText: String = "") =
-        SearchViewModel(mode, initialText, bookmarks, recents, settings)
+        SearchViewModel(SearchRequest(mode, initialText), bookmarks, recents, settings)
 
     @Test
     fun `Given arte is a favorite When the user types arte Then arte is proposed without any network call`() = runTest {
@@ -81,7 +81,7 @@ class SearchViewModelTest {
             viewModel.onQueryChange("arte.tv")
             viewModel.onSubmit()
 
-            assertThat(awaitItem()).isEqualTo(SearchEvent.Navigate(Destination.Browser("https://arte.tv")))
+            assertThat(awaitItem()).isEqualTo(SearchEvent.Open("https://arte.tv"))
         }
         coVerify(exactly = 0) { recents.record(any()) }
     }
@@ -96,7 +96,7 @@ class SearchViewModelTest {
             viewModel.onSubmit()
 
             assertThat(awaitItem()).isEqualTo(
-                SearchEvent.Navigate(Destination.Browser("https://www.google.com/search?q=arte+documentaire")),
+                SearchEvent.Open("https://www.google.com/search?q=arte+documentaire"),
             )
         }
         coVerifyOrder { recents.record("arte documentaire") }
@@ -111,7 +111,7 @@ class SearchViewModelTest {
             viewModel.onQueryChange("meteo")
             viewModel.onSubmit()
 
-            assertThat(awaitItem()).isInstanceOf(SearchEvent.Navigate::class.java)
+            assertThat(awaitItem()).isInstanceOf(SearchEvent.Open::class.java)
         }
     }
 
@@ -122,7 +122,7 @@ class SearchViewModelTest {
         viewModel.events.test {
             viewModel.onSuggestionSelected(Suggestion.Favorite("https://arte.tv", "Arte"))
 
-            assertThat(awaitItem()).isEqualTo(SearchEvent.Navigate(Destination.Browser("https://arte.tv")))
+            assertThat(awaitItem()).isEqualTo(SearchEvent.Open("https://arte.tv"))
         }
     }
 
@@ -134,7 +134,7 @@ class SearchViewModelTest {
             viewModel.onSuggestionSelected(Suggestion.Recent("arte.tv"))
 
             assertThat(awaitItem()).isEqualTo(
-                SearchEvent.Navigate(Destination.Browser("https://duckduckgo.com/?q=arte.tv")),
+                SearchEvent.Open("https://duckduckgo.com/?q=arte.tv"),
             )
         }
     }
@@ -168,14 +168,14 @@ class SearchViewModelTest {
     }
 
     @Test
-    fun `Given add bookmark mode When the user validates an address Then it is saved and the home is shown`() = runTest {
+    fun `Given add bookmark mode When the user validates an address Then it is saved and the input closes`() = runTest {
         val viewModel = viewModel(SearchMode.AddBookmark)
 
         viewModel.events.test {
             viewModel.onQueryChange("www.wikipedia.org")
             viewModel.onSubmit()
 
-            assertThat(awaitItem()).isEqualTo(SearchEvent.Navigate(Destination.Home))
+            assertThat(awaitItem()).isEqualTo(SearchEvent.Close)
         }
         coVerify { bookmarks.add("https://www.wikipedia.org", "wikipedia.org") }
     }
