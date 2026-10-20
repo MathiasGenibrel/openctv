@@ -29,6 +29,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
@@ -52,17 +58,21 @@ import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.LockedWebViewFactory
+import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.search.domain.SearchRequest
 
 /**
  * Écran de navigation de [viewModel] (portée = la destination, cf. DestinationHost : un ViewModel neuf à
- * chaque ouverture). [toolbar] est l'emplacement de la barre d'outils (ajoutée par une tâche
- * ultérieure) ; la barre de progression s'affiche juste dessous.
+ * chaque ouverture).
  *
- * [addressInput] affiche la saisie d'adresse (fournie par la racine de composition) en surcouche quand
- * [BrowserViewModel.addressInput] est ouverte : la WebView reste vivante dessous, et le focus revient à
- * l'écran quand la saisie se ferme.
+ * Deux modes (cf. [BrowserMode]) : en mode page le D-pad appartient à la WebView ; en mode interface le
+ * focus est dans [BrowserToolbar]. Le ViewModel décide (Haut en haut de page, touche Menu, Bas, Retour) ;
+ * l'écran ne fait que lui transmettre les touches et déplacer le focus en conséquence.
+ *
+ * [addressInput] (saisie d'adresse) et [menu] (contenu du menu, #10) sont des surcouches fournies par la
+ * racine de composition : la WebView reste vivante dessous, et le focus revient à l'élément qui les a
+ * ouvertes quand elles se ferment. [menu] doit piéger le focus (`focusTrap`).
  */
 @Composable
 fun BrowserScreen(
@@ -70,12 +80,15 @@ fun BrowserScreen(
     webViewFactory: LockedWebViewFactory,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    toolbar: @Composable () -> Unit = {},
     addressInput: @Composable (SearchRequest) -> Unit = {},
+    menu: @Composable () -> Unit = {},
 ) {
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
     val addressInputRequest by viewModel.addressInput.collectAsStateWithLifecycle()
     val isAddressInputOpen = addressInputRequest != null
+    val isMenuOpen by viewModel.isMenuOpen.collectAsStateWithLifecycle()
+    val mode by viewModel.mode.collectAsStateWithLifecycle()
+    val toolbarState by viewModel.toolbar.collectAsStateWithLifecycle()
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
@@ -89,6 +102,9 @@ fun BrowserScreen(
             when (command) {
                 is BrowserCommand.Load -> webView.loadUrl(command.url)
                 BrowserCommand.GoBack -> webView.goBack()
+                BrowserCommand.GoForward -> webView.goForward()
+                BrowserCommand.Reload -> webView.reload()
+                BrowserCommand.Stop -> webView.stopLoading()
                 BrowserCommand.Close -> currentOnClose()
             }
         }
@@ -99,34 +115,98 @@ fun BrowserScreen(
     BackHandler(enabled = !isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
     val retryFocus = remember { FocusRequester() }
-    // Saisie refermée : le focus revient à l'écran (#7 : le pointer sur le champ d'adresse de la toolbar).
-    FocusAfterAddressInput(isAddressInputOpen) {
+    val addressFocus = remember { FocusRequester() }
+    val menuFocus = remember { FocusRequester() }
+
+    val focusPage = {
         val isShowingError = viewModel.pageState.value is PageState.Error
         if (isShowingError) retryFocus.requestFocus() else webView.requestFocus()
     }
+    val focusToolbarOr = { toolbarTarget: FocusRequester ->
+        val isInterfaceMode = viewModel.mode.value == BrowserMode.Interface
+        if (isInterfaceMode) toolbarTarget.requestFocus() else focusPage()
+    }
+    // Une surcouche refermée rend le focus à ce qui l'a ouverte (champ d'adresse, bouton Menu) en mode
+    // interface, à la page sinon. Un changement de mode déplace le focus entre la page et la barre.
+    AfterClosed(isAddressInputOpen) { focusToolbarOr(addressFocus) }
+    AfterClosed(isMenuOpen) { focusToolbarOr(menuFocus) }
+    OnChanged(mode) { focusToolbarOr(addressFocus) }
+    // Recréation de l'activité en mode interface : le focus ne doit pas rester sans élément.
+    LaunchedEffect(Unit) { if (viewModel.mode.value == BrowserMode.Interface) addressFocus.requestFocus() }
 
-    Box(modifier.fillMaxSize()) {
+    val isInterfaceMode = mode == BrowserMode.Interface
+    val isLoading = pageState is PageState.Loading
+    val isToolbarShown = isInterfaceMode || isLoading
+    val isHelpShown = isInterfaceMode && !isAddressInputOpen && !isMenuOpen
+    val toolbarActions = remember(viewModel) {
+        ToolbarActions(
+            onBack = viewModel::goBack,
+            onForward = viewModel::goForward,
+            onReloadOrStop = viewModel::onReloadOrStop,
+            onEditAddress = viewModel::openAddressInput,
+            onToggleBookmark = viewModel::toggleBookmark,
+            onMenu = viewModel::openMenu,
+        )
+    }
+
+    Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumes(event, webView) }) {
         BrowserContent(
             pageState = pageState,
             pageView = { PageView(webView, isVisible = pageState !is PageState.Error) },
             onRetry = viewModel::retry,
             onHome = onClose,
             retryFocus = retryFocus,
-            toolbar = toolbar,
+            toolbar = {
+                if (isToolbarShown) {
+                    BrowserToolbar(
+                        state = toolbarState,
+                        actions = toolbarActions,
+                        isInteractive = isInterfaceMode,
+                        addressFocus = addressFocus,
+                        menuFocus = menuFocus,
+                    )
+                }
+            },
         )
+        if (isHelpShown) {
+            OverscanSafeArea {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                    HelpSnackbar(text = stringResource(R.string.browser_interface_help))
+                }
+            }
+        }
+        if (isMenuOpen) menu()
         addressInputRequest?.let { addressInput(it) }
     }
 }
 
-/** Appelle [restoreFocus] à chaque fermeture de la saisie (pas à l'ouverture de l'écran). */
+/** Touches de navigation entre page et interface : le ViewModel décide, `true` = événement consommé. */
+private fun BrowserViewModel.consumes(event: KeyEvent, webView: WebView): Boolean {
+    val isKeyDown = event.type == KeyEventType.KeyDown
+    if (!isKeyDown) return false
+    return when (event.key) {
+        Key.DirectionUp -> onDpadUp(canScrollUp = webView.canScrollVertically(-1))
+        Key.DirectionDown -> onDpadDown()
+        Key.Menu -> onMenuKey()
+        else -> false
+    }
+}
+
+/** Appelle [action] à chaque fermeture d'une surcouche (pas à l'ouverture de l'écran). */
 @Composable
-private fun FocusAfterAddressInput(isAddressInputOpen: Boolean, restoreFocus: () -> Unit) {
-    var wasOpen by remember { mutableStateOf(false) }
-    val currentRestoreFocus by rememberUpdatedState(restoreFocus)
-    LaunchedEffect(isAddressInputOpen) {
-        val isClosing = wasOpen && !isAddressInputOpen
-        wasOpen = isAddressInputOpen
-        if (isClosing) currentRestoreFocus()
+private fun AfterClosed(isOpen: Boolean, action: () -> Unit) {
+    OnChanged(isOpen) { nowOpen -> if (!nowOpen) action() }
+}
+
+/** Appelle [action] à chaque changement de [value], sauf à l'ouverture de l'écran. */
+@Composable
+private fun <T> OnChanged(value: T, action: (T) -> Unit) {
+    var previous by remember { mutableStateOf(value) }
+    val currentAction by rememberUpdatedState(action)
+    LaunchedEffect(value) {
+        val hasChanged = value != previous
+        previous = value
+        if (hasChanged) currentAction(value)
     }
 }
 
