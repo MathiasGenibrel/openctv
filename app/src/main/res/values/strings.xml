@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">OpenCTV</string>
-    <string name="home_placeholder_action">Accueil</string>
+    <string name="home_open_sample">Ouvrir arte.tv</string>
+    <string name="browser_loading">Chargement de %1$s…</string>
+    <string name="browser_error_title">Impossible d\'atteindre %1$s</string>
+    <string name="browser_error_unreachable">Vérifiez la connexion de la TV, puis réessayez.</string>
+    <string name="browser_error_certificate">Le certificat de sécurité de ce site n\'est pas valide : OpenCTV a refusé de charger la page.</string>
+    <string name="browser_error_unknown">La page n\'a pas pu être chargée.</string>
+    <string name="browser_error_retry">Réessayer</string>
+    <string name="browser_error_home">Accueil</string>
 </resources>

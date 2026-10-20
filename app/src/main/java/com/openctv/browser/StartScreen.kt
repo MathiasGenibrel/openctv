@@ -16,16 +16,18 @@ import androidx.tv.material3.Text
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 
+private const val SampleUrl = "https://www.arte.tv"
+
 /** Premier écran minimal : un seul élément, focalisé dès l'ouverture. */
 @Composable
-fun StartScreen(modifier: Modifier = Modifier) {
+fun StartScreen(onOpenUrl: (String) -> Unit, modifier: Modifier = Modifier) {
     val initialFocus = remember { FocusRequester() }
 
     LaunchedEffect(Unit) { initialFocus.requestFocus() }
 
     Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Button(onClick = {}, modifier = Modifier.focusRequester(initialFocus)) {
-            Text(text = stringResource(R.string.home_placeholder_action))
+        Button(onClick = { onOpenUrl(SampleUrl) }, modifier = Modifier.focusRequester(initialFocus)) {
+            Text(text = stringResource(R.string.home_open_sample))
         }
     }
 }
@@ -34,6 +36,6 @@ fun StartScreen(modifier: Modifier = Modifier) {
 @Composable
 private fun StartScreenPreview() {
     OpenCtvTheme {
-        OverscanSafeArea { StartScreen() }
+        OverscanSafeArea { StartScreen(onOpenUrl = {}) }
     }
 }
