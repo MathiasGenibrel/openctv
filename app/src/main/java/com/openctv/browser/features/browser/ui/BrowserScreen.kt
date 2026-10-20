@@ -38,9 +38,6 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
@@ -54,29 +51,19 @@ import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.browser.domain.PageState
-import com.openctv.browser.features.settings.domain.SettingsContract
-import org.koin.mp.KoinPlatform
 
 /**
- * Écran de navigation pour [url]. [toolbar] est l'emplacement de la barre d'outils (ajoutée par une
- * tâche ultérieure) ; la barre de progression s'affiche juste dessous.
+ * Écran de navigation de [viewModel] (portée = la destination, cf. DestinationHost : un ViewModel neuf à
+ * chaque ouverture). [toolbar] est l'emplacement de la barre d'outils (ajoutée par une tâche
+ * ultérieure) ; la barre de progression s'affiche juste dessous.
  */
 @Composable
 fun BrowserScreen(
-    url: String,
+    viewModel: BrowserViewModel,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
     toolbar: @Composable () -> Unit = {},
 ) {
-    // Portée = la destination (cf. DestinationHost) : un ViewModel neuf à chaque ouverture.
-    val viewModel: BrowserViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer {
-                val settings = KoinPlatform.getKoin().get<SettingsContract>()
-                BrowserViewModel(url, onPageVisited = settings::recordLastPage)
-            }
-        },
-    )
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.

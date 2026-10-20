@@ -11,6 +11,7 @@ import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.StartPage
+import com.openctv.browser.features.settings.domain.orDefaults
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -48,7 +49,7 @@ class SettingsViewModel(
         feedback,
     ) { storedSettings, storedBookmarks, panel, feedback ->
         SettingsUiState(
-            settings = (storedSettings as? Resource.Success)?.data ?: Settings(),
+            settings = storedSettings.orDefaults(),
             bookmarks = (storedBookmarks as? Resource.Success)?.data.orEmpty(),
             openPanel = panel,
             isSaveFailed = feedback.isSaveFailed,

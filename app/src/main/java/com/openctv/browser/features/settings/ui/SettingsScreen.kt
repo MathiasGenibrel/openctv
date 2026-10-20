@@ -39,9 +39,6 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.initializer
-import androidx.lifecycle.viewmodel.viewModelFactory
 import androidx.tv.material3.ClickableSurfaceDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
@@ -57,27 +54,16 @@ import com.openctv.browser.core.designsystem.SidePanel
 import com.openctv.browser.core.designsystem.focusRing
 import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.features.bookmarks.domain.Bookmark
-import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
-import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.StartPage
 import java.time.Instant
-import org.koin.mp.KoinPlatform
 
 /** Écran Réglages. Retour ferme le sous-panneau ouvert, puis appelle [onClose] (accueil). */
 @Composable
-fun SettingsScreen(onClose: () -> Unit, modifier: Modifier = Modifier) {
-    val viewModel: SettingsViewModel = viewModel(
-        factory = viewModelFactory {
-            initializer {
-                val koin = KoinPlatform.getKoin()
-                SettingsViewModel(koin.get<SettingsContract>(), koin.get<BookmarksContract>())
-            }
-        },
-    )
+fun SettingsScreen(viewModel: SettingsViewModel, onClose: () -> Unit, modifier: Modifier = Modifier) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
     BackHandler { if (!viewModel.onBack()) onClose() }

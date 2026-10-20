@@ -36,7 +36,10 @@ class HomeViewModelTest {
 
     private val bookmarks = mockk<BookmarksContract>()
     private val storedSettings = MutableStateFlow<Resource<Settings>>(Resource.Success(Settings()))
-    private val settings = mockk<SettingsContract> { every { settings } returns storedSettings }
+    private val settings = mockk<SettingsContract> {
+        every { settings } returns storedSettings
+        every { current } answers { callOriginal() }
+    }
     private val clock = MutableClock()
 
     @Before

@@ -9,6 +9,7 @@ import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.StartPage
+import com.openctv.browser.features.settings.domain.orDefaults
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
@@ -36,7 +37,7 @@ class SettingsImpl(
 
     override suspend fun launchUrl(): String? {
         val loaded = settings.first { it !is Resource.Loading }
-        return (loaded as? Resource.Success)?.data?.launchUrl()
+        return loaded.orDefaults().launchUrl()
     }
 
     override suspend fun setSearchEngine(engine: SearchEngine) = write { it.copy(searchEngine = engine) }

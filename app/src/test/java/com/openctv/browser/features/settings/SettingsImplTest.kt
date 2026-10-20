@@ -70,6 +70,25 @@ class SettingsImplTest {
     }
 
     @Test
+    fun `Given the settings are still being read When a consumer reads the current settings Then the defaults apply`() = runTest {
+        val repository = impl(FakeSettingsStore(Settings(isAdBlockEnabled = false)))
+
+        assertThat(repository.settings.value).isEqualTo(Resource.Loading)
+        assertThat(repository.current).isEqualTo(Settings())
+    }
+
+    @Test
+    fun `Given the ad blocker turned off When a request is intercepted Then the current settings say it is off without suspending`() = runTest {
+        val repository = impl(FakeSettingsStore())
+        runCurrent()
+
+        repository.setAdBlockEnabled(false)
+        runCurrent()
+
+        assertThat(repository.current.isAdBlockEnabled).isFalse()
+    }
+
+    @Test
     fun `Given a web page finished loading When the browser records it Then resume last page can reopen it`() = runTest {
         val store = FakeSettingsStore(Settings(startPage = StartPage.LastPage))
         val repository = impl(store)

@@ -9,9 +9,8 @@ import com.openctv.browser.features.home.domain.BackPressOutcome
 import com.openctv.browser.features.home.domain.DoubleBackPress
 import com.openctv.browser.features.home.domain.HomeFavorite
 import com.openctv.browser.features.home.domain.toHomeFavorite
-import com.openctv.browser.features.settings.domain.SearchEngine
-import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.SettingsContract
+import com.openctv.browser.features.settings.domain.orDefaults
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -50,8 +49,8 @@ class HomeViewModel(
 
     /** Nom du moteur de recherche choisi dans les réglages, affiché dans la barre de recherche. */
     val searchEngineName: StateFlow<String> = settings.settings
-        .map(::searchEngineNameOf)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), searchEngineNameOf(settings.settings.value))
+        .map { it.orDefaults().searchEngine.displayName }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), settings.current.searchEngine.displayName)
 
     private val _isExitHintVisible = MutableStateFlow(false)
 
@@ -80,11 +79,6 @@ class HomeViewModel(
             delay(doubleBackPress.window.toMillis())
             _isExitHintVisible.value = false
         }
-    }
-
-    private fun searchEngineNameOf(settings: Resource<Settings>): String {
-        val engine = (settings as? Resource.Success)?.data?.searchEngine ?: SearchEngine.Default
-        return engine.displayName
     }
 
     private companion object {

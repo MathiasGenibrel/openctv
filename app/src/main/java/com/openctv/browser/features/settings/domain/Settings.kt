@@ -1,5 +1,7 @@
 package com.openctv.browser.features.settings.domain
 
+import com.openctv.browser.core.common.Resource
+
 /** Préférences de l'utilisateur, stockées uniquement sur la TV. Les valeurs par défaut sont celles du premier lancement. */
 data class Settings(
     val searchEngine: SearchEngine = SearchEngine.Default,
@@ -21,3 +23,9 @@ data class Settings(
         is StartPage.Site -> startPage.url
     }
 }
+
+/**
+ * Réglages à appliquer : la valeur lue, ou les défauts tant qu'elle ne l'est pas (lecture en cours,
+ * stockage illisible). Un consommateur n'a ainsi jamais à traiter `Loading`/`Error` lui-même.
+ */
+fun Resource<Settings>.orDefaults(): Settings = (this as? Resource.Success)?.data ?: Settings()

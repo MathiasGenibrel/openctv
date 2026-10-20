@@ -13,6 +13,12 @@ import kotlinx.coroutines.flow.StateFlow
 interface SettingsContract {
     val settings: StateFlow<Resource<Settings>>
 
+    /**
+     * Réglages courants (défauts tant que la lecture n'a pas abouti) : lecture synchrone, sans I/O ni
+     * suspension, sûre depuis n'importe quel thread — utilisable dans `shouldInterceptRequest`.
+     */
+    val current: Settings get() = settings.value.orDefaults()
+
     /** URL à ouvrir au lancement, `null` = accueil (y compris si le stockage est illisible). Attend la lecture. */
     suspend fun launchUrl(): String?
 
