@@ -8,14 +8,23 @@ import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.WebNavigationPolicy
 import com.openctv.browser.core.webview.WebPageListener
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
+import com.openctv.browser.features.browser.domain.BackAction
+import com.openctv.browser.features.browser.domain.BrowserHud
+import com.openctv.browser.features.browser.domain.BrowserLayers
 import com.openctv.browser.features.browser.domain.BrowserMode
+import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.ToolbarState
+import com.openctv.browser.features.browser.domain.backAction
+import com.openctv.browser.features.browser.domain.browserHudOf
 import com.openctv.browser.features.browser.domain.siteLabelOf
 import com.openctv.browser.features.browser.domain.toolbarStateOf
 import com.openctv.browser.features.search.domain.SearchMode
 import com.openctv.browser.features.search.domain.SearchRequest
+import kotlin.time.Duration.Companion.seconds
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -27,6 +36,7 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Ordre adressé à la vue, qui l'exécute sur sa WebView (la vue exécute, le ViewModel décide). */
@@ -61,15 +71,26 @@ class BrowserViewModel(
     private val _commands = Channel<BrowserCommand>(Channel.BUFFERED)
     val commands: Flow<BrowserCommand> = _commands.receiveAsFlow()
 
-    private val _mode = MutableStateFlow(BrowserMode.Page)
+    private val _layers = MutableStateFlow(BrowserLayers())
 
-    /** Où va le D-pad : dans la page ou dans la barre d'outils. */
-    val mode: StateFlow<BrowserMode> = _mode.asStateFlow()
+    /**
+     * Couches au-dessus de la page (saisie, menu, mode interface) : qui reçoit le D-pad et Retour. La page,
+     * sa WebView et son historique restent vivants dessous : fermer une couche ne recharge rien.
+     */
+    val layers: StateFlow<BrowserLayers> = _layers.asStateFlow()
 
-    private val _isMenuOpen = MutableStateFlow(false)
+    /** Barre d'outils et aide affichées par-dessus la page. */
+    val hud: StateFlow<BrowserHud> = combine(_layers, _pageState, ::browserHudOf).stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
+        browserHudOf(_layers.value, _pageState.value),
+    )
 
-    /** Menu ouvert en surcouche (contenu : #10). La page reste vivante dessous. */
-    val isMenuOpen: StateFlow<Boolean> = _isMenuOpen.asStateFlow()
+    private val _notice = MutableStateFlow<BrowserNotice?>(null)
+    private var noticeJob: Job? = null
+
+    /** Message bref (échec d'un favori…), effacé seul après [NOTICE_DURATION]. `null` = aucun. */
+    val notice: StateFlow<BrowserNotice?> = _notice.asStateFlow()
 
     private val isBookmarked: StateFlow<Boolean> = _pageUrl
         .flatMapLatest { bookmarks.isBookmarked(it) }
@@ -85,14 +106,6 @@ class BrowserViewModel(
         toolbarStateOf(_pageState.value, initialUrl, false, false, false),
     )
 
-    private val _addressInput = MutableStateFlow<SearchRequest?>(null)
-
-    /**
-     * Saisie d'adresse ouverte en surcouche de la page (`null` = fermée). La page, sa WebView et son
-     * historique restent vivants dessous : fermer la saisie ne recharge rien.
-     */
-    val addressInput: StateFlow<SearchRequest?> = _addressInput.asStateFlow()
-
     /**
      * Une WebView vierge vient d'être créée (ouverture de l'écran, ou recréation de l'activité alors
      * que ce ViewModel survit) : elle charge la page courante.
@@ -101,31 +114,25 @@ class BrowserViewModel(
 
     fun retry() = load(_pageUrl.value)
 
-    /**
-     * Retour, dans l'ordre : fermer la saisie, fermer le menu, quitter le mode interface, reculer dans
-     * l'historique de la page, revenir à l'accueil. Jamais de sortie de l'application depuis ici.
-     */
+    /** Retour retire la couche la plus haute, puis recule dans l'historique, puis revient à l'accueil ([backAction]). */
     fun onBack(canGoBack: Boolean) {
-        val isAddressInputOpen = _addressInput.value != null
-        val isMenuOpen = _isMenuOpen.value
-        val isInterfaceMode = _mode.value == BrowserMode.Interface
-        when {
-            isAddressInputOpen -> closeAddressInput()
-            isMenuOpen -> closeMenu()
-            isInterfaceMode -> exitInterfaceMode()
-            canGoBack -> _commands.trySend(BrowserCommand.GoBack)
-            else -> _commands.trySend(BrowserCommand.Close)
+        when (_layers.value.backAction(canGoBack)) {
+            BackAction.CloseAddressInput -> closeAddressInput()
+            BackAction.CloseMenu -> closeMenu()
+            BackAction.ExitInterface -> exitInterfaceMode()
+            BackAction.GoBackInHistory -> _commands.trySend(BrowserCommand.GoBack)
+            BackAction.LeaveBrowser -> _commands.trySend(BrowserCommand.Close)
         }
     }
 
     /** Le D-pad pilote désormais la barre d'outils (aussi appelé par « maintenir Haut », #8). */
     fun enterInterfaceMode() {
-        _mode.value = BrowserMode.Interface
+        _layers.update { it.copy(mode = BrowserMode.Interface) }
     }
 
     /** Le D-pad pilote de nouveau la page. */
     fun exitInterfaceMode() {
-        _mode.value = BrowserMode.Page
+        _layers.update { it.copy(mode = BrowserMode.Page) }
     }
 
     /**
@@ -133,34 +140,35 @@ class BrowserViewModel(
      * ouvre le mode interface. Renvoie `true` si l'événement est consommé (sinon la page le reçoit).
      */
     fun onDpadUp(canScrollUp: Boolean): Boolean {
-        val isPageMode = _mode.value == BrowserMode.Page
+        val layers = _layers.value
+        val isPageMode = !layers.isInterfaceMode
         val isAtTopOfPage = !canScrollUp
-        val shouldEnterInterface = isPageMode && isAtTopOfPage && !isOverlayOpen()
+        val shouldEnterInterface = isPageMode && isAtTopOfPage && !layers.isOverlayOpen
         if (shouldEnterInterface) enterInterfaceMode()
         return shouldEnterInterface
     }
 
     /** Flèche Bas dans la barre d'outils : retour à la page. Renvoie `true` si consommé. */
     fun onDpadDown(): Boolean {
-        val isInterfaceMode = _mode.value == BrowserMode.Interface
-        val shouldReturnToPage = isInterfaceMode && !isOverlayOpen()
+        val layers = _layers.value
+        val shouldReturnToPage = layers.isInterfaceMode && !layers.isOverlayOpen
         if (shouldReturnToPage) exitInterfaceMode()
         return shouldReturnToPage
     }
 
     /** Touche Menu de la télécommande : ouvre le mode interface. Renvoie `true` si consommé. */
     fun onMenuKey(): Boolean {
-        if (isOverlayOpen()) return false
+        if (_layers.value.isOverlayOpen) return false
         enterInterfaceMode()
         return true
     }
 
     fun openMenu() {
-        _isMenuOpen.value = true
+        _layers.update { it.copy(isMenuOpen = true) }
     }
 
     fun closeMenu() {
-        _isMenuOpen.value = false
+        _layers.update { it.copy(isMenuOpen = false) }
     }
 
     fun goBack() {
@@ -188,32 +196,43 @@ class BrowserViewModel(
         }
     }
 
-    /** Favori : retire la page courante si elle l'est déjà, sinon l'ajoute (titre = domaine). */
+    /**
+     * Favori : retire la page courante si elle l'est déjà, sinon l'ajoute (titre = domaine). Un échec du
+     * stockage est signalé par [BrowserNotice.BookmarkFailed] ; l'étoile reste sur l'état réel.
+     */
     fun toggleBookmark() {
         val url = _pageUrl.value
         viewModelScope.launch {
             val current = bookmarks.isBookmarked(url).first { it !is Resource.Loading }
             val isAlreadyBookmarked = current is Resource.Success && current.data
-            if (isAlreadyBookmarked) bookmarks.remove(url) else bookmarks.add(url, siteLabelOf(url))
+            val result = if (isAlreadyBookmarked) bookmarks.remove(url) else bookmarks.add(url, siteLabelOf(url))
+            if (result is Resource.Error) showNotice(BrowserNotice.BookmarkFailed)
         }
     }
 
-    private fun isOverlayOpen(): Boolean = _addressInput.value != null || _isMenuOpen.value
+    private fun showNotice(notice: BrowserNotice) {
+        noticeJob?.cancel()
+        noticeJob = viewModelScope.launch {
+            _notice.value = notice
+            delay(NOTICE_DURATION)
+            _notice.value = null
+        }
+    }
 
     /** Ouvre la saisie par-dessus la page, pré-remplie avec son adresse (OK sur le champ d'adresse, #7). */
     fun openAddressInput() {
-        _addressInput.value = SearchRequest(SearchMode.Browse, initialText = _pageUrl.value)
+        val request = SearchRequest(SearchMode.Browse, initialText = _pageUrl.value)
+        _layers.update { it.copy(addressInput = request) }
     }
 
-    /** Ferme la saisie sans rien charger : la page est intacte, l'écran rend le focus (cf. BrowserScreen). */
+    /** Ferme la saisie sans rien charger : la page est intacte, l'écran rend le focus (cf. BrowserFocus). */
     fun closeAddressInput() {
-        _addressInput.value = null
+        _layers.update { it.copy(addressInput = null) }
     }
 
     /** Adresse ou recherche validée dans la saisie : chargée dans la même WebView (historique conservé). */
     fun onAddressChosen(url: String) {
-        closeAddressInput()
-        exitInterfaceMode()
+        _layers.update { it.copy(addressInput = null, mode = BrowserMode.Page) }
         load(url)
     }
 
@@ -270,7 +289,8 @@ class BrowserViewModel(
         return if (isAllowed) PageState.Loading(site, progress = 0f) else PageState.Error(site, LoadErrorCause.Unknown)
     }
 
-    private companion object {
-        const val STOP_TIMEOUT_MS = 5_000L
+    companion object {
+        private const val STOP_TIMEOUT_MS = 5_000L
+        val NOTICE_DURATION = 4.seconds
     }
 }

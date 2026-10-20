@@ -5,6 +5,7 @@ import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.features.browser.domain.BrowserMode
+import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.ReloadAction
 import com.openctv.browser.features.browser.domain.siteLabelOf
@@ -15,6 +16,8 @@ import com.openctv.browser.features.search.domain.SearchRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -214,7 +217,7 @@ class BrowserViewModelTest {
 
         viewModel.openAddressInput()
 
-        assertThat(viewModel.addressInput.value)
+        assertThat(viewModel.layers.value.addressInput)
             .isEqualTo(SearchRequest(SearchMode.Browse, initialText = "https://www.arte.tv/fr/videos/"))
     }
 
@@ -227,7 +230,7 @@ class BrowserViewModelTest {
             viewModel.commands.test {
                 viewModel.onBack(canGoBack = true)
 
-                assertThat(viewModel.addressInput.value).isNull()
+                assertThat(viewModel.layers.value.addressInput).isNull()
                 assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("arte.tv"))
                 expectNoEvents()
             }
@@ -256,7 +259,7 @@ class BrowserViewModelTest {
             viewModel.commands.test {
                 viewModel.onAddressChosen("https://example.org")
 
-                assertThat(viewModel.addressInput.value).isNull()
+                assertThat(viewModel.layers.value.addressInput).isNull()
                 assertThat(awaitItem()).isEqualTo(BrowserCommand.Load("https://example.org"))
                 expectNoEvents()
             }
@@ -273,8 +276,8 @@ class BrowserViewModelTest {
         viewModel.commands.test {
             viewModel.onBack(canGoBack = true)
 
-            assertThat(viewModel.isMenuOpen.value).isFalse()
-            assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Interface)
+            assertThat(viewModel.layers.value.isMenuOpen).isFalse()
+            assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Interface)
             expectNoEvents()
         }
     }
@@ -288,7 +291,7 @@ class BrowserViewModelTest {
             viewModel.commands.test {
                 viewModel.onBack(canGoBack = true)
 
-                assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Page)
+                assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Page)
                 expectNoEvents()
             }
         }
@@ -300,11 +303,11 @@ class BrowserViewModelTest {
         viewModel.openAddressInput()
 
         viewModel.onBack(canGoBack = true)
-        assertThat(viewModel.addressInput.value).isNull()
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Interface)
+        assertThat(viewModel.layers.value.addressInput).isNull()
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Interface)
 
         viewModel.onBack(canGoBack = true)
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Page)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Page)
     }
 
     @Test
@@ -327,7 +330,7 @@ class BrowserViewModelTest {
         val isConsumed = viewModel.onDpadUp(canScrollUp = false)
 
         assertThat(isConsumed).isTrue()
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Interface)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Interface)
     }
 
     @Test
@@ -337,7 +340,7 @@ class BrowserViewModelTest {
         val isConsumed = viewModel.onDpadUp(canScrollUp = true)
 
         assertThat(isConsumed).isFalse()
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Page)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Page)
     }
 
     @Test
@@ -348,7 +351,7 @@ class BrowserViewModelTest {
         val isConsumed = viewModel.onDpadDown()
 
         assertThat(isConsumed).isTrue()
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Page)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Page)
     }
 
     @Test
@@ -358,7 +361,7 @@ class BrowserViewModelTest {
         viewModel.openAddressInput()
 
         assertThat(viewModel.onDpadDown()).isFalse()
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Interface)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Interface)
     }
 
     @Test
@@ -366,7 +369,7 @@ class BrowserViewModelTest {
         val viewModel = pageOnScreen()
 
         assertThat(viewModel.onMenuKey()).isTrue()
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Interface)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Interface)
     }
 
     @Test
@@ -377,7 +380,7 @@ class BrowserViewModelTest {
 
         viewModel.onAddressChosen("https://example.org")
 
-        assertThat(viewModel.mode.value).isEqualTo(BrowserMode.Page)
+        assertThat(viewModel.layers.value.mode).isEqualTo(BrowserMode.Page)
     }
 
     // --- Barre d'outils ---
@@ -516,9 +519,26 @@ class BrowserViewModelTest {
         val viewModel = pageOnScreen()
 
         viewModel.openMenu()
-        assertThat(viewModel.isMenuOpen.value).isTrue()
+        assertThat(viewModel.layers.value.isMenuOpen).isTrue()
 
         viewModel.closeMenu()
-        assertThat(viewModel.isMenuOpen.value).isFalse()
+        assertThat(viewModel.layers.value.isMenuOpen).isFalse()
     }
+
+    @Test
+    fun `Given the storage fails When the user toggles the favorite Then a brief notice explains it and the star stays empty`() =
+        runTest {
+            bookmarks.failure = "disk full"
+            val viewModel = pageOnScreen()
+
+            viewModel.toolbar.test {
+                viewModel.toggleBookmark()
+
+                assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.BookmarkFailed)
+                assertThat(expectMostRecentItem().isBookmarked).isFalse()
+            }
+            advanceTimeBy(BrowserViewModel.NOTICE_DURATION)
+            runCurrent()
+            assertThat(viewModel.notice.value).isNull()
+        }
 }

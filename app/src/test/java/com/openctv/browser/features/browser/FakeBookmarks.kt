@@ -15,6 +15,9 @@ class FakeBookmarks : BookmarksContract {
 
     val urls: Set<String> get() = stored.value.keys
 
+    /** Non nul : ajouts et retraits échouent avec ce message, comme un stockage indisponible. */
+    var failure: String? = null
+
     fun seed(url: String) {
         stored.value += BookmarkUrl.normalize(url) to url
     }
@@ -26,11 +29,13 @@ class FakeBookmarks : BookmarksContract {
         stored.map { Resource.Success(BookmarkUrl.normalize(url) in it) }
 
     override suspend fun add(url: String, title: String): Resource<Unit> {
+        failure?.let { return Resource.Error(it) }
         stored.value += BookmarkUrl.normalize(url) to title
         return Resource.Success(Unit)
     }
 
     override suspend fun remove(url: String): Resource<Unit> {
+        failure?.let { return Resource.Error(it) }
         stored.value -= BookmarkUrl.normalize(url)
         return Resource.Success(Unit)
     }

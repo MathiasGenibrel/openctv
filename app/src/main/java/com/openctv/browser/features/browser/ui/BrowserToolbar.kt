@@ -67,6 +67,8 @@ fun BrowserToolbar(
             .shadow(elevation = 6.dp, shape = OpenCtvShapes.Full)
             .background(OpenCtvColors.PrimaryContainer, OpenCtvShapes.Full)
             .padding(horizontal = 12.dp, vertical = 8.dp)
+            // Pas de focusTarget sur la Row : chaque bouton remonte ses ancêtres jusqu'au premier focusTarget
+            // et hérite de ce canFocus (le plus externe l'emporte). Ne pas ajouter de focusGroup ici.
             .focusProperties { canFocus = isInteractive },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),

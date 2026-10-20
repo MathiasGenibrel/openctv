@@ -29,6 +29,7 @@
     <string name="browser_toolbar_bookmark_add">Ajouter aux favoris</string>
     <string name="browser_toolbar_bookmark_remove">Retirer des favoris</string>
     <string name="browser_toolbar_menu">Menu</string>
+    <string name="browser_notice_bookmark_failed">Le favori n\'a pas pu être enregistré.</string>
     <string name="browser_interface_help">Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page</string>
     <string name="settings_title">Réglages</string>
     <string name="settings_back">Retour</string>

@@ -34,7 +34,8 @@ mémoriser l'élément focalisé et le restaurer au retour (`HomeFocus`).
 ## Surcouches
 Un écran qui doit rester vivant sous un autre (la page web sous la saisie d'adresse : WebView,
 historique, défilement) ne change pas de destination : il affiche une **surcouche**. Son ViewModel en
-expose l'état (`BrowserViewModel.addressInput`, `HomeViewModel.searchInput`) ; l'écran reçoit le
+expose l'état (`BrowserViewModel.layers` — pile `BrowserLayers` dont la couche la plus haute décide de
+Retour via `backAction` —, `HomeViewModel.searchInput`) ; l'écran reçoit le
 contenu de la surcouche en slot depuis `MainActivity` (aucune feature n'importe l'`ui/` d'une autre), la
 place dans une portée `ScopedViewModels`, la rend modale (`Modifier.focusTrap()`) et rend le focus à
 l'élément d'origine à sa fermeture.
