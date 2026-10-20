@@ -4,9 +4,9 @@ import androidx.room.Room
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
+/** Fournit la base. Chaque feature expose elle-même son DAO dans son module DI. */
 val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), OpenCtvDatabase::class.java, "openctv.db").build()
     }
-    single { get<OpenCtvDatabase>().bookmarkDao() }
 }

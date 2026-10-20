@@ -48,6 +48,23 @@ class BookmarksImplTest {
     }
 
     @Test
+    fun `Given the home screen observes bookmarks When a site is added then removed Then the list is re-emitted each time without a new Loading`() =
+        runTest {
+            val arte = BookmarkEntity("https://arte.tv", "Arte", now)
+            every { dao.observeAll() } returns flowOf(emptyList(), listOf(arte), emptyList())
+
+            repository().getBookmarks().test {
+                assertThat(awaitItem()).isEqualTo(Resource.Loading)
+                assertThat(awaitItem()).isEqualTo(Resource.Success(emptyList<Bookmark>()))
+                assertThat(awaitItem()).isEqualTo(
+                    Resource.Success(listOf(Bookmark("https://arte.tv", "Arte", now))),
+                )
+                assertThat(awaitItem()).isEqualTo(Resource.Success(emptyList<Bookmark>()))
+                awaitComplete()
+            }
+        }
+
+    @Test
     fun `Given arte tv already bookmarked When the user adds it again with another spelling Then the same key is inserted so no duplicate exists`() =
         runTest {
             coEvery { dao.insert(any()) } returns Unit

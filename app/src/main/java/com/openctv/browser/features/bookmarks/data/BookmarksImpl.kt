@@ -3,6 +3,7 @@ package com.openctv.browser.features.bookmarks.data
 import com.openctv.browser.core.common.DispatcherProvider
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.features.bookmarks.domain.Bookmark
+import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.bookmarks.domain.BookmarkUrl
 import java.time.Clock
 import java.time.Instant
