@@ -6,7 +6,17 @@ import com.openctv.browser.core.webview.LoadErrorCause
 sealed interface PageState {
     val site: String
 
-    data class Loading(override val site: String, val progress: Float) : PageState
+    /**
+     * [isPageShown] : une page est déjà affichée derrière ce chargement (lien suivi dans la page) ;
+     * seule la barre de progression le signale. Sinon (premier chargement, après une erreur), un
+     * indicateur plein écran masque la WebView vierge.
+     */
+    data class Loading(
+        override val site: String,
+        val progress: Float,
+        val isPageShown: Boolean = false,
+    ) : PageState
+
     data class Loaded(override val site: String) : PageState
     data class Error(override val site: String, val cause: LoadErrorCause) : PageState
 }

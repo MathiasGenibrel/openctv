@@ -11,7 +11,7 @@ sealed interface Destination {
     data class Browser(val url: String) : Destination
 
     companion object {
-        /** `null` = accueil, sinon l'URL du navigateur. */
+        /** Chaîne vide = accueil, sinon l'URL du navigateur. */
         val Saver: Saver<Destination, String> = Saver(
             save = { (it as? Browser)?.url ?: "" },
             restore = { if (it.isEmpty()) Home else Browser(it) },

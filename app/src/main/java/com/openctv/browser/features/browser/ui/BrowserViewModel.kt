@@ -14,28 +14,46 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.receiveAsFlow
 
-/** Ordre adressé à la WebView (la vue exécute, le ViewModel décide). */
+/** Ordre adressé à la vue, qui l'exécute sur sa WebView (la vue exécute, le ViewModel décide). */
 sealed interface BrowserCommand {
     data class Load(val url: String) : BrowserCommand
+    data object GoBack : BrowserCommand
+
+    /** Quitter l'écran de navigation (retour à l'accueil). */
+    data object Close : BrowserCommand
 }
 
 class BrowserViewModel(initialUrl: String) : ViewModel(), WebPageListener {
     private var currentUrl: String = initialUrl
 
-    private val _pageState = MutableStateFlow<PageState>(initialState(initialUrl))
+    private val _pageState = MutableStateFlow(freshStateFor(initialUrl))
     val pageState: StateFlow<PageState> = _pageState.asStateFlow()
 
     private val _commands = Channel<BrowserCommand>(Channel.BUFFERED)
     val commands: Flow<BrowserCommand> = _commands.receiveAsFlow()
 
-    init {
-        val isInitialUrlAllowed = WebNavigationPolicy.isUrlAllowed(initialUrl)
-        if (isInitialUrlAllowed) _commands.trySend(BrowserCommand.Load(initialUrl))
+    /**
+     * Une WebView vierge vient d'être créée (ouverture de l'écran, ou recréation de l'activité alors
+     * que ce ViewModel survit) : elle charge la page courante.
+     */
+    fun onWebViewReady() = load(currentUrl)
+
+    fun retry() = load(currentUrl)
+
+    /** Retour : reculer dans l'historique de la page, sinon revenir à l'accueil. */
+    fun onBack(canGoBack: Boolean) {
+        val command = if (canGoBack) BrowserCommand.GoBack else BrowserCommand.Close
+        _commands.trySend(command)
     }
 
     override fun onPageStarted(url: String) {
         currentUrl = url
-        _pageState.value = PageState.Loading(siteLabelOf(url), progress = 0f)
+        val isPageShown = when (val state = _pageState.value) {
+            is PageState.Loaded -> true
+            is PageState.Loading -> state.isPageShown
+            is PageState.Error -> false
+        }
+        _pageState.value = PageState.Loading(siteLabelOf(url), progress = 0f, isPageShown = isPageShown)
     }
 
     override fun onProgressChanged(progress: Int) {
@@ -57,12 +75,15 @@ class BrowserViewModel(initialUrl: String) : ViewModel(), WebPageListener {
         _pageState.value = PageState.Error(siteLabelOf(failedUrl), error.cause)
     }
 
-    fun retry() {
-        _pageState.value = PageState.Loading(siteLabelOf(currentUrl), progress = 0f)
-        _commands.trySend(BrowserCommand.Load(currentUrl))
+    /** Seul chemin vers `loadUrl` : `loadUrl` contourne `shouldOverrideUrlLoading`, la politique est appliquée ici. */
+    private fun load(url: String) {
+        val state = freshStateFor(url)
+        _pageState.value = state
+        val isAllowed = state is PageState.Loading
+        if (isAllowed) _commands.trySend(BrowserCommand.Load(url))
     }
 
-    private fun initialState(url: String): PageState {
+    private fun freshStateFor(url: String): PageState {
         val site = siteLabelOf(url)
         val isAllowed = WebNavigationPolicy.isUrlAllowed(url)
         return if (isAllowed) PageState.Loading(site, progress = 0f) else PageState.Error(site, LoadErrorCause.Unknown)

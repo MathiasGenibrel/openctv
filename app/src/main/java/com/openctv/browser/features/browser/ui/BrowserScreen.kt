@@ -23,6 +23,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -67,8 +68,8 @@ fun BrowserScreen(
     modifier: Modifier = Modifier,
     toolbar: @Composable () -> Unit = {},
 ) {
+    // Portée = la destination (cf. DestinationHost) : un ViewModel neuf à chaque ouverture.
     val viewModel: BrowserViewModel = viewModel(
-        key = url,
         factory = viewModelFactory { initializer { BrowserViewModel(url) } },
     )
     val pageState by viewModel.pageState.collectAsStateWithLifecycle()
@@ -78,18 +79,20 @@ fun BrowserScreen(
     val webView = remember { LockedWebViewFactory().create(context, viewModel) }
     WebViewLifecycle(webView)
 
+    val currentOnClose by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel, webView) {
+        viewModel.onWebViewReady()
         viewModel.commands.collect { command ->
             when (command) {
                 is BrowserCommand.Load -> webView.loadUrl(command.url)
+                BrowserCommand.GoBack -> webView.goBack()
+                BrowserCommand.Close -> currentOnClose()
             }
         }
     }
 
-    // Sémantique minimale ; la tâche de la barre d'outils la complète (menu, plein écran…).
-    BackHandler {
-        if (webView.canGoBack()) webView.goBack() else onClose()
-    }
+    // La décision revient au ViewModel ; la vue ne fournit que l'état d'historique de sa WebView.
+    BackHandler { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
     BrowserContent(
         pageState = pageState,
@@ -144,7 +147,7 @@ private fun BrowserContent(
     Box(modifier = modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
         pageView()
         when (pageState) {
-            is PageState.Loading -> LoadingContent(pageState.site)
+            is PageState.Loading -> if (!pageState.isPageShown) LoadingContent(pageState.site)
             is PageState.Error -> ErrorContent(pageState, onRetry, onHome)
             is PageState.Loaded -> Unit
         }

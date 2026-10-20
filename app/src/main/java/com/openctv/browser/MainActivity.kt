@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.navigation.Destination
+import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.features.browser.ui.BrowserScreen
 
 class MainActivity : ComponentActivity() {
@@ -21,14 +22,16 @@ class MainActivity : ComponentActivity() {
                 var destination: Destination by rememberSaveable(stateSaver = Destination.Saver) {
                     mutableStateOf(Destination.Home)
                 }
-                when (val current = destination) {
-                    Destination.Home -> OverscanSafeArea {
-                        StartScreen(onOpenUrl = { destination = Destination.Browser(it) })
+                DestinationHost(destination) { current ->
+                    when (current) {
+                        Destination.Home -> OverscanSafeArea {
+                            StartScreen(onOpenUrl = { destination = Destination.Browser(it) })
+                        }
+                        is Destination.Browser -> BrowserScreen(
+                            url = current.url,
+                            onClose = { destination = Destination.Home },
+                        )
                     }
-                    is Destination.Browser -> BrowserScreen(
-                        url = current.url,
-                        onClose = { destination = Destination.Home },
-                    )
                 }
             }
         }
