@@ -25,7 +25,7 @@ câblés dans un module Koin.
 
 ## Découpage prévu pour OpenCTV
 
-Projet greenfield : cette carte est la cible, à créer au fil des tâches. Le brief produit
+Cette carte est la cible, créée au fil des tâches (déjà en place : `core/common`, `core/di`, `core/designsystem`). Le brief produit
 (`.claude/docs/product.md`) donne le pourquoi de chaque brique.
 
 | Emplacement | Contenu |

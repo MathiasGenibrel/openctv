@@ -39,7 +39,10 @@ Conséquences à garder en tête :
 | Fonctionnalité | Ce qui est attendu |
 |---|---|
 | **Accueil** | Écran soigné, lisible à 3 m : favoris en grille, champ de recherche, accès rapide. C'est la vitrine du projet. |
-| **Barre d'adresse / recherche** | Saisie au clavier TV (IME système), détection URL vs recherche, moteur de recherche configurable (défaut sans tracking, ex. DuckDuckGo). |
+| **Barre d'adresse / recherche** | Saisie au clavier TV (IME système), détection URL vs recherche, moteur de recherche configurable parmi : **DuckDuckGo (défaut)**, Google, Bing, Qwant, Ecosia, Brave Search. **Suggestions locales uniquement** : favoris + recherches récentes stockées sur la TV ; aucune frappe n'est envoyée au réseau. |
+| **Page de démarrage** | Configurable : **Écran d'accueil OpenCTV** (défaut) / Reprendre la dernière page / Un site précis. |
+| **Écran Réglages** | Ouvert depuis l'engrenage de l'accueil : page de démarrage, moteur de recherche, masquage automatique de l'interface. Entièrement utilisable au D-pad. |
+| **Masquage auto du HUD** | L'interface (barre d'adresse, menus) se masque après 3 / 5 / 10 s ou Jamais (**5 s par défaut**). Le premier appui sur la télécommande ne fait que réafficher le HUD, sans déclencher d'action. |
 | **Favoris** | Ajouter / retirer / ouvrir, persistés localement. |
 | **Curseur virtuel** | Pointeur à l'écran déplacé par le D-pad, OK = clic, défilement quand le pointeur touche un bord. **C'est le cœur du produit** (voir enjeux). |
 | **Bloqueur de pubs** | Filtrage des requêtes à partir de listes type EasyList, via `WebViewClient.shouldInterceptRequest`. Activable/désactivable par site. |
