@@ -15,9 +15,14 @@ import kotlin.math.min
  * allocation par frame.
  */
 internal class CursorVisuals {
-    /** Déplacement : fast spatial. Léger dépassement, le pointeur « flotte » vers sa cible. */
-    val x = SpringFollower(dampingRatio = 0.6f, stiffness = 800f)
-    val y = SpringFollower(dampingRatio = 0.6f, stiffness = 800f)
+    /**
+     * Déplacement : fast spatial, alimenté par la vitesse du point visé. Pendant le mouvement, le pointeur
+     * dessiné reste **sur** le point visé (pas de traînée de position) ; le dépassement du ressort ne se voit
+     * qu'à l'arrêt, et le pointeur revient se poser sur le point où partira le clic. L'utilisateur relâche la
+     * flèche sur ce qu'il voit : c'est ce point-là qui est cliqué.
+     */
+    val x = positionSpring()
+    val y = positionSpring()
 
     /** Morph burst -> cercle (survol cliquable), pilule (survol texte), lueur de bord : default spatial. */
     val clickable = SpringFollower(dampingRatio = 0.8f, stiffness = 380f)
@@ -70,8 +75,8 @@ internal class CursorVisuals {
         if (controller.isPressed && !wasPressed) rippleStartNanos = now
         wasPressed = controller.isPressed
 
-        x.step(controller.x, dtSeconds)
-        y.step(controller.y, dtSeconds)
+        x.step(controller.x, dtSeconds, targetVelocity = controller.velocityX)
+        y.step(controller.y, dtSeconds, targetVelocity = controller.velocityY)
         clickable.step(if (hover == HoverTarget.Clickable) 1f else 0f, dtSeconds)
         text.step(if (hover == HoverTarget.Text) 1f else 0f, dtSeconds)
         press.step(if (controller.isPressed) 1f else 0f, dtSeconds)
@@ -105,6 +110,13 @@ internal class CursorVisuals {
     }
 
     companion object {
+        private fun positionSpring() = SpringFollower(
+            dampingRatio = 0.6f,
+            stiffness = 800f,
+            settleDistance = SpringFollower.PIXEL_SETTLE_DISTANCE,
+            settleVelocity = SpringFollower.PIXEL_SETTLE_VELOCITY,
+        )
+
         const val NONE = Long.MIN_VALUE
         const val RIPPLE_NANOS = 450_000_000L
         const val PULSE_NANOS = 1_200_000_000L

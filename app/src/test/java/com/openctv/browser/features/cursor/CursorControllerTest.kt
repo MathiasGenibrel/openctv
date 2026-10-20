@@ -176,7 +176,8 @@ class CursorControllerTest {
         val offset = CursorController(config).apply { setBounds(100f, 50f, 1100f, 1050f) }
 
         // centre de la zone : (600, 550) en fenêtre = (500, 500) dans la WebView
-        assertThat(offset.hoverEvent()).isEqualTo(PointerEvent(PointerAction.HoverMove, 500f, 500f))
+        assertThat(offset.pageX).isEqualTo(500f)
+        assertThat(offset.pageY).isEqualTo(500f)
         assertThat(offset.pressOk()).isEqualTo(PointerEvent(PointerAction.Down, 500f, 500f))
     }
 

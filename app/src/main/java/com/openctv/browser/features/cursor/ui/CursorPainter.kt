@@ -27,18 +27,23 @@ import kotlin.math.sin
  * texte : pilule 8 x 28. Appui : contraction à 0,8 + onde. Bord : flèche + lueur.
  *
  * Appelé depuis la phase de dessin : aucune allocation par frame hors tracé du morph, recalculé seulement
- * quand son avancement change (le tracé est réutilisé au repos).
+ * quand son avancement change (le tracé est réutilisé au repos). Les traits ([Stroke]) sont créés une fois
+ * par densité d'écran.
  */
 internal class CursorPainter {
     private val morph = ExpressiveShape.SoftBurst.morphToCircle()
     private val shapePath = Path()
     private var cachedProgress = Float.NaN
     private var cachedSize = Float.NaN
+    private var strokeDensity = Float.NaN
+    private var outlineStroke = Stroke()
+    private var rippleStroke = Stroke()
 
     /** Dessine [visuals] ; (originX, originY) = coin haut gauche de la surcouche en coordonnées fenêtre. */
     fun DrawScope.drawCursor(visuals: CursorVisuals, originX: Float, originY: Float) {
         val alpha = visuals.alpha.value.coerceIn(0f, 1f)
         if (alpha <= 0.01f) return
+        updateStrokes()
 
         val edge = visuals.edgeGlow.value.coerceIn(0f, 1f)
         if (edge > 0.01f) drawEdgeGlow(visuals.edgeDirection, edge * alpha)
@@ -74,7 +79,7 @@ internal class CursorPainter {
                 color.copy(alpha = 0.55f * (1f - ripple) * alpha),
                 radius,
                 Offset.Zero,
-                style = Stroke(width = 4.dp.toPx()),
+                style = rippleStroke,
             )
         }
     }
@@ -105,7 +110,7 @@ internal class CursorPainter {
             translate(-diameter / 2f, -diameter / 2f) {
                 // Ombre légère, puis contour extérieur (trait centré : on double sa largeur), puis remplissage.
                 translate(0f, 2.dp.toPx()) { drawPath(shapePath, Color.Black.copy(alpha = 0.28f * burstAlpha)) }
-                drawPath(shapePath, outline.copy(alpha = burstAlpha), style = Stroke(width = contour * 2f))
+                drawPath(shapePath, outline.copy(alpha = burstAlpha), style = outlineStroke)
                 drawPath(shapePath, fill.copy(alpha = burstAlpha))
             }
         }
@@ -118,6 +123,14 @@ internal class CursorPainter {
             drawRoundRect(outline.copy(alpha = pillAlpha), topLeft - Offset(contour, contour), Size(width + contour * 2, height + contour * 2), CornerRadius(width / 2f + contour))
             drawRoundRect(fill.copy(alpha = pillAlpha), topLeft, Size(width, height), corner)
         }
+    }
+
+    private fun DrawScope.updateStrokes() {
+        if (density == strokeDensity) return
+        // Contour extérieur : trait centré sur le tracé, d'où la largeur doublée.
+        outlineStroke = Stroke(width = OUTLINE.dp.toPx() * 2f)
+        rippleStroke = Stroke(width = RIPPLE_WIDTH.dp.toPx())
+        strokeDensity = density
     }
 
     private fun updateShapePath(progress: Float, size: Float) {
@@ -150,13 +163,15 @@ internal class CursorPainter {
         val back = Offset(direction.dx * (reach - half), direction.dy * (reach - half))
         val sideA = back + Offset(-direction.dy * half, direction.dx * half)
         val sideB = back + Offset(direction.dy * half, -direction.dx * half)
-        for ((color, width) in arrowStrokes) {
-            drawLine(color.copy(alpha = strength), sideA, tip, width.dp.toPx(), StrokeCap.Round)
-            drawLine(color.copy(alpha = strength), sideB, tip, width.dp.toPx(), StrokeCap.Round)
-        }
+        // Contour clair puis trait primaire : lisible sur tout fond. Deux appels directs : pas d'itérateur par frame.
+        drawChevron(sideA, sideB, tip, OpenCtvColors.OnPrimary.copy(alpha = strength), ARROW_OUTLINE_WIDTH.dp.toPx())
+        drawChevron(sideA, sideB, tip, OpenCtvColors.Primary.copy(alpha = strength), ARROW_WIDTH.dp.toPx())
     }
 
-    private val arrowStrokes = listOf(OpenCtvColors.OnPrimary to 9f, OpenCtvColors.Primary to 5f)
+    private fun DrawScope.drawChevron(sideA: Offset, sideB: Offset, tip: Offset, color: Color, width: Float) {
+        drawLine(color, sideA, tip, width, StrokeCap.Round)
+        drawLine(color, sideB, tip, width, StrokeCap.Round)
+    }
 
     /** 0..1 : halo pulsé deux fois à l'entrée sur un élément cliquable. */
     private fun pulseAt(visuals: CursorVisuals): Float {
@@ -182,6 +197,9 @@ internal class CursorPainter {
         const val HALO_ALPHA = 0.28f
         const val HALO_ACCELERATION_CUT = 0.45f
         const val OUTLINE = 3f
+        const val RIPPLE_WIDTH = 4f
+        const val ARROW_OUTLINE_WIDTH = 9f
+        const val ARROW_WIDTH = 5f
         const val PILL_WIDTH = 8f
         const val PILL_HEIGHT = 28f
         const val PRESS_SHRINK = 0.2f

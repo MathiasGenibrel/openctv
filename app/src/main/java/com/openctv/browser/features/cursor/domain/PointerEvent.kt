@@ -1,10 +1,11 @@
 package com.openctv.browser.features.cursor.domain
 
-enum class PointerAction { HoverMove, Down, Up }
+enum class PointerAction { Down, Up }
 
 /**
- * Événement à injecter dans la page, déjà en **coordonnées de la WebView** (origine = coin haut gauche de la
- * vue). La vue y ajoute l'horloge et fabrique le `MotionEvent`.
+ * Appui ou relâchement de clic à injecter dans la page, déjà en **coordonnées de la WebView** (origine = coin
+ * haut gauche de la vue). La vue y ajoute l'horloge et fabrique le `MotionEvent`. Le survol, lui, passe par
+ * `CursorController.pageX/pageY` (une fois par frame, sans allocation).
  */
 data class PointerEvent(val action: PointerAction, val x: Float, val y: Float)
 

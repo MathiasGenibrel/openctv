@@ -114,7 +114,7 @@ class CursorController(private val config: CursorConfig) {
         pressX = x
         pressY = y
         stopMotion()
-        return PointerEvent(PointerAction.Down, pressX - left, pressY - top)
+        return PointerEvent(PointerAction.Down, pageX, pageY)
     }
 
     /** OK relâché : renvoie le `UP` au **même point** que le `DOWN`. `null` s'il n'y a pas d'appui ouvert. */
@@ -124,8 +124,12 @@ class CursorController(private val config: CursorConfig) {
         return PointerEvent(PointerAction.Up, pressX - left, pressY - top)
     }
 
-    /** Survol au point courant, pour que la page applique son `:hover`. */
-    fun hoverEvent(): PointerEvent = PointerEvent(PointerAction.HoverMove, x - left, y - top)
+    /**
+     * Point visé en **coordonnées de la WebView**, pour le survol envoyé à chaque frame de mouvement (la page
+     * applique son `:hover`). Deux nombres plutôt qu'un [PointerEvent] : rien n'est alloué par frame.
+     */
+    val pageX: Float get() = x - left
+    val pageY: Float get() = y - top
 
     /**
      * « Haut » maintenu au bord haut d'une page déjà en haut : `true` une seule fois, quand il faut ouvrir le

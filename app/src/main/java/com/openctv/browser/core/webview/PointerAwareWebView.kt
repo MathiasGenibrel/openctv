@@ -13,14 +13,18 @@ enum class PointerKind { Default, Clickable, Text }
  * signal « lien / bouton / champ texte » disponible sans JavaScript injecté. Créée uniquement par
  * [LockedWebViewFactory], qui garde la configuration de la WebView.
  *
- * Repli si une version du moteur n'émet pas d'icône : [PointerKind.Default] reste le dernier état connu,
- * le pointeur garde sa forme de repos (le clic fonctionne quand même).
+ * **Détection best-effort, échec silencieux.** L'icône reçue est comparée aux icônes système `HAND` et
+ * `TEXT` (`PointerIcon.equals` compare le type des icônes système). Tout ce qui ne correspond pas — moteur
+ * qui n'appelle pas `setPointerIcon`, icône personnalisée (`cursor: url(…)`), type inattendu — donne
+ * [PointerKind.Default] : le pointeur garde sa forme de repos. Rien d'autre n'en dépend : le clic part
+ * toujours au point visé, quel que soit [pointerKind]. Aucune exception possible sur ce chemin.
  */
 class PointerAwareWebView(context: Context) : WebView(context) {
-    // Nullables : `setPointerIcon` peut être appelée par le constructeur parent, avant l'initialisation de ces champs.
-    private var handIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_HAND)
-    private var textIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_TEXT)
-    private var verticalTextIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_VERTICAL_TEXT)
+    // Lues comme `null` si le constructeur parent appelle déjà `setPointerIcon` (champs pas encore initialisés) :
+    // la comparaison échoue alors simplement vers `Default`.
+    private val handIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_HAND)
+    private val textIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_TEXT)
+    private val verticalTextIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_VERTICAL_TEXT)
 
     /** Dernier type demandé par la page. */
     var pointerKind: PointerKind = PointerKind.Default

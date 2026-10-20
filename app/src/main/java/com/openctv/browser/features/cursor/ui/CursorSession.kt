@@ -104,6 +104,11 @@ class CursorSession(
         injector?.inject(event)
     }
 
+    /** Survol au point visé (frame de mouvement ou de défilement). */
+    internal fun injectHover() {
+        injector?.hover(controller.pageX, controller.pageY)
+    }
+
     private fun directionOf(key: Key): CursorDirection? = when (key) {
         Key.DirectionLeft -> CursorDirection.Left
         Key.DirectionRight -> CursorDirection.Right

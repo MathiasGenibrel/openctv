@@ -33,4 +33,18 @@ class SpringFollowerTest {
         assertThat(peak).isAtMost(1.001f)
         assertThat(spring.isSettledOn(1f)).isTrue()
     }
+
+    @Test
+    fun `Given the move spring fed with the target speed When the target moves at constant speed Then it follows without lag`() {
+        val spring = SpringFollower(dampingRatio = 0.6f, stiffness = 800f)
+        val speed = 1200f
+        var target = 0f
+
+        repeat(60) {
+            target += speed / 60f
+            spring.step(target, 1f / 60f, targetVelocity = speed)
+        }
+
+        assertThat(spring.value).isWithin(1f).of(target)
+    }
 }

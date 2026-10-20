@@ -127,7 +127,7 @@ private fun stepFrame(
     val hasScrolled = controller.scrollDx != 0 || controller.scrollDy != 0
     if (hasScrolled) webView.scrollBy(controller.scrollDx, controller.scrollDy)
     // La page a bougé sous le pointeur, ou le pointeur sous la page : dans les deux cas elle doit le savoir.
-    if (moved || hasScrolled) session.inject(controller.hoverEvent())
+    if (moved || hasScrolled) session.injectHover()
     visuals.update(controller, session.hoverTarget, dt, now)
     if (controller.consumeInterfaceRequest()) {
         controller.releaseAll()
