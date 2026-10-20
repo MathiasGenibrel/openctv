@@ -12,6 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
@@ -74,7 +75,7 @@ fun DPadIcon(modifier: Modifier = Modifier, tint: Color = OpenCtvColors.OnSurfac
     }
 }
 
-@Preview(device = "id:tv_1080p")
+@Preview(device = Devices.TV_1080p)
 @Composable
 private fun KeyHintPreview() {
     OpenCtvTheme {

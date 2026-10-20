@@ -1,5 +1,7 @@
 package com.openctv.browser.core.designsystem
 
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import org.junit.Test
 
@@ -23,6 +25,18 @@ class DesignSystemTokensTest {
     fun `Given the focus ring color When reading the palette Then it is the Secondary role from the design`() {
         assertThat(OpenCtvColors.Secondary.value).isEqualTo(androidx.compose.ui.graphics.Color(0xFFCCC2DC).value)
         assertThat(OpenCtvThemeTokens.m3ColorScheme.secondary).isEqualTo(OpenCtvColors.Secondary)
+    }
+
+    @Test
+    fun `Given a tv surface When building its focus ring border Then it is a 3 dp Secondary stroke 2 dp outside the element`() {
+        val border = focusRingBorder(OpenCtvShapes.ExtraLarge)
+
+        val strokeWidth = border.border.width
+        val gapToElement = border.inset - strokeWidth / 2
+        assertThat(strokeWidth).isEqualTo(3.dp)
+        assertThat(gapToElement).isEqualTo(2.dp)
+        assertThat((border.border.brush as SolidColor).value).isEqualTo(OpenCtvColors.Secondary)
+        assertThat(border.shape).isEqualTo(OpenCtvShapes.ExtraLarge)
     }
 
     @Test

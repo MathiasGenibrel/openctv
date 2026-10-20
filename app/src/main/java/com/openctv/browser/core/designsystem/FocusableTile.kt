@@ -1,31 +1,26 @@
 package com.openctv.browser.core.designsystem
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ClickableSurfaceDefaults
-import androidx.tv.material3.ExperimentalTvMaterial3Api
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 
 /**
  * Tuile focalisable (favori, entrée de liste) : fond `surfaceContainer`, `primaryContainer` au focus,
- * anneau de focus extérieur. Le contenu reçoit la couleur de texte adaptée à l'état.
+ * anneau de focus extérieur qui suit l'agrandissement de la tuile. Le contenu reçoit la couleur de texte
+ * adaptée à l'état.
  */
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun FocusableTile(
     onClick: () -> Unit,
@@ -35,8 +30,9 @@ fun FocusableTile(
     val shape = OpenCtvShapes.ExtraLarge
     Surface(
         onClick = onClick,
-        modifier = modifier.focusRing(shape),
+        modifier = modifier,
         shape = ClickableSurfaceDefaults.shape(shape = shape, focusedShape = shape),
+        border = ClickableSurfaceDefaults.border(focusedBorder = focusRingBorder(shape)),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = OpenCtvColors.SurfaceContainer,
             contentColor = OpenCtvColors.OnSurface,
@@ -51,7 +47,7 @@ fun FocusableTile(
     }
 }
 
-@Preview(device = "id:tv_1080p")
+@Preview(device = Devices.TV_1080p)
 @Composable
 private fun FocusableTilePreview() {
     OpenCtvTheme {

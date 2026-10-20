@@ -33,8 +33,10 @@ object OpenCtvTypography {
     val LabelLarge = style(14, 20, 0.1f, Medium)
     val LabelMedium = style(12, 16, 0.5f, Medium)
     val LabelSmall = style(11, 16, 0.5f, Medium)
-
-    /** Variante « emphasized » : même taille, graisse Medium (titres d'écran, de panneau). */
-    fun TextStyle.emphasized(): TextStyle = copy(fontWeight = Medium)
-
 }
+
+/**
+ * Variante « emphasized » d'un style de l'échelle : même taille, graisse Medium (titres d'écran, de
+ * panneau). S'applique aussi aux styles lus dans le thème : `MaterialTheme.typography.displaySmall.emphasized()`.
+ */
+fun TextStyle.emphasized(): TextStyle = copy(fontWeight = FontWeight.Medium)

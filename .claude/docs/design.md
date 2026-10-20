@@ -57,6 +57,8 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
 ## Focus
 - Indicateur M3 : contour **3 dp `secondary`**, à l'extérieur de l'élément (offset 2 dp), forme qui suit
   celle de l'élément. Ne jamais le rogner (pas de clip sur les parents).
+  Code : surface `tv-material` (Surface, Button, Card…) → `border = …Defaults.border(focusedBorder =
+  focusRingBorder(shape))`, qui suit l'agrandissement au focus ; autre élément → `Modifier.focusRing(shape)`.
 - Tuile de favori focalisée : fond `primaryContainer`, textes `onPrimaryContainer`, monogramme qui se
   transforme en cercle `primary` (morph, spring default spatial), élévation légère.
 - Bouton / FAB focalisé : variante Focused M3 + indicateur.

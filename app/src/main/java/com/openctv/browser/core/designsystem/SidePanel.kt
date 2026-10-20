@@ -8,11 +8,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
+import androidx.tv.material3.SurfaceDefaults
 import androidx.tv.material3.Text
 
 val SidePanelWidth: Dp = 380.dp
@@ -32,7 +34,7 @@ fun SidePanel(
     Surface(
         modifier = modifier.width(SidePanelWidth).fillMaxHeight(),
         shape = OpenCtvShapes.ExtraLarge,
-        colors = androidx.tv.material3.SurfaceDefaults.colors(
+        colors = SurfaceDefaults.colors(
             containerColor = OpenCtvColors.SurfaceContainerHigh,
             contentColor = OpenCtvColors.OnSurface,
         ),
@@ -41,7 +43,7 @@ fun SidePanel(
     }
 }
 
-@Preview(device = "id:tv_1080p")
+@Preview(device = Devices.TV_1080p)
 @Composable
 private fun SidePanelPreview() {
     OpenCtvTheme {

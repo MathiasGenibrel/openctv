@@ -2,7 +2,11 @@ package com.openctv.browser.core.designsystem
 
 import androidx.compose.ui.graphics.Color
 
-/** Tokens du schéma M3 Dark (voir .claude/docs/design.md). Source unique pour les deux thèmes. */
+/**
+ * Tokens du schéma M3 Dark (voir .claude/docs/design.md). Source unique pour les deux thèmes.
+ * Le thème est unique et statique : lire un rôle ici ou via `MaterialTheme.colorScheme` est équivalent.
+ * Les rôles `surfaceContainer*` n'existent pas dans le `ColorScheme` de tv-material : les lire ici.
+ */
 object OpenCtvColors {
     val Primary = Color(0xFFD0BCFF)
     val OnPrimary = Color(0xFF381E72)

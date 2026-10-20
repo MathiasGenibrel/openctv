@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.Shape
@@ -45,7 +46,7 @@ fun ExpressiveShape.toPolygon(): RoundedPolygon = when (this) {
 @Composable
 fun ExpressiveShape.asShape(): Shape = toPolygon().toShape()
 
-@Preview(device = "id:tv_1080p")
+@Preview(device = Devices.TV_1080p)
 @Composable
 private fun ExpressiveShapesPreview() {
     OpenCtvTheme {
