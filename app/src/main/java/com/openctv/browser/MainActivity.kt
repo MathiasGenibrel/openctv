@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
                         )
                         is Destination.Browser -> {
                             val browser = viewModel {
-                                BrowserViewModel(current.url, onPageVisited = settings::recordLastPage)
+                                BrowserViewModel(current.url, bookmarks, onPageVisited = settings::recordLastPage)
                             }
                             BrowserScreen(
                                 webViewFactory = webViewFactory,

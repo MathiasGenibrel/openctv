@@ -36,6 +36,10 @@ class SecureWebViewClient(
         listener.onPageFinished(url)
     }
 
+    override fun doUpdateVisitedHistory(view: WebView, url: String, isReload: Boolean) {
+        listener.onUrlChanged(url, view.canGoBack(), view.canGoForward())
+    }
+
     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
         if (request.isForMainFrame) {
             listener.onLoadError(WebLoadError(request.url.toString(), loadErrorCauseOf(error.errorCode)))

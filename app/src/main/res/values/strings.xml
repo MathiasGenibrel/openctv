@@ -20,6 +20,17 @@
     <string name="browser_error_unknown">La page n\'a pas pu être chargée.</string>
     <string name="browser_error_retry">Réessayer</string>
     <string name="browser_error_home">Accueil</string>
+    <string name="browser_toolbar_back">Page précédente</string>
+    <string name="browser_toolbar_forward">Page suivante</string>
+    <string name="browser_toolbar_reload">Actualiser</string>
+    <string name="browser_toolbar_stop">Arrêter le chargement</string>
+    <string name="browser_toolbar_address">Adresse : %1$s</string>
+    <string name="browser_toolbar_address_hint">OK pour modifier</string>
+    <string name="browser_toolbar_bookmark_add">Ajouter aux favoris</string>
+    <string name="browser_toolbar_bookmark_remove">Retirer des favoris</string>
+    <string name="browser_toolbar_menu">Menu</string>
+    <string name="browser_notice_bookmark_failed">Le favori n\'a pas pu être enregistré.</string>
+    <string name="browser_interface_help">Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page</string>
     <string name="settings_title">Réglages</string>
     <string name="settings_back">Retour</string>
     <string name="settings_privacy_intro">Tout reste sur cette TV : aucun compte, aucune donnée envoyée.</string>

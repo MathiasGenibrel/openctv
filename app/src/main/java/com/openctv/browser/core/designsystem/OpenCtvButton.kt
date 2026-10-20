@@ -19,6 +19,10 @@ import androidx.tv.material3.IconButton
 import androidx.tv.material3.IconButtonDefaults
 import androidx.tv.material3.Text
 
+// États désactivés M3 : conteneur 12 %, contenu 38 %.
+private const val DisabledContainerAlpha = 0.12f
+private const val DisabledContentAlpha = 0.38f
+
 enum class OpenCtvButtonStyle { Filled, Tonal }
 
 private val OpenCtvButtonStyle.container: Color
@@ -52,7 +56,7 @@ fun OpenCtvButton(
 
 /**
  * Bouton icône rond d'OpenCTV (40 dp), mêmes styles et anneau de focus que [OpenCtvButton]. `Tonal` par
- * défaut : icônes d'en-tête (Réglages…). [contentDescription] est obligatoire : pas de libellé visible.
+ * défaut : icônes d'en-tête (Réglages…). Désactivé ([enabled] faux) : grisé et non focalisable. [contentDescription] est obligatoire : pas de libellé visible.
  */
 @Composable
 fun OpenCtvIconButton(
@@ -61,10 +65,12 @@ fun OpenCtvIconButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     style: OpenCtvButtonStyle = OpenCtvButtonStyle.Tonal,
+    enabled: Boolean = true,
 ) {
     IconButton(
         onClick = onClick,
         modifier = modifier,
+        enabled = enabled,
         shape = IconButtonDefaults.shape(CircleShape),
         border = IconButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
         colors = IconButtonDefaults.colors(
@@ -72,6 +78,8 @@ fun OpenCtvIconButton(
             contentColor = style.onContainer,
             focusedContainerColor = style.container,
             focusedContentColor = style.onContainer,
+            disabledContainerColor = style.container.copy(alpha = DisabledContainerAlpha),
+            disabledContentColor = style.onContainer.copy(alpha = DisabledContentAlpha),
         ),
     ) {
         Icon(icon, contentDescription = contentDescription)
