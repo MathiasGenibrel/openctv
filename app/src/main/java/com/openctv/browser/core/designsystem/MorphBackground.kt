@@ -22,9 +22,12 @@ fun ExpressiveShape.morphToCircle(): Morph = Morph(toPolygon().normalized(), Cir
 fun Modifier.morphBackground(morph: Morph, color: Color, progress: () -> Float): Modifier =
     drawBehind { drawPath(morph.toPath(progress(), size), color) }
 
-/** Contour du morph à [progress], mis à l'échelle de [size] (les polygones sont normalisés sur 0..1). */
-private fun Morph.toPath(progress: Float, size: Size): Path {
-    val path = Path()
+/**
+ * Contour du morph à [progress], mis à l'échelle de [size] (les polygones sont normalisés sur 0..1). Écrit dans
+ * [path] (vidé d'abord) pour qu'un appelant par frame réutilise le même objet.
+ */
+fun Morph.toPath(progress: Float, size: Size, path: Path = Path()): Path {
+    path.rewind()
     asCubics(progress).forEachIndexed { i, cubic ->
         if (i == 0) path.moveTo(cubic.anchor0X * size.width, cubic.anchor0Y * size.height)
         path.cubicTo(
