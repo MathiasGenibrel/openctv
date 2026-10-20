@@ -4,7 +4,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -54,13 +53,12 @@ fun BrowserScreen(
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
-    val fullscreen = remember(viewModel) {
+    // Le plein écran vidéo naît et meurt avec la WebView : rendu à la page avant sa destruction (WebViewLifecycle).
+    val fullscreen = remember {
         BrowserFullscreen(onShown = viewModel::onFullscreenShown, onHidden = viewModel::onFullscreenHidden)
     }
     val webView = remember { webViewFactory.create(context, viewModel, fullscreen) }
-    WebViewLifecycle(webView)
-    // Écran quitté en plein écran : le lecteur est rendu à la page avant la destruction de la WebView.
-    DisposableEffect(fullscreen) { onDispose { fullscreen.exit() } }
+    WebViewLifecycle(webView, fullscreen)
 
     val currentOnClose by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel, webView) {

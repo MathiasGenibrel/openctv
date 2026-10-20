@@ -20,7 +20,6 @@ class SecureWebChromeClient(
         fullscreenHost.onHide()
     }
 
-
     override fun onProgressChanged(view: WebView, newProgress: Int) {
         listener.onProgressChanged(newProgress)
     }

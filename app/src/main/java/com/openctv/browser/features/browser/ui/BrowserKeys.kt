@@ -18,8 +18,8 @@ import androidx.compose.ui.input.key.type
 internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView): Boolean {
     val isKeyDown = event.type == KeyEventType.KeyDown
     // Plein écran vidéo : OK, flèches et Menu appartiennent au lecteur ; Retour passe par BackHandler.
-    val isVideoPlaying = layers.value.isFullscreen
-    if (!isKeyDown || isVideoPlaying) return false
+    val isFullscreen = layers.value.isFullscreen
+    if (!isKeyDown || isFullscreen) return false
     return when (event.key) {
         Key.DirectionUp -> onDpadUp(canScrollUp = webView.canScrollVertically(-1))
         Key.DirectionDown -> onDpadDown()

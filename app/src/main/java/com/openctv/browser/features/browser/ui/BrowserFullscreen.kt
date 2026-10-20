@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -66,18 +67,21 @@ internal class BrowserFullscreen(
 @Composable
 internal fun FullscreenLayer(video: View, modifier: Modifier = Modifier) {
     ImmersiveMode()
-    AndroidView(
-        factory = { context ->
-            FrameLayout(context).apply {
-                keepScreenOn = true
-                (video.parent as? ViewGroup)?.removeView(video)
-                addView(video, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
-            }
-        },
-        modifier = modifier.fillMaxSize(),
-        // Libération : la View du lecteur ne reste attachée à rien une fois le plein écran quitté.
-        onRelease = { container -> container.removeAllViews() },
-    )
+    // Un conteneur par lecteur : la fabrique ne capture jamais une View périmée.
+    key(video) {
+        AndroidView(
+            factory = { context ->
+                FrameLayout(context).apply {
+                    keepScreenOn = true
+                    (video.parent as? ViewGroup)?.removeView(video)
+                    addView(video, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
+                }
+            },
+            modifier = modifier.fillMaxSize(),
+            // Libération : la View du lecteur ne reste attachée à rien une fois le plein écran quitté.
+            onRelease = { container -> container.removeAllViews() },
+        )
+    }
 }
 
 private const val MATCH_PARENT = ViewGroup.LayoutParams.MATCH_PARENT

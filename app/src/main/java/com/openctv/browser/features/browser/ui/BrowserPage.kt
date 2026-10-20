@@ -62,10 +62,15 @@ internal fun PageView(webView: WebView, isVisible: Boolean) {
     )
 }
 
+/**
+ * Pause / reprise de [webView] avec l'écran, puis libération quand il quitte la composition (sortie du
+ * navigateur, recréation de l'activité) : le plein écran vidéo est d'abord rendu à la page ([fullscreen]),
+ * jamais à une WebView déjà détruite.
+ */
 @Composable
-internal fun WebViewLifecycle(webView: WebView) {
+internal fun WebViewLifecycle(webView: WebView, fullscreen: BrowserFullscreen) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    DisposableEffect(lifecycleOwner, webView) {
+    DisposableEffect(lifecycleOwner, webView, fullscreen) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_PAUSE -> webView.onPause()
@@ -76,6 +81,7 @@ internal fun WebViewLifecycle(webView: WebView) {
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
+            fullscreen.exit()
             webView.destroy()
         }
     }
