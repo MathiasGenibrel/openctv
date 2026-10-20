@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -53,8 +54,13 @@ fun BrowserScreen(
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
-    val webView = remember { webViewFactory.create(context, viewModel) }
+    val fullscreen = remember(viewModel) {
+        BrowserFullscreen(onShown = viewModel::onFullscreenShown, onHidden = viewModel::onFullscreenHidden)
+    }
+    val webView = remember { webViewFactory.create(context, viewModel, fullscreen) }
     WebViewLifecycle(webView)
+    // Écran quitté en plein écran : le lecteur est rendu à la page avant la destruction de la WebView.
+    DisposableEffect(fullscreen) { onDispose { fullscreen.exit() } }
 
     val currentOnClose by rememberUpdatedState(onClose)
     LaunchedEffect(viewModel, webView) {
@@ -66,6 +72,7 @@ fun BrowserScreen(
                 BrowserCommand.GoForward -> webView.goForward()
                 BrowserCommand.Reload -> webView.reload()
                 BrowserCommand.Stop -> webView.stopLoading()
+                BrowserCommand.ExitFullscreen -> fullscreen.exit()
                 BrowserCommand.Close -> currentOnClose()
             }
         }
@@ -75,7 +82,7 @@ fun BrowserScreen(
     // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
     BackHandler(enabled = !layers.isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
-    val focus = rememberBrowserFocus(viewModel, webView, layers)
+    val focus = rememberBrowserFocus(viewModel, webView, layers, fullscreenView = { fullscreen.view })
     val toolbarActions = remember(viewModel) {
         ToolbarActions(
             onBack = viewModel::goBack,
@@ -88,7 +95,7 @@ fun BrowserScreen(
     }
 
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
-    // en bas d'écran, menu, saisie d'adresse.
+    // en bas d'écran, menu, saisie d'adresse, vidéo plein écran (au-dessus de tout).
     Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView) }) {
         BrowserContent(
             pageState = pageState,
@@ -117,6 +124,7 @@ fun BrowserScreen(
         bottomMessage?.let { BottomSnackbar(it) }
         if (layers.isMenuOpen) menu()
         layers.addressInput?.let { addressInput(it) }
+        fullscreen.view?.let { FullscreenLayer(it) }
     }
 }
 
