@@ -4,4 +4,12 @@
         <!-- = OpenCtvColors.Surface : aucun flash noir avant le premier écran Compose. -->
         <item name="android:windowBackground">#FF141218</item>
     </style>
+
+    <!-- Fenêtre de démarrage (SplashScreen API) : affichée par le système dès le lancement, avant même que
+         l'application ne s'exécute, au lieu de l'application précédente. Remplacée par Theme.OpenCTV. -->
+    <style name="Theme.OpenCTV.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#FF141218</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash</item>
+        <item name="postSplashScreenTheme">@style/Theme.OpenCTV</item>
+    </style>
 </resources>

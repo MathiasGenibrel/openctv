@@ -28,17 +28,28 @@ data class BrowserLayers(
 }
 
 /** Effet de la touche Retour, décidé par [backAction]. */
-enum class BackAction { ExitFullscreen, CloseAddressInput, CloseMenu, ExitInterface, GoBackInHistory, LeaveBrowser }
+enum class BackAction {
+    ExitFullscreen, CloseAddressInput, CloseMenu, ExitInterface,
+
+    /** Écran d'erreur dont la page n'est pas dans l'historique : on retrouve la page affichée avant, sans reculer. */
+    DismissError,
+    GoBackInHistory, LeaveBrowser,
+}
 
 /**
  * Retour retire la couche la plus haute ; sur la page seule, il recule dans l'historique, puis revient
  * à l'accueil. Jamais de sortie de l'application depuis le navigateur.
+ *
+ * [isUnrecordedErrorShown] : un écran d'erreur recouvre la page, alors que la page en échec n'a pas été ajoutée à
+ * l'historique de la WebView (ex. certificat refusé) : la page courante de la WebView est celle d'avant, que
+ * Retour doit simplement ré-afficher. Reculer d'un cran sauterait cette page.
  */
-fun BrowserLayers.backAction(canGoBack: Boolean): BackAction = when {
+fun BrowserLayers.backAction(canGoBack: Boolean, isUnrecordedErrorShown: Boolean = false): BackAction = when {
     isFullscreen -> BackAction.ExitFullscreen
     isAddressInputOpen -> BackAction.CloseAddressInput
     isMenuOpen -> BackAction.CloseMenu
     isInterfaceMode -> BackAction.ExitInterface
+    isUnrecordedErrorShown && canGoBack -> BackAction.DismissError
     canGoBack -> BackAction.GoBackInHistory
     else -> BackAction.LeaveBrowser
 }

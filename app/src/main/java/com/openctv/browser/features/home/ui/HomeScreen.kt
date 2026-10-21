@@ -136,6 +136,7 @@ fun HomeScreen(
             isFavoriteMenuOpen = favoriteMenu != null,
             focusToRestore = viewModel::focusToRestore,
             onFocused = viewModel::onFocused,
+            onFocusRestored = viewModel::onFocusRestored,
         )
         searchRequest?.let { searchInput(it) }
         favoriteMenu?.let { favorite ->
@@ -195,6 +196,7 @@ internal fun HomeContent(
     isFavoriteMenuOpen: Boolean = false,
     focusToRestore: () -> HomeFocus = { HomeFocus.Search },
     onFocused: (HomeFocus) -> Unit = {},
+    onFocusRestored: () -> Unit = {},
 ) {
     val currentOnFocused by rememberUpdatedState(onFocused)
     val focusTargets = remember { HomeFocusTargets { currentOnFocused(it) } }
@@ -209,7 +211,10 @@ internal fun HomeContent(
         if (isSearchOpen || isFavoriteMenuOpen) return@LaunchedEffect
         val target = focusToRestore()
         gridIndexOf(target, currentFavorites)?.let { gridState.bringIntoView(it) }
-        focusTargets.requester(target).requestFocus()
+        // La cible peut ne pas être (encore) attachée (grille recomposée après un retrait) : l'effet
+        // repart dès que la grille ou l'état vide change (clés), et le focus de repli est de toute façon déjà passé.
+        runCatching { focusTargets.requester(target).requestFocus() }
+        onFocusRestored()
     }
 
     OverscanSafeArea(modifier) {

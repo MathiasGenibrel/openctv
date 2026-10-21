@@ -30,6 +30,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -357,7 +364,9 @@ private fun StartPagePanel(
     }
     var address by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+    // padding après verticalScroll : marge dans le contenu défilant, pour que l'anneau de focus (5 dp) et
+    // l'agrandissement des lignes ne soient jamais rognés par la zone de défilement.
+    Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(8.dp)) {
         PanelTitle(stringResource(R.string.settings_start_page))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ListRadioRow(
@@ -457,6 +466,10 @@ private fun BookmarkChip(bookmark: Bookmark, isSelected: Boolean, onClick: () ->
     }
 }
 
+/**
+ * Champ d'adresse : se focalise comme un bouton (lecture seule, sans clavier) ; OK lance la saisie et ouvre le
+ * clavier système, la validation (✓) le referme et rend le champ à la navigation au D-pad.
+ */
 @Composable
 private fun AddressField(
     value: String,
@@ -464,6 +477,11 @@ private fun AddressField(
     onDone: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var isEditing by remember { mutableStateOf(false) }
+    val keyboard = LocalSoftwareKeyboardController.current
+    LaunchedEffect(isEditing) {
+        if (isEditing) keyboard?.show() else keyboard?.hide()
+    }
     Box(
         modifier = modifier
             .fillMaxWidth()
@@ -474,12 +492,24 @@ private fun AddressField(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
+            readOnly = !isEditing,
             singleLine = true,
             textStyle = MaterialTheme.typography.bodyLarge.copy(color = OpenCtvColors.OnSurface),
             cursorBrush = SolidColor(OpenCtvColors.Primary),
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Done),
-            keyboardActions = KeyboardActions(onDone = { onDone() }),
-            modifier = Modifier.fillMaxWidth(),
+            keyboardActions = KeyboardActions(onDone = {
+                isEditing = false
+                onDone()
+            }),
+            modifier = Modifier
+                .fillMaxWidth()
+                .onFocusChanged { if (!it.isFocused) isEditing = false }
+                .onPreviewKeyEvent { event ->
+                    val isOkPress = event.key.isOk && event.type == KeyEventType.KeyDown
+                    val shouldStartEditing = isOkPress && !isEditing
+                    if (shouldStartEditing) isEditing = true
+                    shouldStartEditing
+                },
             decorationBox = { inner ->
                 if (value.isEmpty()) {
                     Text(
@@ -493,6 +523,9 @@ private fun AddressField(
         )
     }
 }
+
+private val Key.isOk: Boolean
+    get() = this == Key.DirectionCenter || this == Key.Enter || this == Key.NumPadEnter
 
 private val PreviewBookmarks = listOf(
     Bookmark("https://arte.tv", "Arte", Instant.EPOCH),

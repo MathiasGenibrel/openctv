@@ -77,6 +77,12 @@ class BrowserViewModel(
     private val _canGoBack = MutableStateFlow(false)
     private val _canGoForward = MutableStateFlow(false)
 
+    /** Dernière adresse entrée dans l'historique de la WebView ([onUrlChanged]) : la page qu'elle affiche vraiment. */
+    private var committedUrl: String? = null
+
+    /** Adresse de la page en échec affichée par l'écran d'erreur (significative en [PageState.Error] seulement). */
+    private var failedUrl: String = initialUrl
+
     private val _pageState = MutableStateFlow(freshStateFor(initialUrl))
     val pageState: StateFlow<PageState> = _pageState.asStateFlow()
 
@@ -161,14 +167,23 @@ class BrowserViewModel(
      * Une WebView vierge vient d'être créée (ouverture de l'écran, ou recréation de l'activité alors
      * que ce ViewModel survit) : elle charge la page courante.
      */
-    fun onWebViewReady() = load(_pageUrl.value)
+    fun onWebViewReady() {
+        committedUrl = null
+        load(_pageUrl.value)
+    }
 
     fun retry() = load(_pageUrl.value)
 
     /** Retour retire la couche la plus haute, puis recule dans l'historique, puis revient à l'accueil ([backAction]). */
     fun onBack(canGoBack: Boolean) {
         autoHide.onUserActivity()
-        when (_layers.value.backAction(canGoBack)) {
+        val isErrorShown = _pageState.value is PageState.Error
+        val shownPageUrl = committedUrl
+        // La dernière page entrée dans l'historique n'est pas celle en échec (ex. certificat refusé, schéma
+        // interdit) : la WebView l'affiche toujours sous l'écran d'erreur.
+        val isUnrecordedErrorShown = isErrorShown && shownPageUrl != null && shownPageUrl != failedUrl
+        when (_layers.value.backAction(canGoBack, isUnrecordedErrorShown)) {
+            BackAction.DismissError -> shownPageUrl?.let(::showPreviousPage)
             BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
             BackAction.CloseAddressInput -> closeAddressInput()
             BackAction.CloseMenu -> closeMenu()
@@ -176,6 +191,12 @@ class BrowserViewModel(
             BackAction.GoBackInHistory -> _commands.trySend(BrowserCommand.GoBack)
             BackAction.LeaveBrowser -> _commands.trySend(BrowserCommand.Close)
         }
+    }
+
+    /** L'écran d'erreur se retire : la page que la WebView n'a jamais quittée redevient visible, sans rechargement. */
+    private fun showPreviousPage(url: String) {
+        _pageUrl.value = url
+        _pageState.value = PageState.Loaded(siteLabelOf(url))
     }
 
     /** Le D-pad pilote désormais la barre d'outils (aussi appelé par « maintenir Haut », #8). */
@@ -348,6 +369,7 @@ class BrowserViewModel(
     }
 
     override fun onUrlChanged(url: String, canGoBack: Boolean, canGoForward: Boolean) {
+        committedUrl = url
         _pageUrl.value = url
         _canGoBack.value = canGoBack
         _canGoForward.value = canGoForward
@@ -371,13 +393,14 @@ class BrowserViewModel(
     }
 
     override fun onLoadError(error: WebLoadError) {
-        val failedUrl = error.url ?: _pageUrl.value
+        failedUrl = error.url ?: _pageUrl.value
         _pageState.value = PageState.Error(siteLabelOf(failedUrl), error.cause)
     }
 
     /** Seul chemin vers `loadUrl` : `loadUrl` contourne `shouldOverrideUrlLoading`, la politique est appliquée ici. */
     private fun load(url: String) {
         _pageUrl.value = url
+        failedUrl = url
         val state = freshStateFor(url)
         _pageState.value = state
         val isAllowed = state is PageState.Loading

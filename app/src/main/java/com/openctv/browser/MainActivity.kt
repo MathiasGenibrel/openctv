@@ -9,6 +9,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -52,6 +53,8 @@ class MainActivity : ComponentActivity() {
     private val recentSearches: RecentSearchesContract by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // Fenêtre de démarrage OpenCTV (thème Theme.OpenCTV.Starting) ; avant super.onCreate, elle bascule sur le thème normal.
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         // Charge le moteur WebView en tâche de fond pendant l'écran de démarrage (sans effet s'il ne le gère pas).
         webViewFactory.warmUp(this)

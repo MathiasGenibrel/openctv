@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.tooling.preview.Devices
@@ -69,7 +70,9 @@ fun OpenCtvIconButton(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier,
+        // Les surfaces tv-material sont `focusable()` même désactivées : on retire explicitement le focus
+        // (jamais `canFocus = true`, cf. conventions). Le bouton qui le perd en cours de focus est géré par l'écran.
+        modifier = modifier.focusProperties { if (!enabled) canFocus = false },
         enabled = enabled,
         shape = IconButtonDefaults.shape(CircleShape),
         border = IconButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),

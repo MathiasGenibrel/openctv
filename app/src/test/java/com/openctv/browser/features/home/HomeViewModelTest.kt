@@ -259,6 +259,58 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `Given the options of Arte When Back closes them and the engine falls back on the search bar Then the Arte tile still gets the focus`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+
+        viewModel.favorites.test {
+            val favorite = (expectMostRecentItem() as Resource.Success).data.first()
+            viewModel.onFocused(HomeFocus.Favorite(favorite.url))
+            viewModel.onFavoriteMenuRequested(favorite)
+
+            viewModel.onFavoriteMenuClosed()
+            viewModel.onFocused(HomeFocus.Search) // focus de repli quand le menu quitte la composition
+
+            assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Favorite(favorite.url))
+        }
+    }
+
+    @Test
+    fun `Given the focus restored after the options closed When the user moves to the search bar Then the move is remembered again`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+
+        viewModel.favorites.test {
+            val favorite = (expectMostRecentItem() as Resource.Success).data.first()
+            viewModel.onFavoriteMenuRequested(favorite)
+            viewModel.onFavoriteMenuClosed()
+            viewModel.onFocusRestored()
+
+            viewModel.onFocused(HomeFocus.Search)
+
+            assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Search)
+        }
+    }
+
+    @Test
+    fun `Given two favorites When the user removes the first from its options Then the focus goes to the neighbour even if the engine falls back on the search bar`() = runTest {
+        val wiki = Bookmark("https://www.wikipedia.org", "Wikipedia", Instant.EPOCH)
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte, wiki)))
+        coEvery { bookmarks.remove(any()) } returns Resource.Success(Unit)
+        val viewModel = viewModel()
+
+        viewModel.favorites.test {
+            val first = (expectMostRecentItem() as Resource.Success).data.first()
+            viewModel.onFavoriteMenuRequested(first)
+
+            viewModel.onRemoveFromMenu()
+            viewModel.onFocused(HomeFocus.Search)
+
+            assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Favorite("https://www.wikipedia.org"))
+        }
+    }
+
+    @Test
     fun `Given the add tile When the user adds a favorite and the input closes Then the focus returns to the add tile`() = runTest {
         every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
         val viewModel = viewModel()
