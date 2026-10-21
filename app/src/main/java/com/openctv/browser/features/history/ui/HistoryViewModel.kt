@@ -40,14 +40,18 @@ data class HistoryUiState(
     val isClearConfirmationOpen: Boolean = false,
     /** Un retrait ou l'effacement a échoué : l'écran le dit. */
     val isWriteFailed: Boolean = false,
+    /** Élément focalisé quand la liste est lue (cf. [HistoryFocus.initial]). */
+    val initialFocus: HistoryFocus = HistoryFocus.BackButton,
 )
 
 /**
  * Écran Historique. Le ViewModel décide (contenu, dialogue, focus après retrait), la vue exécute.
  * Ouvrir une page est une décision de l'écran d'origine (accueil ou navigateur), pas d'ici.
+ * [focusedEntryId] : entrée à refocaliser à l'ouverture (retour de la page qu'elle avait ouverte).
  */
 class HistoryViewModel(
     private val history: HistoryContract,
+    private val focusedEntryId: Long? = null,
     private val today: () -> LocalDate = { LocalDate.now() },
     private val zone: () -> ZoneId = { ZoneId.systemDefault() },
 ) : ViewModel() {
@@ -60,7 +64,8 @@ class HistoryViewModel(
     private val _focus = MutableStateFlow<HistoryFocus?>(null)
 
     val uiState: StateFlow<HistoryUiState> = combine(entries, isClearConfirmationOpen, isWriteFailed) { resource, isOpen, isFailed ->
-        HistoryUiState(contentOf(resource), isOpen, isFailed)
+        val entries = (resource as? Resource.Success)?.data.orEmpty()
+        HistoryUiState(contentOf(resource), isOpen, isFailed, HistoryFocus.initial(entries, focusedEntryId))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), HistoryUiState())
 
     /** Focus demandé par une action (retrait, dialogue fermé) ; la vue le prend puis appelle [onFocusHandled]. */

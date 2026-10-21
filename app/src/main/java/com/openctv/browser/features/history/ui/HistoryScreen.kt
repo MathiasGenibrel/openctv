@@ -65,13 +65,13 @@ import java.time.format.FormatStyle
 
 /**
  * Écran Historique, plein écran : destination (depuis l'accueil) ou surcouche du navigateur (depuis son menu), d'où
- * son piège à focus. [onOpen] ouvre la page choisie (l'écran d'origine applique les règles de sécurité habituelles) ;
+ * son piège à focus. [onOpen] ouvre l'entrée choisie (l'écran d'origine applique les règles de sécurité habituelles) ;
  * [onClose] revient à l'écran d'origine. Retour ferme le dialogue de confirmation, puis l'écran.
  */
 @Composable
 fun HistoryScreen(
     viewModel: HistoryViewModel,
-    onOpen: (String) -> Unit,
+    onOpen: (HistoryEntry) -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -84,7 +84,7 @@ fun HistoryScreen(
         state = state,
         requestedFocus = requestedFocus,
         onFocusHandled = viewModel::onFocusHandled,
-        onOpen = { entry -> onOpen(entry.url) },
+        onOpen = onOpen,
         onRemove = viewModel::remove,
         onClearAll = viewModel::requestClear,
         onConfirmClear = viewModel::confirmClear,
@@ -112,13 +112,13 @@ internal fun HistoryContentScreen(
     val content = state.content
     val days = (content as? HistoryContent.Entries)?.days.orEmpty()
     val currentDays by rememberUpdatedState(days)
+    val currentInitialFocus by rememberUpdatedState(state.initialFocus)
 
     // Le focus ne se perd jamais : le bouton retour d'abord (pendant la lecture), puis le premier élément utile.
     LaunchedEffect(Unit) { focus.backButton.requestFocus() }
     LaunchedEffect(content::class) {
-        val entries = (content as? HistoryContent.Entries)?.entries.orEmpty()
         val isLoading = content is HistoryContent.Loading
-        if (!isLoading) focus.request(HistoryFocus.initial(entries), currentDays, listState)
+        if (!isLoading) focus.request(currentInitialFocus, currentDays, listState)
     }
     // Focus décidé par le ViewModel : après un retrait (entrée voisine) ou la fermeture du dialogue.
     LaunchedEffect(requestedFocus) {

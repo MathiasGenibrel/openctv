@@ -702,13 +702,14 @@ class BrowserViewModelTest {
     }
 
     @Test
-    fun `Given the menu is open When the user chooses Accueil Then the browser asks to close`() = runTest {
+    fun `Given the menu is open When the user chooses Accueil Then the browser asks to go to the home screen`() = runTest {
         val viewModel = BrowserViewModel(url, bookmarks)
         viewModel.openMenu()
 
         viewModel.goHome()
 
-        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Close) }
+        // Pas `Close` : « Accueil » mène à l'accueil même quand la page a été ouverte depuis l'Historique.
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.GoHome) }
     }
 
     @Test

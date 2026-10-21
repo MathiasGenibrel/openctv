@@ -39,8 +39,8 @@ class HistoryViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun TestScope.viewModel(): HistoryViewModel =
-        HistoryViewModel(history, today = { LocalDate.of(2026, 10, 21) }, zone = { ZoneOffset.UTC })
+    private fun TestScope.viewModel(focusedEntryId: Long? = null): HistoryViewModel =
+        HistoryViewModel(history, focusedEntryId, today = { LocalDate.of(2026, 10, 21) }, zone = { ZoneOffset.UTC })
             .also { it.uiState.onEach { }.launchIn(backgroundScope) }
             .also { runCurrent() }
 
@@ -55,6 +55,14 @@ class HistoryViewModelTest {
 
         assertThat(content.days.map { it.label }).containsExactly(DayLabel.Today, DayLabel.Yesterday).inOrder()
         assertThat(content.count).isEqualTo(3)
+    }
+
+    @Test
+    fun `Given the user comes back from a page opened from an entry When the screen opens Then that entry gets the focus`() = runTest {
+        history.entries.value = listOf(entry(3), entry(2), entry(1))
+
+        assertThat(viewModel(focusedEntryId = 2).uiState.value.initialFocus).isEqualTo(HistoryFocus.Entry(2))
+        assertThat(viewModel().uiState.value.initialFocus).isEqualTo(HistoryFocus.Entry(3))
     }
 
     @Test

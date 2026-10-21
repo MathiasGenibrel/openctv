@@ -7,8 +7,15 @@ sealed interface HistoryFocus {
     data class Entry(val id: Long) : HistoryFocus
 
     companion object {
-        /** Focus à l'ouverture : la première entrée ; sans historique, le bouton retour. */
-        fun initial(entries: List<HistoryEntry>): HistoryFocus = entries.firstOrNull()?.let { Entry(it.id) } ?: BackButton
+        /**
+         * Focus à l'ouverture : l'entrée [rememberedId] si elle est toujours listée (retour d'une page qu'elle a
+         * ouverte), sinon la première entrée ; sans historique, le bouton retour.
+         */
+        fun initial(entries: List<HistoryEntry>, rememberedId: Long? = null): HistoryFocus {
+            val remembered = entries.firstOrNull { it.id == rememberedId }
+            val target = remembered ?: entries.firstOrNull()
+            return target?.let { Entry(it.id) } ?: BackButton
+        }
 
         /**
          * Focus après le retrait de l'entrée [removedId] de [entries] (ordre d'affichage) : l'entrée qui prend sa place,

@@ -34,7 +34,8 @@ import com.openctv.browser.features.search.domain.SearchRequest
 
 /**
  * Écran de navigation de [viewModel] (portée = la destination, cf. DestinationHost : un ViewModel neuf à
- * chaque ouverture).
+ * chaque ouverture). [onClose] : Retour depuis la première page, vers l'écran d'où l'on vient (accueil ou
+ * Historique) ; [onHome] : « Accueil » (menu, écran d'erreur), toujours vers l'accueil.
  *
  * Le ViewModel décide, l'écran exécute. Chaque responsabilité a son fichier :
  * - couches (saisie, menu, mode interface) et Retour : `domain/BrowserLayers.kt` ;
@@ -59,6 +60,7 @@ fun BrowserScreen(
     webViewFactory: LockedWebViewFactory,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onHome: () -> Unit = onClose,
     addressInput: @Composable (SearchRequest) -> Unit = {},
     menu: @Composable () -> Unit = {},
     history: @Composable () -> Unit = {},
@@ -94,6 +96,7 @@ fun BrowserScreen(
     WebViewLifecycle(webView, fullscreen)
 
     val currentOnClose by rememberUpdatedState(onClose)
+    val currentOnHome by rememberUpdatedState(onHome)
     LaunchedEffect(viewModel, webView) {
         viewModel.onWebViewReady()
         viewModel.commands.collect { command ->
@@ -105,6 +108,7 @@ fun BrowserScreen(
                 BrowserCommand.Stop -> webView.stopLoading()
                 BrowserCommand.ExitFullscreen -> fullscreen.exit()
                 BrowserCommand.Close -> currentOnClose()
+                BrowserCommand.GoHome -> currentOnHome()
             }
         }
     }
@@ -143,7 +147,7 @@ fun BrowserScreen(
             pageState = pageState,
             pageView = { PageView(webView, pageZoom, isVisible = pageState !is PageState.Error) },
             onRetry = viewModel::retry,
-            onHome = onClose,
+            onHome = onHome,
             retryFocus = focus.retry,
             warningActions = warningActions,
             isWarningOptionsOpen = layers.isWarningOptionsOpen,

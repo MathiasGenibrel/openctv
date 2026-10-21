@@ -68,8 +68,11 @@ sealed interface BrowserCommand {
     /** Demander au lecteur de quitter le plein écran (la vue appelle `onCustomViewHidden`). */
     data object ExitFullscreen : BrowserCommand
 
-    /** Quitter l'écran de navigation (retour à l'accueil). */
+    /** Retour depuis la première page : quitter le navigateur vers l'écran d'où l'on vient (accueil, Historique). */
     data object Close : BrowserCommand
+
+    /** « Accueil » (menu, écran d'erreur) : quitter le navigateur vers l'accueil, quel que soit l'écran d'origine. */
+    data object GoHome : BrowserCommand
 }
 
 class BrowserViewModel(
@@ -414,7 +417,7 @@ class BrowserViewModel(
 
     /** « Accueil » du menu : quitte le navigateur (la WebView et son historique sont libérés avec l'écran). */
     fun goHome() {
-        _commands.trySend(BrowserCommand.Close)
+        _commands.trySend(BrowserCommand.GoHome)
     }
 
     /**

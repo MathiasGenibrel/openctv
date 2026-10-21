@@ -150,7 +150,7 @@ class HomeViewModel(
 
     fun onOpenSettings() = navigate(Destination.Settings)
 
-    fun onOpenHistory() = navigate(Destination.History)
+    fun onOpenHistory() = navigate(Destination.History())
 
     fun onOpenSearch() = openSearch(SearchMode.Browse)
 

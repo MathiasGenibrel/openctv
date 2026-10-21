@@ -134,9 +134,10 @@ class MainActivity : ComponentActivity() {
                             onRefreshFilterLists = { lifecycleScope.launch { adBlock.refreshNow() } },
                             onClose = { destination = Destination.Home },
                         )
-                        Destination.History -> HistoryScreen(
-                            viewModel = viewModel { HistoryViewModel(history) },
-                            onOpen = { url -> destination = Destination.Browser(url) },
+                        is Destination.History -> HistoryScreen(
+                            viewModel = viewModel { HistoryViewModel(history, focusedEntryId = current.focusedEntryId) },
+                            // Retour depuis la page ouverte ramène ici, sur cette entrée (cf. Destination.Browser.returnTo).
+                            onOpen = { entry -> destination = Destination.Browser(entry.url, openedFromHistoryEntry = entry.id) },
                             onClose = { destination = Destination.Home },
                         )
                         is Destination.Browser -> {
@@ -167,7 +168,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 webViewFactory = webViewFactory,
                                 viewModel = browser,
-                                onClose = { destination = Destination.Home },
+                                onClose = { destination = current.returnTo },
+                                onHome = { destination = Destination.Home },
                                 menu = {
                                     val menu = viewModel {
                                         BrowserMenuViewModel(
@@ -192,7 +194,7 @@ class MainActivity : ComponentActivity() {
                                     ScopedViewModels("history") {
                                         HistoryScreen(
                                             viewModel = viewModel { HistoryViewModel(history) },
-                                            onOpen = browser::onHistoryEntryChosen,
+                                            onOpen = { entry -> browser.onHistoryEntryChosen(entry.url) },
                                             onClose = browser::closeHistory,
                                         )
                                     }

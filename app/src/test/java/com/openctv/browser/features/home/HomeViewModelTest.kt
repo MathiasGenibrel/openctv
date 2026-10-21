@@ -381,7 +381,7 @@ class HomeViewModelTest {
         viewModel.events.test {
             viewModel.onOpenHistory()
 
-            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.History))
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.History()))
         }
     }
 
