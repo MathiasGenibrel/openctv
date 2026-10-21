@@ -45,6 +45,7 @@ import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
+import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.CertificateProblem
 import com.openctv.browser.core.webview.SecurityWarning
@@ -90,68 +91,77 @@ internal fun SecurityWarningContent(
     }
 
     val style = warning.style()
-    Box(modifier.fillMaxSize().background(OpenCtvColors.Surface), contentAlignment = Alignment.Center) {
-        Column(
-            modifier = Modifier
-                .widthIn(max = ContentWidth)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 48.dp, vertical = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            // Les options dépliées gardent la page dans 540 dp : l'illustration s'efface.
-            if (!isOptionsOpen) {
-                Illustration(style)
-                Spacer(Modifier.height(20.dp))
-            }
-            SeverityPill(style)
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = stringResource(style.titleRes),
-                style = MaterialTheme.typography.headlineMedium,
-                color = OpenCtvColors.OnSurface,
-                textAlign = TextAlign.Center,
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(style.bodyRes, warning.host ?: warning.url),
-                style = MaterialTheme.typography.bodyLarge,
-                color = OpenCtvColors.OnSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
-            if (warning is SecurityWarning.InvalidCertificate) {
-                Spacer(Modifier.height(16.dp))
-                CertificateCard(warning)
-            }
-            Spacer(Modifier.height(24.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                OpenCtvButton(onClick = actions.onReturnToSafety, modifier = Modifier.focusRequester(primaryFocus)) {
-                    Text(stringResource(R.string.security_return_to_safety))
+    // La zone sûre (overscan) borde le défilement : la colonne se centre si elle tient, sinon elle défile à
+    // l'intérieur, sans jamais atteindre les bords de l'écran. Le focus garde l'élément visible (bringIntoView).
+    OverscanSafeArea(modifier.background(OpenCtvColors.Surface)) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(
+                modifier = Modifier
+                    .widthIn(max = ContentWidth)
+                    .verticalScroll(rememberScrollState())
+                    // padding après verticalScroll : le défilement rogne verticalement, la marge garde l'anneau de
+                    // focus (5 dp) et l'agrandissement des boutons visibles en haut et en bas du contenu.
+                    .padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Les options dépliées gardent la page dans 540 dp : l'illustration s'efface.
+                if (!isOptionsOpen) {
+                    Illustration(style)
+                    Spacer(Modifier.height(20.dp))
                 }
-                if (canContinue) {
-                    OpenCtvButton(
-                        onClick = actions.onToggleOptions,
-                        style = OpenCtvButtonStyle.Text,
-                        modifier = Modifier.focusRequester(optionsFocus),
-                    ) {
-                        Text(stringResource(R.string.security_advanced_options))
-                        Spacer(Modifier.size(8.dp))
-                        Icon(
-                            painter = if (isOptionsOpen) OpenCtvIcons.ExpandLess else OpenCtvIcons.ExpandMore,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp),
-                        )
+                SeverityPill(style)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = stringResource(style.titleRes),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = OpenCtvColors.OnSurface,
+                    textAlign = TextAlign.Center,
+                )
+                // Les options dépliées répètent l'explication et l'hôte : le texte d'introduction cède la place.
+                if (!isOptionsOpen) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = stringResource(style.bodyRes, warning.host ?: warning.url),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = OpenCtvColors.OnSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                if (warning is SecurityWarning.InvalidCertificate) {
+                    Spacer(Modifier.height(16.dp))
+                    CertificateCard(warning)
+                }
+                Spacer(Modifier.height(24.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    OpenCtvButton(onClick = actions.onReturnToSafety, modifier = Modifier.focusRequester(primaryFocus)) {
+                        Text(stringResource(R.string.security_return_to_safety))
+                    }
+                    if (canContinue) {
+                        OpenCtvButton(
+                            onClick = actions.onToggleOptions,
+                            style = OpenCtvButtonStyle.Text,
+                            modifier = Modifier.focusRequester(optionsFocus),
+                        ) {
+                            Text(stringResource(R.string.security_advanced_options))
+                            Spacer(Modifier.size(8.dp))
+                            Icon(
+                                painter = if (isOptionsOpen) OpenCtvIcons.ExpandLess else OpenCtvIcons.ExpandMore,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 }
-            }
-            if (isOptionsOpen && canContinue) {
-                Spacer(Modifier.height(16.dp))
-                OptionsPanel(
-                    warning = warning,
-                    isRemembered = isRemembered,
-                    onToggleRemembered = { isRemembered = !isRemembered },
-                    onContinue = { actions.onContinue(isRemembered) },
-                    checkboxFocus = checkboxFocus,
-                )
+                if (isOptionsOpen && canContinue) {
+                    Spacer(Modifier.height(16.dp))
+                    OptionsPanel(
+                        warning = warning,
+                        isRemembered = isRemembered,
+                        onToggleRemembered = { isRemembered = !isRemembered },
+                        onContinue = { actions.onContinue(isRemembered) },
+                        checkboxFocus = checkboxFocus,
+                    )
+                }
             }
         }
     }

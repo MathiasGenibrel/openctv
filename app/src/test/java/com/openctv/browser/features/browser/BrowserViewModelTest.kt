@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.webview.LoadErrorCause
+import com.openctv.browser.core.webview.SecurityWarning
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
@@ -130,6 +131,40 @@ class BrowserViewModelTest {
 
         assertThat(viewModel.pageState.value)
             .isEqualTo(PageState.Loading("arte.tv", 0.3f, isPageShown = true))
+    }
+
+    @Test
+    fun `Given a first load When the page becomes visible before it finishes Then the loading screen goes away and the progress continues`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+
+        viewModel.onPageCommitVisible(url)
+        viewModel.onProgressChanged(60)
+
+        assertThat(viewModel.pageState.value).isEqualTo(PageState.Loading("arte.tv", 0.6f, isPageShown = true))
+    }
+
+    @Test
+    fun `Given an error replacing the page When a stale first render arrives Then the error stays and nothing is revealed`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+        viewModel.onLoadError(WebLoadError(url, LoadErrorCause.Unreachable))
+
+        viewModel.onPageCommitVisible(url)
+
+        assertThat(viewModel.pageState.value).isInstanceOf(PageState.Error::class.java)
+    }
+
+    @Test
+    fun `Given an http warning replacing the page When a first render of that page arrives Then the warning stays`() {
+        val httpUrl = "http://neverssl.com/"
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "neverssl.com")))
+
+        viewModel.onPageCommitVisible(httpUrl)
+
+        assertThat((viewModel.pageState.value as PageState.Error).warning).isEqualTo(SecurityWarning.InsecureHttp(httpUrl, "neverssl.com"))
     }
 
     @Test

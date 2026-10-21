@@ -3,6 +3,7 @@ package com.openctv.browser.core.webview
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.security.SiteException
 import com.openctv.browser.core.security.SiteHost
+import java.time.Instant
 import org.junit.Test
 
 class WebNavigationPolicyTest {
@@ -84,6 +85,31 @@ class WebNavigationPolicyTest {
         assertThat(certificateProblemOf(3)).isEqualTo(CertificateProblem.Untrusted)
         assertThat(certificateProblemOf(4)).isEqualTo(CertificateProblem.Invalid)
         assertThat(certificateProblemOf(5)).isEqualTo(CertificateProblem.Invalid)
+    }
+
+    @Test
+    fun `Given a date error When the certificate validity ended before now Then the cause is expired`() {
+        val now = Instant.parse("2026-10-21T10:00:00Z")
+        val problem = certificateProblemOf(4, Instant.parse("2014-01-01T00:00:00Z"), Instant.parse("2015-04-12T23:59:59Z"), now)
+
+        assertThat(problem).isEqualTo(CertificateProblem.Expired)
+    }
+
+    @Test
+    fun `Given a date error When the certificate validity starts after now Then the cause is not yet valid`() {
+        val now = Instant.parse("2026-10-21T10:00:00Z")
+        val problem = certificateProblemOf(4, Instant.parse("2030-01-01T00:00:00Z"), Instant.parse("2031-01-01T00:00:00Z"), now)
+
+        assertThat(problem).isEqualTo(CertificateProblem.NotYetValid)
+    }
+
+    @Test
+    fun `Given a date error When the certificate dates are unreadable or consistent Then the cause stays invalid`() {
+        val now = Instant.parse("2026-10-21T10:00:00Z")
+
+        assertThat(certificateProblemOf(4, null, null, now)).isEqualTo(CertificateProblem.Invalid)
+        assertThat(certificateProblemOf(4, Instant.parse("2025-01-01T00:00:00Z"), Instant.parse("2027-01-01T00:00:00Z"), now))
+            .isEqualTo(CertificateProblem.Invalid)
     }
 
     @Test

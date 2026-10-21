@@ -9,9 +9,9 @@ sealed interface PageState {
     val site: String
 
     /**
-     * [isPageShown] : une page est déjà affichée derrière ce chargement (lien suivi dans la page) ;
-     * seule la barre de progression le signale. Sinon (premier chargement, après une erreur), un
-     * indicateur plein écran masque la WebView vierge.
+     * [isPageShown] : une page est déjà affichée derrière ce chargement (lien suivi dans la page, ou premier
+     * rendu visible de la page chargée, `onPageCommitVisible`) ; seule la barre de progression le signale.
+     * Sinon (premier chargement, après une erreur), un indicateur plein écran masque la WebView vierge.
      */
     data class Loading(
         override val site: String,

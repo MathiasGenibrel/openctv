@@ -63,6 +63,10 @@ class SecureWebViewClient(
         onCertificateCheck(view, url, check)
     }
 
+    override fun onPageCommitVisible(view: WebView, url: String) {
+        listener.onPageCommitVisible(url)
+    }
+
     override fun onPageFinished(view: WebView, url: String) {
         listener.onPageFinished(url)
         // Le certificat de la page n'est pas forcément connu dès onPageStarted : seconde vérification.
@@ -112,7 +116,7 @@ class SecureWebViewClient(
         val warning = SecurityWarning.InvalidCertificate(
             url = error.url,
             host = SiteHost.of(error.url),
-            problem = certificateProblemOf(error.primaryError),
+            problem = certificateProblemOf(error.primaryError, certificate.validFrom, certificate.validUntil),
             issuedTo = certificate.issuedTo,
             validUntil = certificate.validUntil,
             fingerprint = certificate.fingerprint,
