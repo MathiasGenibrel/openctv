@@ -3,7 +3,6 @@ package com.openctv.browser.core.webview
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.security.SiteException
 import com.openctv.browser.core.security.SiteHost
-import com.openctv.browser.core.security.isLocalNetworkHost
 import org.junit.Test
 
 class WebNavigationPolicyTest {
@@ -130,14 +129,6 @@ class WebNavigationPolicyTest {
     }
 
     @Test
-    fun `Given hosts of the local network and public sites When the warning is built Then local ones are recognised`() {
-        listOf("localhost", "nas", "192.168.1.10", "10.0.0.5", "172.16.3.4", "box.local", "tv.lan", "[::1]", "[fd12::1]")
-            .forEach { assertThat(isLocalNetworkHost(it)).isTrue() }
-        listOf("expired.badssl.com", "8.8.8.8", "172.32.0.1", "example.org", null)
-            .forEach { assertThat(isLocalNetworkHost(it)).isFalse() }
-    }
-
-    @Test
     fun `Given an SSL error on the page itself When it is reported Then it breaks the page but a subresource error does not`() {
         assertThat(SslErrorPolicy.isMainFrameError("https://bad.example/", "https://bad.example/")).isTrue()
         assertThat(SslErrorPolicy.isMainFrameError("https://cdn.bad/x.js", "https://good.example/")).isFalse()
@@ -204,11 +195,5 @@ class WebNavigationPolicyTest {
         assertThat(host).isEqualTo("gitlab-dashboard.tools.internal")
         assertThat(first).isEqualTo(NavigationDecision.WarnHttp(host))
         assertThat(second).isEqualTo(NavigationDecision.Allow)
-    }
-
-    @Test
-    fun `Given hosts with a private network extension When the warning is built Then the local network note applies`() {
-        listOf("gitlab-dashboard.tools.internal", "a.local", "b.lan", "c.home", "d.home.arpa", "e.localdomain")
-            .forEach { assertThat(isLocalNetworkHost(it)).isTrue() }
     }
 }

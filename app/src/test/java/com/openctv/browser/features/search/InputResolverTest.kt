@@ -45,8 +45,13 @@ class InputResolverTest {
     }
 
     @Test
+    fun `Given a private network host typed in capitals When validated Then it is still opened in http`() {
+        assertThat(resolve("GitLab-Dashboard.Tools.Internal")).isEqualTo(ResolvedInput.Url("http://GitLab-Dashboard.Tools.Internal"))
+    }
+
+    @Test
     fun `Given a public domain that merely contains a private word When validated Then it stays https`() {
-        listOf("internal.com", "local.example.org", "home.arpa.example.com").forEach {
+        listOf("internal.com", "internal.evil.com", "local.example.org", "home.arpa.example.com").forEach {
             assertThat(resolve(it)).isEqualTo(ResolvedInput.Url("https://$it"))
         }
     }

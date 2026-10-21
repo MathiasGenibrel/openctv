@@ -36,7 +36,7 @@ sealed interface StartPage {
 
         /** `http` pour un hôte de réseau local (comme la barre d'adresse), `https` sinon. */
         private fun defaultSchemeFor(input: String): String {
-            val host = runCatching { URI("http://$input").host }.getOrNull()?.lowercase()
+            val host = runCatching { URI("http://$input").host }.getOrNull()
             val isLocal = host != null && isHttpByDefaultHost(host)
             return if (isLocal) "http" else "https"
         }
