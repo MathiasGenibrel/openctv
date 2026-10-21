@@ -146,6 +146,8 @@ class SettingsViewModel(
 
     fun setAdBlockEnabled(isEnabled: Boolean) = save { settings.setAdBlockEnabled(isEnabled) }
 
+    fun setCookieBannerBlockEnabled(isEnabled: Boolean) = save { settings.setCookieBannerBlockEnabled(isEnabled) }
+
     /** Retire une exception de sécurité : la prochaine visite du site affiche de nouveau l'avertissement. */
     fun removeSecurityException(exception: SiteException) = save { securityExceptions.remove(exception) }
 

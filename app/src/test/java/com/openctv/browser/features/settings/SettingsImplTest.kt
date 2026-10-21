@@ -66,6 +66,7 @@ class SettingsImplTest {
         repository.setCursorSpeed(CursorSpeed.Fast)
         repository.setPageZoom(PageZoom.ThreeQuarters)
         repository.setAdBlockEnabled(false)
+        repository.setCookieBannerBlockEnabled(false)
         repository.setStartPage(StartPage.LastPage)
         runCurrent()
 
@@ -78,6 +79,7 @@ class SettingsImplTest {
                     cursorSpeed = CursorSpeed.Fast,
                     pageZoom = PageZoom.ThreeQuarters,
                     isAdBlockEnabled = false,
+                    isCookieBannerBlockEnabled = false,
                 ),
             ),
         )
@@ -145,6 +147,7 @@ class SettingsImplTest {
             cursorSpeed = CursorSpeed.Slow,
             pageZoom = PageZoom.Half,
             isAdBlockEnabled = false,
+            isCookieBannerBlockEnabled = false,
             lastPage = "https://wikipedia.org/wiki/Kotlin",
         )
         val preferences = mutablePreferencesOf()

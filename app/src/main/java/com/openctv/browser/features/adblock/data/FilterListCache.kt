@@ -6,15 +6,15 @@ import java.io.InputStream
 import java.time.Clock
 import java.time.Instant
 
-/** Copie locale de la liste, rechargée au démarrage avant tout accès réseau. */
+/** Copie locale de chaque liste, rechargée au démarrage avant tout accès réseau. */
 interface FilterListCache {
-    fun lastUpdated(): Instant?
+    fun lastUpdated(list: FilterListId): Instant?
 
-    /** Lit le cache en flux ; `null` s'il n'y en a pas. */
-    fun <T> readLines(block: (Sequence<String>) -> T): T?
+    /** Lit le cache de [list] en flux ; `null` s'il n'y en a pas. */
+    fun <T> readLines(list: FilterListId, block: (Sequence<String>) -> T): T?
 
     /** Copie [input] dans un fichier temporaire sans toucher au cache : il ne le remplace qu'à [StagedList.commit]. */
-    fun stage(input: InputStream): StagedList
+    fun stage(list: FilterListId, input: InputStream): StagedList
 
     interface StagedList {
         fun <T> readLines(block: (Sequence<String>) -> T): T
@@ -24,20 +24,21 @@ interface FilterListCache {
 }
 
 class FileFilterListCache(
-    directory: File,
+    private val directory: File,
     private val clock: Clock,
     private val maxBytes: Long = DefaultMaxBytes,
 ) : FilterListCache {
-    private val cacheFile = File(directory, "filters.txt")
-    private val stagedFile = File(directory, "filters.txt.tmp")
+    private fun cacheFileOf(list: FilterListId) = File(directory, list.cacheFileName)
+    private fun stagedFileOf(list: FilterListId) = File(directory, list.cacheFileName + ".tmp")
 
-    override fun lastUpdated(): Instant? =
-        cacheFile.takeIf { it.isFile }?.let { Instant.ofEpochMilli(it.lastModified()) }
+    override fun lastUpdated(list: FilterListId): Instant? =
+        cacheFileOf(list).takeIf { it.isFile }?.let { Instant.ofEpochMilli(it.lastModified()) }
 
-    override fun <T> readLines(block: (Sequence<String>) -> T): T? =
-        cacheFile.takeIf { it.isFile }?.let { it.readLinesOf(block) }
+    override fun <T> readLines(list: FilterListId, block: (Sequence<String>) -> T): T? =
+        cacheFileOf(list).takeIf { it.isFile }?.let { it.readLinesOf(block) }
 
-    override fun stage(input: InputStream): FilterListCache.StagedList {
+    override fun stage(list: FilterListId, input: InputStream): FilterListCache.StagedList {
+        val stagedFile = stagedFileOf(list)
         try {
             input.use { source ->
                 stagedFile.outputStream().use { target ->
@@ -57,10 +58,10 @@ class FileFilterListCache(
             stagedFile.delete()
             throw e
         }
-        return Staged()
+        return Staged(stagedFile, cacheFileOf(list))
     }
 
-    private inner class Staged : FilterListCache.StagedList {
+    private inner class Staged(private val stagedFile: File, private val cacheFile: File) : FilterListCache.StagedList {
         override fun <T> readLines(block: (Sequence<String>) -> T): T = stagedFile.readLinesOf(block)
 
         override fun commit() {

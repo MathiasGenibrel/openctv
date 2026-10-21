@@ -29,6 +29,7 @@ interface SettingsContract {
     suspend fun setCursorSpeed(speed: CursorSpeed): Resource<Unit>
     suspend fun setPageZoom(zoom: PageZoom): Resource<Unit>
     suspend fun setAdBlockEnabled(isEnabled: Boolean): Resource<Unit>
+    suspend fun setCookieBannerBlockEnabled(isEnabled: Boolean): Resource<Unit>
 
     /**
      * Enregistre la dernière page visitée (le navigateur l'appelle à chaque page chargée).

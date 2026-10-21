@@ -97,39 +97,67 @@ class AdBlockImpl(
     override fun blockedCount(site: String): Flow<Int> = counter.observe(site)
 
     private fun loadCache() {
-        try {
-            val filters = cache.readLines { FilterListParser.parse(it) }
-            if (filters != null) engine.updateFilters(filters)
-            _filterLists.update { it.copy(lastUpdated = cache.lastUpdated()) }
-        } catch (e: Exception) {
-            // Cache illisible : comme s'il n'y en avait pas, la mise à jour réseau prend le relais.
+        for (list in FilterListId.entries) {
+            try {
+                cache.readLines(list) { compile(list, it) }?.install?.invoke()
+            } catch (e: Exception) {
+                // Cache illisible : comme s'il n'y en avait pas, la mise à jour réseau prend le relais.
+            }
         }
+        publishLastUpdated()
     }
 
-    private fun isCacheStale(): Boolean {
-        val lastUpdated = _filterLists.value.lastUpdated ?: return true
-        return Duration.between(lastUpdated, clock.instant()) > maxAge
+    /** La date affichée est celle de la liste la plus ancienne : elle ne promet rien de plus que la moins à jour. */
+    private fun publishLastUpdated() {
+        val oldest = FilterListId.entries.mapNotNull(cache::lastUpdated).minOrNull()
+        _filterLists.update { it.copy(lastUpdated = oldest) }
     }
 
-    /** L'ancienne liste (cache + moteur) n'est remplacée que si la nouvelle est téléchargée et non vide. */
+    private fun isCacheStale(): Boolean = FilterListId.entries.any { list ->
+        val lastUpdated = cache.lastUpdated(list) ?: return@any true
+        Duration.between(lastUpdated, clock.instant()) > maxAge
+    }
+
+    /** Télécharge chaque liste indépendamment : l'échec de l'une n'empêche pas la mise à jour de l'autre. */
     private fun download(): Resource<Unit> {
+        val errors = FilterListId.entries.mapNotNull { list -> download(list) }
+        publishLastUpdated()
+        val message = errors.firstOrNull() ?: return Resource.Success(Unit)
+        _filterLists.update { it.copy(error = message) }
+        return Resource.Error(message)
+    }
+
+    /**
+     * L'ancienne liste (cache + moteur) n'est remplacée que si la nouvelle est téléchargée et non vide.
+     * Renvoie le message d'erreur, `null` si la liste est à jour.
+     */
+    private fun download(list: FilterListId): String? {
         var staged: FilterListCache.StagedList? = null
         return try {
-            staged = cache.stage(fetcher.fetch())
-            val filters = staged.readLines { FilterListParser.parse(it) }
-            check(!filters.isEmpty) { "Liste de filtres vide" }
+            staged = cache.stage(list, fetcher.fetch(list))
+            val compiled = staged.readLines { compile(list, it) }
+            check(!compiled.isEmpty) { "Liste de filtres vide" }
             staged.commit()
-            engine.updateFilters(filters)
-            _filterLists.update { it.copy(lastUpdated = cache.lastUpdated()) }
-            Resource.Success(Unit)
+            compiled.install()
+            null
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            val message = e.message ?: e.javaClass.simpleName
-            _filterLists.update { it.copy(error = message) }
-            Resource.Error(message)
+            e.message ?: e.javaClass.simpleName
         } finally {
             staged?.discard()
+        }
+    }
+
+    /** Liste compilée hors du moteur : [install] ne la pousse qu'une fois validée et mise en cache. */
+    private class Compiled(val isEmpty: Boolean, val install: () -> Unit)
+
+    private fun compile(list: FilterListId, lines: Sequence<String>): Compiled = when (list) {
+        FilterListId.EasyList -> FilterListParser.parse(lines).let { filters ->
+            Compiled(filters.isEmpty) { engine.updateFilters(filters) }
+        }
+        FilterListId.EasyListCookie -> CookieListParser.parse(lines).let { cookies ->
+            Compiled(cookies.isEmpty) { engine.updateCookieFilters(cookies.network, cookies.cosmetic) }
         }
     }
 

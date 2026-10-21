@@ -36,6 +36,7 @@ object OpenCtvIcons {
     val Check: Painter @Composable get() = painterResource(R.drawable.ic_check)
     val ChevronRight: Painter @Composable get() = painterResource(R.drawable.ic_chevron_right)
     val Close: Painter @Composable get() = painterResource(R.drawable.ic_close)
+    val Cookie: Painter @Composable get() = painterResource(R.drawable.ic_cookie)
     val Delete: Painter @Composable get() = painterResource(R.drawable.ic_delete)
     val DeleteSweep: Painter @Composable get() = painterResource(R.drawable.ic_delete_sweep)
     val ExpandLess: Painter @Composable get() = painterResource(R.drawable.ic_expand_less)
@@ -80,7 +81,7 @@ private fun OpenCtvIconsPreview() {
                 OpenCtvIcons.Check, OpenCtvIcons.ChevronRight, OpenCtvIcons.RadioButtonChecked,
                 OpenCtvIcons.RadioButtonUnchecked, OpenCtvIcons.Gamepad, OpenCtvIcons.NoEncryption, OpenCtvIcons.GppBad,
                 OpenCtvIcons.Warning, OpenCtvIcons.CheckBox, OpenCtvIcons.CheckBoxOutlineBlank, OpenCtvIcons.ExpandMore,
-                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete, OpenCtvIcons.ZoomIn, OpenCtvIcons.DeleteSweep, OpenCtvIcons.Language,
+                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete, OpenCtvIcons.ZoomIn, OpenCtvIcons.DeleteSweep, OpenCtvIcons.Language, OpenCtvIcons.Cookie,
             ).chunked(13).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     row.forEach { Icon(it, contentDescription = null, tint = OpenCtvColors.OnSurface) }

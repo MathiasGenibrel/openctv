@@ -6,17 +6,17 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 
 /**
- * Seule requête réseau de l'application hors navigation : le téléchargement de la liste de filtres.
+ * Seules requêtes réseau de l'application hors navigation : le téléchargement des listes de filtres ([FilterListId], HTTPS).
  * [client] n'est construit qu'au premier téléchargement (sur le thread d'I/O) : son initialisation (TLS,
  * certificats système) ne pèse jamais sur le démarrage de l'application.
  */
 class OkHttpFilterListFetcher(
     private val client: Lazy<OkHttpClient>,
-    private val url: String = EasyListUrl,
+    private val urlOf: (FilterListId) -> String = FilterListId::url,
 ) : FilterListFetcher {
 
-    override fun fetch(): InputStream {
-        val request = Request.Builder().url(url).header("User-Agent", UserAgent).build()
+    override fun fetch(list: FilterListId): InputStream {
+        val request = Request.Builder().url(urlOf(list)).header("User-Agent", UserAgent).build()
         val response = client.value.newCall(request).execute()
         if (!response.isSuccessful) {
             response.close()
@@ -26,7 +26,6 @@ class OkHttpFilterListFetcher(
     }
 
     companion object {
-        const val EasyListUrl = "https://easylist.to/easylist/easylist.txt"
         private const val UserAgent = "OpenCTV"
     }
 }

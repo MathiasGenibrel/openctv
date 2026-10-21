@@ -96,4 +96,26 @@ class AdBlockInterceptorTest {
         // Then
         assertThat(response).isNull()
     }
+
+    @Test
+    fun `Given a consent script from the cookie list When the cookie banners setting is on Then it is blocked and counted`() {
+        val cookies = com.openctv.browser.features.adblock.data.CookieListParser.parse("||cmp.example.net^".lineSequence())
+        engine.updateCookieFilters(cookies.network, cookies.cosmetic)
+
+        val response = interceptor.intercept("https://cmp.example.net/consent.js", page, isMainFrame = false)
+
+        assertThat(response).isSameInstanceAs(emptyResponse)
+        assertThat(counter.countOf(page)).isEqualTo(1)
+    }
+
+    @Test
+    fun `Given a consent script from the cookie list When the cookie banners setting is off Then it passes through`() {
+        val cookies = com.openctv.browser.features.adblock.data.CookieListParser.parse("||cmp.example.net^".lineSequence())
+        engine.updateCookieFilters(cookies.network, cookies.cosmetic)
+        settingsState.value = Resource.Success(Settings(isCookieBannerBlockEnabled = false))
+
+        val response = interceptor.intercept("https://cmp.example.net/consent.js", page, isMainFrame = false)
+
+        assertThat(response).isNull()
+    }
 }
