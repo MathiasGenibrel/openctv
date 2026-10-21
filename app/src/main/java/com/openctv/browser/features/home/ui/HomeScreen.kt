@@ -105,6 +105,7 @@ fun HomeScreen(
     val isExitHintVisible by viewModel.isExitHintVisible.collectAsStateWithLifecycle()
     val searchRequest by viewModel.searchInput.collectAsStateWithLifecycle()
     val favoriteMenu by viewModel.favoriteMenu.collectAsStateWithLifecycle()
+    val isFavoriteOptionsHintVisible by viewModel.isFavoriteOptionsHintVisible.collectAsStateWithLifecycle()
     val isSearchOpen = searchRequest != null
 
     val currentOnNavigate by rememberUpdatedState(onNavigate)
@@ -126,6 +127,7 @@ fun HomeScreen(
         HomeContent(
             favorites = favorites,
             isExitHintVisible = isExitHintVisible,
+            isFavoriteOptionsHintVisible = isFavoriteOptionsHintVisible,
             searchPlaceholder = stringResource(R.string.home_search_placeholder, searchEngineName),
             onOpenFavorite = viewModel::onOpenFavorite,
             onOpenSearch = viewModel::onOpenSearch,
@@ -185,6 +187,7 @@ private suspend fun LazyGridState.bringIntoView(index: Int) {
 internal fun HomeContent(
     favorites: Resource<List<HomeFavorite>>,
     isExitHintVisible: Boolean,
+    isFavoriteOptionsHintVisible: Boolean,
     searchPlaceholder: String,
     onOpenFavorite: (HomeFavorite) -> Unit,
     onOpenSearch: () -> Unit,
@@ -260,7 +263,7 @@ internal fun HomeContent(
                             }
                     }
                 }
-                RemoteHints()
+                RemoteHints(isFavoriteOptionsHintVisible)
             }
             if (isExitHintVisible) {
                 ExitHint(Modifier.align(Alignment.BottomCenter).padding(bottom = 32.dp))
@@ -523,15 +526,20 @@ private fun EmptyFavorites(onAdd: () -> Unit, addModifier: Modifier, isUnavailab
     }
 }
 
+/** Aide télécommande (D-pad / OK / Retour) ; l'appui long n'est rappelé que s'il y a un favori à maintenir. */
 @Composable
-private fun RemoteHints() {
+private fun RemoteHints(isFavoriteOptionsHintVisible: Boolean) {
     Row(
         Modifier.fillMaxWidth().padding(top = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(32.dp, Alignment.CenterHorizontally),
+        // Pastilles (« OK ») et icônes (D-pad) n'ont pas la même hauteur : centrées sur une même ligne.
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         KeyHint(stringResource(R.string.home_hint_navigate)) { DPadIcon() }
-        KeyHint(stringResource(R.string.home_hint_select)) { Icon(OpenCtvIcons.Keyboard, contentDescription = null) }
-        KeyHint(stringResource(R.string.home_hint_options)) { KeyCap("OK") }
+        KeyHint(stringResource(R.string.home_hint_select)) { KeyCap("OK") }
+        if (isFavoriteOptionsHintVisible) {
+            KeyHint(stringResource(R.string.home_hint_options)) { KeyCap("OK") }
+        }
         KeyHint(stringResource(R.string.home_hint_quit)) { KeyCap("⟵") }
     }
 }
@@ -561,6 +569,7 @@ private fun HomePreview() {
         HomeContent(
             favorites = Resource.Success(PreviewFavorites),
             isExitHintVisible = false,
+            isFavoriteOptionsHintVisible = true,
             searchPlaceholder = "Rechercher sur DuckDuckGo ou saisir une adresse",
             onOpenFavorite = {}, onOpenSearch = {}, onAddBookmark = {}, onOpenSettings = {},
         )
@@ -574,6 +583,7 @@ private fun HomeEmptyPreview() {
         HomeContent(
             favorites = Resource.Success(emptyList()),
             isExitHintVisible = true,
+            isFavoriteOptionsHintVisible = false,
             searchPlaceholder = "Rechercher sur DuckDuckGo ou saisir une adresse",
             onOpenFavorite = {}, onOpenSearch = {}, onAddBookmark = {}, onOpenSettings = {},
         )

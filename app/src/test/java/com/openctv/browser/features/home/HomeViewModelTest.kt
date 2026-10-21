@@ -149,6 +149,24 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `Given no favorite When the home loads Then the hold OK hint for favorite options is hidden`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+
+        viewModel().isFavoriteOptionsHintVisible.test {
+            assertThat(expectMostRecentItem()).isFalse()
+        }
+    }
+
+    @Test
+    fun `Given a saved favorite When the home loads Then the hold OK hint for favorite options is shown`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+
+        viewModel().isFavoriteOptionsHintVisible.test {
+            assertThat(expectMostRecentItem()).isTrue()
+        }
+    }
+
+    @Test
     fun `Given a storage failure When the home loads Then the error is exposed`() = runTest {
         every { bookmarks.getBookmarks() } returns flowOf(Resource.Error("disk"))
 
