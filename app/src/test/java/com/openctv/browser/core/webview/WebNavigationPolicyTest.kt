@@ -2,6 +2,8 @@ package com.openctv.browser.core.webview
 
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.security.SiteException
+import com.openctv.browser.core.security.SiteHost
+import com.openctv.browser.core.security.isLocalNetworkHost
 import org.junit.Test
 
 class WebNavigationPolicyTest {
@@ -187,5 +189,26 @@ class WebNavigationPolicyTest {
         assertThat(loadErrorCauseOf(-8)).isEqualTo(LoadErrorCause.Unreachable)
         assertThat(loadErrorCauseOf(-11)).isEqualTo(LoadErrorCause.InvalidCertificate)
         assertThat(loadErrorCauseOf(-1)).isEqualTo(LoadErrorCause.Unknown)
+    }
+
+    @Test
+    fun `Given an internal site over http When it is visited then allowed once Then the warning comes first and the next visit is direct`() {
+        val url = "http://gitlab-dashboard.tools.internal/projects"
+        val host = SiteHost.of(url)
+        val allowed = mutableSetOf<String>()
+
+        val first = WebNavigationPolicy.navigationOf(url, isMainFrame = true) { it in allowed }
+        host?.let(allowed::add)
+        val second = WebNavigationPolicy.navigationOf(url, isMainFrame = true) { it in allowed }
+
+        assertThat(host).isEqualTo("gitlab-dashboard.tools.internal")
+        assertThat(first).isEqualTo(NavigationDecision.WarnHttp(host))
+        assertThat(second).isEqualTo(NavigationDecision.Allow)
+    }
+
+    @Test
+    fun `Given hosts with a private network extension When the warning is built Then the local network note applies`() {
+        listOf("gitlab-dashboard.tools.internal", "a.local", "b.lan", "c.home", "d.home.arpa", "e.localdomain")
+            .forEach { assertThat(isLocalNetworkHost(it)).isTrue() }
     }
 }

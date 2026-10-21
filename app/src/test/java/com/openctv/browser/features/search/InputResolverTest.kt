@@ -37,6 +37,21 @@ class InputResolverTest {
     }
 
     @Test
+    fun `Given a private network host When validated Then it is opened in http`() {
+        listOf(
+            "gitlab-dashboard.tools.internal", "nas.local", "box.lan", "tv.home", "router.home.arpa",
+            "srv.localdomain", "gitlab-dashboard.tools.internal:8080/a?b=1",
+        ).forEach { assertThat(resolve(it)).isEqualTo(ResolvedInput.Url("http://$it")) }
+    }
+
+    @Test
+    fun `Given a public domain that merely contains a private word When validated Then it stays https`() {
+        listOf("internal.com", "local.example.org", "home.arpa.example.com").forEach {
+            assertThat(resolve(it)).isEqualTo(ResolvedInput.Url("https://$it"))
+        }
+    }
+
+    @Test
     fun `Given Google When the user validates words Then the browser opens the Google search`() {
         val result = resolve("arte documentaire", SearchEngine.Google)
 

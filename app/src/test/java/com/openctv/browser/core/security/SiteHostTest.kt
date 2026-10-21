@@ -61,4 +61,9 @@ class SiteHostTest {
         assertThat(SiteHost.of("http://nas.lan:8080/")).isEqualTo(SiteHost.of("http://nas.lan/"))
         assertThat(SiteHost.of("https://XN--CAF-DMA.FR/")).isEqualTo("xn--caf-dma.fr")
     }
+
+    @Test
+    fun `Given an internal host with dashes and several labels When the host is read Then it is accepted`() {
+        assertThat(SiteHost.of("http://gitlab-dashboard.tools.internal")).isEqualTo("gitlab-dashboard.tools.internal")
+    }
 }
