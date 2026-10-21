@@ -35,7 +35,8 @@ class HistoryImpl(
         return flow {
             emit(Resource.Loading)
             // Les entrées trop anciennes partent à l'ouverture de l'écran, pas seulement à la prochaine visite.
-            withContext(dispatchers.io) { runCatching { prune() } }
+            // Un élagage en échec n'empêche pas la lecture (l'erreur éventuelle de lecture vient du flux) ; l'annulation passe.
+            write { prune() }
             emitAll(entries)
         }
     }

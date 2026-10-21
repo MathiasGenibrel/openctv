@@ -74,6 +74,47 @@ class BrowserHistoryTest {
     }
 
     @Test
+    fun `Given a single-page site already displayed When it changes its address without reloading Then the new address is recorded`() = runTest {
+        val viewModel = viewModel()
+        val video = "https://www.youtube.com/watch?v=abc"
+        viewModel.onPageStarted("https://www.youtube.com/")
+        viewModel.onUrlChanged("https://www.youtube.com/", canGoBack = false, canGoForward = false)
+        viewModel.onTitleChanged("YouTube")
+        viewModel.onPageFinished("https://www.youtube.com/")
+
+        viewModel.onUrlChanged(video, canGoBack = true, canGoForward = false)
+        viewModel.onTitleChanged("Une vidéo - YouTube")
+
+        assertThat(visits.recorded).containsExactly(
+            "https://www.youtube.com/" to "YouTube",
+            video to "YouTube",
+            video to "Une vidéo - YouTube",
+        ).inOrder()
+    }
+
+    @Test
+    fun `Given a page still loading When its address is committed Then it is recorded only once it is displayed`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onPageStarted(url)
+
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished(url)
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+
+        assertThat(visits.recorded).containsExactly(url to "")
+    }
+
+    @Test
+    fun `Given a security warning is shown When the engine reports an address change Then nothing is recorded`() = runTest {
+        val viewModel = BrowserViewModel("http://nas.maison/", bookmarks, pageVisits = visits)
+        viewModel.onWebViewReady()
+
+        viewModel.onUrlChanged("http://nas.maison/", canGoBack = false, canGoForward = false)
+
+        assertThat(visits.recorded).isEmpty()
+    }
+
+    @Test
     fun `Given a load error When WebView finishes its own error page Then nothing is recorded`() = runTest {
         val viewModel = viewModel()
         viewModel.onPageStarted(url)

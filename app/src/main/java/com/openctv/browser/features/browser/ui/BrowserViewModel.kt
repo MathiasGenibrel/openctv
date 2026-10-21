@@ -515,6 +515,11 @@ class BrowserViewModel(
         _pageUrl.value = url
         _canGoBack.value = canGoBack
         _canGoForward.value = canGoForward
+        // Navigation interne d'une page déjà affichée (`pushState`, YouTube…) : pas de nouveau chargement, donc pas
+        // d'onPageFinished. Un chargement en cours sera enregistré à sa fin ; une erreur ou un avertissement, jamais.
+        val isShownPage = _pageState.value is PageState.Loaded
+        val isNewAddress = url != recordedUrl
+        if (isShownPage && isNewAddress) recordVisit(url)
     }
 
     override fun onProgressChanged(progress: Int) {
