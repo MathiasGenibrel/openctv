@@ -45,7 +45,6 @@ import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.PointerAwareWebView
-import com.openctv.browser.core.webview.applyPageZoom
 import com.openctv.browser.core.webview.pageZoomLayout
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.browser.domain.PageState

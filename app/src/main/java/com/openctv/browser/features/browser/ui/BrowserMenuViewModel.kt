@@ -41,8 +41,8 @@ class BrowserMenuViewModel(
     private val onWriteFailed: (MenuWriteFailure) -> Unit,
     /** Zoom appliqué à la page (porté par le navigateur, qui le mémorise et l'applique à la WebView). */
     private val pageZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
-    /** Niveau choisi pour le site, et niveau par défaut des Réglages au moment du choix. */
-    private val onZoomChosen: (zoom: PageZoom, default: PageZoom) -> Unit = { _, _ -> },
+    /** Niveau choisi pour le site : le navigateur ferme le menu, l'applique et le mémorise. */
+    private val onZoomChosen: (PageZoom) -> Unit = {},
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<BrowserMenuPanel?>(null)
@@ -120,8 +120,14 @@ class BrowserMenuViewModel(
         return isPanelOpen
     }
 
-    /** Niveau choisi dans « Zoom de la page » : le navigateur l'applique, le mémorise (ou retire le zoom du site si c'est le niveau par défaut). */
-    fun selectPageZoom(zoom: PageZoom) = onZoomChosen(zoom, state.value.defaultZoom)
+    /**
+     * Niveau choisi dans « Zoom de la page » : le sous-panneau se referme (le menu rouvert repart de sa liste) et le
+     * navigateur ferme le menu, applique le niveau et le mémorise (ou retire le zoom du site si c'est le niveau par défaut).
+     */
+    fun selectPageZoom(zoom: PageZoom) {
+        closePanel()
+        onZoomChosen(zoom)
+    }
 
     fun selectSearchEngine(engine: SearchEngine) = save { settings.setSearchEngine(engine) }
 

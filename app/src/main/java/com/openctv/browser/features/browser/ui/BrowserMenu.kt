@@ -64,12 +64,7 @@ fun BrowserMenu(
             onToggleBookmark = viewModel::toggleBookmark,
             onHome = onHome,
             onOpenPanel = viewModel::openPanel,
-            onSelectPageZoom = { zoom ->
-                // Le navigateur applique et mémorise le choix ; le menu se ferme pour laisser voir la page et le message.
-                viewModel.selectPageZoom(zoom)
-                viewModel.closePanel()
-                onClose()
-            },
+            onSelectPageZoom = viewModel::selectPageZoom,
             onSelectSearchEngine = viewModel::selectSearchEngine,
             onSelectCursorSpeed = viewModel::selectCursorSpeed,
         ),

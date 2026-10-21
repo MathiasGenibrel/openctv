@@ -42,7 +42,7 @@ class BrowserMenuViewModelTest {
     private val adBlock = FakeAdBlock()
     private val failures = mutableListOf<MenuWriteFailure>()
     private val pageZoom = MutableStateFlow(PageZoom.Full)
-    private val chosenZooms = mutableListOf<Pair<PageZoom, PageZoom>>()
+    private val chosenZooms = mutableListOf<PageZoom>()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -58,7 +58,7 @@ class BrowserMenuViewModelTest {
         )
         return BrowserMenuViewModel(
             MutableStateFlow(url), settings, adBlock, bookmarks, onWriteFailed = { failures += it },
-            pageZoom = pageZoom, onZoomChosen = { zoom, default -> chosenZooms += zoom to default },
+            pageZoom = pageZoom, onZoomChosen = { chosenZooms += it },
         )
             .also { viewModel -> backgroundScope.launch { viewModel.state.collect {} } }
             .also { runCurrent() }
@@ -200,14 +200,14 @@ class BrowserMenuViewModelTest {
     }
 
     @Test
-    fun `Given the zoom sub menu When the user picks a level Then the browser is told the level and the Settings default`() = runTest {
+    fun `Given the zoom sub menu When the user picks a level Then the browser is told the level and the sub menu closes`() = runTest {
         val viewModel = viewModel(FakeSettingsStore(Settings(pageZoom = PageZoom.ThreeQuarters)))
 
         viewModel.openPanel(BrowserMenuPanel.PageZoom)
         viewModel.selectPageZoom(PageZoom.Half)
 
-        assertThat(viewModel.state.value.openPanel).isEqualTo(BrowserMenuPanel.PageZoom)
-        assertThat(chosenZooms).containsExactly(PageZoom.Half to PageZoom.ThreeQuarters)
+        assertThat(viewModel.state.value.openPanel).isNull()
+        assertThat(chosenZooms).containsExactly(PageZoom.Half)
         assertThat(viewModel.state.value.defaultZoom).isEqualTo(PageZoom.ThreeQuarters)
     }
 

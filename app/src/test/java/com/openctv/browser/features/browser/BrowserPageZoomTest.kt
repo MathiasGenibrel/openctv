@@ -85,10 +85,22 @@ class BrowserPageZoomTest {
         val zooms = FakePageZoom()
         val viewModel = viewModel(dashboard, zooms)
 
-        viewModel.selectPageZoom(PageZoom.Half, default = PageZoom.Full)
+        viewModel.selectPageZoom(PageZoom.Half)
 
         assertThat(viewModel.pageZoom.value).isEqualTo(PageZoom.Half)
         assertThat(zooms.current).containsExactly(SiteZoom("gitlab-dashboard.tools.internal", PageZoom.Half))
+        assertThat(viewModel.notice.value)
+            .isEqualTo(BrowserNotice.ZoomSaved(PageZoom.Half, "gitlab-dashboard.tools.internal"))
+    }
+
+    @Test
+    fun `Given the menu is open When the user picks a zoom Then the menu closes to show the page and the message`() = runTest {
+        val viewModel = viewModel(dashboard)
+        viewModel.openMenu()
+
+        viewModel.selectPageZoom(PageZoom.Half)
+
+        assertThat(viewModel.layers.value.isMenuOpen).isFalse()
         assertThat(viewModel.notice.value)
             .isEqualTo(BrowserNotice.ZoomSaved(PageZoom.Half, "gitlab-dashboard.tools.internal"))
     }
@@ -98,7 +110,7 @@ class BrowserPageZoomTest {
         val viewModel = viewModel(arte)
         viewModel.onWebViewReady()
 
-        viewModel.selectPageZoom(PageZoom.Half, default = PageZoom.Full)
+        viewModel.selectPageZoom(PageZoom.Half)
 
         viewModel.commands.test {
             assertThat(awaitItem()).isEqualTo(BrowserCommand.Load(arte))
@@ -111,7 +123,7 @@ class BrowserPageZoomTest {
         val zooms = FakePageZoom(SiteZoom("gitlab-dashboard.tools.internal", PageZoom.Half))
         val viewModel = viewModel(dashboard, zooms)
 
-        viewModel.selectPageZoom(PageZoom.Full, default = PageZoom.Full)
+        viewModel.selectPageZoom(PageZoom.Full)
 
         assertThat(zooms.current).isEmpty()
         assertThat(viewModel.pageZoom.value).isEqualTo(PageZoom.Full)
@@ -125,7 +137,7 @@ class BrowserPageZoomTest {
         val zooms = FakePageZoom(SiteZoom("arte.tv", PageZoom.Half))
         val viewModel = viewModel("https://arte.tv/", zooms)
 
-        viewModel.selectPageZoom(PageZoom.ThreeQuarters, default = PageZoom.ThreeQuarters)
+        viewModel.selectPageZoom(PageZoom.ThreeQuarters)
 
         assertThat(zooms.current).isEmpty()
         assertThat(viewModel.pageZoom.value).isEqualTo(PageZoom.ThreeQuarters)
@@ -136,7 +148,7 @@ class BrowserPageZoomTest {
         val zooms = FakePageZoom().apply { failure = "disk full" }
         val viewModel = viewModel(dashboard, zooms)
 
-        viewModel.selectPageZoom(PageZoom.Half, default = PageZoom.Full)
+        viewModel.selectPageZoom(PageZoom.Half)
 
         assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.SettingFailed)
         assertThat(viewModel.pageZoom.value).isEqualTo(PageZoom.Full)
@@ -147,7 +159,7 @@ class BrowserPageZoomTest {
         val zooms = FakePageZoom()
         val viewModel = viewModel("about:blank", zooms)
 
-        viewModel.selectPageZoom(PageZoom.Half, default = PageZoom.Full)
+        viewModel.selectPageZoom(PageZoom.Half)
 
         assertThat(zooms.current).isEmpty()
         assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.SettingFailed)

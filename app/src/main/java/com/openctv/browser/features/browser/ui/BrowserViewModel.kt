@@ -81,7 +81,7 @@ class BrowserViewModel(
     /** Sites avec leur propre zoom ; les autres suivent [defaultZoom]. */
     private val siteZooms: PageZoomContract = NoPageZoom,
     /** Zoom des Réglages pour les sites sans zoom propre. */
-    defaultZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
+    private val defaultZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
 ) : ViewModel(), WebPageListener {
     private val _pageUrl = MutableStateFlow(initialUrl)
 
@@ -385,16 +385,18 @@ class BrowserViewModel(
     }
 
     /**
-     * Zoom choisi dans le menu pour le site de la page : appliqué tout de suite (sans recharger), mémorisé pour
-     * l'hôte exact, sauf si c'est le niveau par défaut, qui retire l'exception du site. Le message dit ce qui a été fait.
+     * Zoom choisi dans le menu pour le site de la page : ferme le menu (la page et le message restent visibles),
+     * applique le niveau tout de suite (sans recharger) et le mémorise pour l'hôte exact, sauf si c'est le niveau
+     * par défaut des Réglages, qui retire l'exception du site. Le message dit ce qui a été fait.
      */
-    fun selectPageZoom(zoom: PageZoom, default: PageZoom) {
+    fun selectPageZoom(zoom: PageZoom) {
+        closeMenu()
         val host = SiteHost.of(_pageUrl.value)
         if (host == null) {
             showNotice(BrowserNotice.SettingFailed)
             return
         }
-        val isDefault = zoom == default
+        val isDefault = zoom == defaultZoom.value
         viewModelScope.launch {
             val result = if (isDefault) siteZooms.remove(host) else siteZooms.set(host, zoom)
             val notice = when {
