@@ -18,6 +18,8 @@ import com.openctv.browser.core.designsystem.StartupScreen
 import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.core.navigation.ScopedViewModels
+import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
@@ -38,6 +40,7 @@ import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.ui.FilterListsStatus
 import com.openctv.browser.features.settings.ui.SettingsScreen
 import com.openctv.browser.features.settings.ui.SettingsViewModel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
@@ -51,6 +54,7 @@ class MainActivity : ComponentActivity() {
     private val adBlock: AdBlockContract by inject()
     private val webViewFactory: LockedWebViewFactory by inject()
     private val recentSearches: RecentSearchesContract by inject()
+    private val securityExceptions: SecurityExceptionsContract by inject()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Fenêtre de démarrage OpenCTV (thème Theme.OpenCTV.Starting) ; avant super.onCreate, elle bascule sur le thème normal.
@@ -68,6 +72,8 @@ class MainActivity : ComponentActivity() {
                 }
                 LaunchedEffect(Unit) {
                     if (destination == null) {
+                        // Les exceptions mémorisées sont lues avant la page de démarrage : une page HTTP autorisée s'ouvre sans avertissement.
+                        securityExceptions.persisted.first { it !is Resource.Loading }
                         val launchUrl = settings.launchUrl()
                         destination = launchUrl?.let(Destination::Browser) ?: Destination.Home
                     }
@@ -98,7 +104,7 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                         Destination.Settings -> SettingsScreen(
-                            viewModel = viewModel { SettingsViewModel(settings, bookmarks) },
+                            viewModel = viewModel { SettingsViewModel(settings, bookmarks, securityExceptions) },
                             filterLists = filterListsStatus,
                             // lifecycleScope : la mise à jour continue si l'utilisateur quitte les Réglages.
                             onRefreshFilterLists = { lifecycleScope.launch { adBlock.refreshNow() } },
@@ -111,6 +117,7 @@ class MainActivity : ComponentActivity() {
                                     bookmarks,
                                     onPageVisited = settings::recordLastPage,
                                     hudHideDelay = { settings.current.hudHideDelay.delay },
+                                    securityExceptions = securityExceptions,
                                 )
                             }
                             // Curseur virtuel : la racine relie les features (le navigateur n'importe pas le curseur).

@@ -3,6 +3,10 @@ package com.openctv.browser.features.settings
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.common.TestDispatcherProvider
+import com.openctv.browser.core.security.NoSecurityExceptions
+import com.openctv.browser.core.security.SecurityExceptionsContract
+import com.openctv.browser.core.security.SiteException
+import com.openctv.browser.features.browser.FakeSecurityExceptions
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.settings.data.SettingsImpl
@@ -44,13 +48,16 @@ class SettingsViewModelTest {
     @After
     fun tearDown() = Dispatchers.resetMain()
 
-    private fun TestScope.viewModel(store: FakeSettingsStore = FakeSettingsStore()): SettingsViewModel {
+    private fun TestScope.viewModel(
+        store: FakeSettingsStore = FakeSettingsStore(),
+        securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+    ): SettingsViewModel {
         val settings = SettingsImpl(
             store = store,
             dispatchers = TestDispatcherProvider(StandardTestDispatcher(testScheduler)),
             scope = backgroundScope,
         )
-        return SettingsViewModel(settings, bookmarksContract)
+        return SettingsViewModel(settings, bookmarksContract, securityExceptions)
     }
 
     /** `uiState` n'est actif qu'abonné (WhileSubscribed) : on s'abonne pour la durée du test. */
@@ -128,5 +135,24 @@ class SettingsViewModelTest {
 
         assertThat(viewModel.uiState.value.isSaveFailed).isTrue()
         assertThat(viewModel.uiState.value.settings.searchEngine).isEqualTo(SearchEngine.DuckDuckGo)
+    }
+
+    @Test
+    fun `Given remembered security exceptions When the user removes one in Settings Then it disappears and the others stay`() = runTest {
+        val exceptions = FakeSecurityExceptions()
+        val http = SiteException.Http("192.168.1.10")
+        val certificate = SiteException.Certificate("nas.maison", "ab12")
+        exceptions.allow(http, isRemembered = true)
+        exceptions.allow(certificate, isRemembered = true)
+        val viewModel = viewModel(securityExceptions = exceptions)
+        collected(viewModel)
+        runCurrent()
+        assertThat(viewModel.uiState.value.securityExceptions).containsExactly(http, certificate).inOrder()
+
+        viewModel.removeSecurityException(http)
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.securityExceptions).containsExactly(certificate)
+        assertThat(exceptions.isAllowed(http)).isFalse()
     }
 }

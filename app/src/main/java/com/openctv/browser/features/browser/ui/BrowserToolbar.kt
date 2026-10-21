@@ -39,6 +39,7 @@ import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.focusRingBorder
+import com.openctv.browser.features.browser.domain.PageInsecurity
 import com.openctv.browser.features.browser.domain.ReloadAction
 import com.openctv.browser.features.browser.domain.ToolbarButton
 import com.openctv.browser.features.browser.domain.ToolbarState
@@ -173,6 +174,7 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
             if (state.isSecure) {
                 Icon(OpenCtvIcons.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
             }
+            state.insecurity?.let { InsecurityBadge(it) }
             Text(
                 text = state.site,
                 style = MaterialTheme.typography.titleMedium,
@@ -184,6 +186,38 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
                 text = stringResource(R.string.browser_toolbar_address_hint),
                 style = MaterialTheme.typography.labelLarge,
                 color = OpenCtvColors.OnSurfaceVariant,
+            )
+        }
+    }
+}
+
+/** « Non sécurisé » (HTTP, `tertiary`) ou « Certificat non vérifié » (`error`) : page affichée par exception. */
+@Composable
+private fun InsecurityBadge(insecurity: PageInsecurity) {
+    val isHttp = insecurity == PageInsecurity.Http
+    val color = if (isHttp) OpenCtvColors.Tertiary else OpenCtvColors.Error
+    val icon = if (isHttp) OpenCtvIcons.NoEncryption else OpenCtvIcons.GppBad
+    val label = stringResource(if (isHttp) R.string.security_toolbar_insecure else R.string.security_toolbar_unverified)
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1)
+    }
+}
+
+@Preview(device = Devices.TV_1080p)
+@Composable
+private fun BrowserToolbarInsecurePreview() {
+    OpenCtvTheme {
+        Box(Modifier.padding(48.dp)) {
+            BrowserToolbar(
+                state = ToolbarState(
+                    canGoBack = true, canGoForward = false, reloadAction = ReloadAction.Reload,
+                    site = "192.168.1.10", isSecure = false, isBookmarked = false, insecurity = PageInsecurity.Http,
+                ),
+                actions = ToolbarActions({}, {}, {}, {}, {}, {}),
+                isInteractive = true,
+                addressFocus = FocusRequester(),
+                menuFocus = FocusRequester(),
             )
         }
     }

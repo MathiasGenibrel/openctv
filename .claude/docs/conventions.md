@@ -51,6 +51,14 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 ## WebView
 - La `WebView` n'est créée **que** par la fabrique de `core/webview/`, qui applique les réglages de
   sécurité du brief produit. Aucune feature ne modifie `WebSettings` directement.
+- **SSL** : `onReceivedSslError` annule (`cancel()`) par défaut. `proceed()` seulement si `SslErrorPolicy.shouldProceed`
+  le décide : erreur de la **page principale**, et exception (`SiteException.Certificate`) accordée par l'utilisateur
+  pour **cet hôte exact + cette empreinte SHA-256**. Jamais pour une sous-ressource, jamais sans empreinte lisible.
+- **HTTP** : la page principale en `http://` est remplacée par un avertissement (`WebNavigationPolicy.navigationOf`,
+  appliqué au `load` du ViewModel et dans `shouldOverrideUrlLoading`), sauf exception `SiteException.Http`.
+- **Exceptions de sécurité** : `core/security` (`SecurityExceptionsContract`), hôte normalisé par `SiteHost` (hôte
+  exact, `www.` conservé, strict : l'ambiguïté donne `null`, donc aucune exception possible). Session en mémoire,
+  mémorisées dans DataStore sur la TV. Ne jamais accorder une exception sans geste explicite de l'utilisateur.
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
 - `evaluateJavascript` autorisé **seulement** pour des commandes média constantes en plein écran vidéo
   (`core/webview/MediaCommand` : lecture/pause, saut ±10 s). Ensemble fermé de scripts constants, aucune

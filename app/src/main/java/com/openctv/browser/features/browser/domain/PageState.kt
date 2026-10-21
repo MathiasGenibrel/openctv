@@ -1,6 +1,7 @@
 package com.openctv.browser.features.browser.domain
 
 import com.openctv.browser.core.webview.LoadErrorCause
+import com.openctv.browser.core.webview.SecurityWarning
 import com.openctv.browser.features.bookmarks.domain.BookmarkUrl
 
 /** État de la page affichée par l'écran de navigation. [site] est le nom lisible du site (sans `www.`). */
@@ -19,7 +20,16 @@ sealed interface PageState {
     ) : PageState
 
     data class Loaded(override val site: String) : PageState
-    data class Error(override val site: String, val cause: LoadErrorCause) : PageState
+    /**
+     * Page non affichée. [warning] non nul : avertissement de sécurité (HTTP, certificat invalide) que
+     * l'utilisateur peut contourner ; sinon écran d'erreur ordinaire. Dans les deux cas la page est « refusée » :
+     * pas de curseur, pas de masquage de l'interface, Retour ré-affiche la page d'avant.
+     */
+    data class Error(
+        override val site: String,
+        val cause: LoadErrorCause,
+        val warning: SecurityWarning? = null,
+    ) : PageState
 }
 
 /** `https://www.arte.tv/fr/?x=1` -> `arte.tv` : même libellé que le titre d'un favori ([BookmarkUrl.siteName]). */

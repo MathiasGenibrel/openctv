@@ -7,5 +7,5 @@ import org.koin.dsl.module
  * `shouldInterceptRequest` est fourni par une feature (le bloqueur de pubs).
  */
 val webViewModule = module {
-    single { LockedWebViewFactory(requestInterceptor = get()) }
+    single { LockedWebViewFactory(requestInterceptor = get(), securityExceptions = get()) }
 }

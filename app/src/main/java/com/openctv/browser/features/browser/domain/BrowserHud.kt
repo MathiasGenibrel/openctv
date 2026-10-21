@@ -49,4 +49,15 @@ fun browserHudOf(
 }
 
 /** Message bref affiché en bas de l'écran, sans prendre le focus (cf. `BrowserViewModel.notice`). */
-enum class BrowserNotice { BookmarkFailed, AdBlockFailed, SettingFailed }
+enum class BrowserNotice {
+    BookmarkFailed, AdBlockFailed, SettingFailed,
+
+    /** Page HTTP affichée par exception : ne rien y saisir de sensible. */
+    InsecureHttpShown,
+
+    /** Page affichée malgré un certificat invalide accordé par l'utilisateur. */
+    UnverifiedCertificateShown,
+
+    /** Le choix « toujours autoriser » n'a pas pu être mémorisé : il ne vaut que pour la session. */
+    SecurityExceptionNotSaved,
+}

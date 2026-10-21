@@ -18,6 +18,8 @@ data class BrowserLayers(
     val mode: BrowserMode = BrowserMode.Page,
     /** Vidéo en plein écran : couche la plus haute, elle reçoit toutes les touches (hors Retour). */
     val isFullscreen: Boolean = false,
+    /** Panneau « Options avancées » déplié sur un avertissement de sécurité : Retour le replie d'abord. */
+    val isWarningOptionsOpen: Boolean = false,
 ) {
     val isAddressInputOpen: Boolean get() = addressInput != null
 
@@ -30,6 +32,9 @@ data class BrowserLayers(
 /** Effet de la touche Retour, décidé par [backAction]. */
 enum class BackAction {
     ExitFullscreen, CloseAddressInput, CloseMenu, ExitInterface,
+
+    /** Avertissement de sécurité aux options avancées dépliées : on les replie, sans quitter l'avertissement. */
+    CollapseWarningOptions,
 
     /** Écran d'erreur dont la page n'est pas dans l'historique : on retrouve la page affichée avant, sans reculer. */
     DismissError,
@@ -49,6 +54,7 @@ fun BrowserLayers.backAction(canGoBack: Boolean, isUnrecordedErrorShown: Boolean
     isAddressInputOpen -> BackAction.CloseAddressInput
     isMenuOpen -> BackAction.CloseMenu
     isInterfaceMode -> BackAction.ExitInterface
+    isWarningOptionsOpen -> BackAction.CollapseWarningOptions
     isUnrecordedErrorShown && canGoBack -> BackAction.DismissError
     canGoBack -> BackAction.GoBackInHistory
     else -> BackAction.LeaveBrowser

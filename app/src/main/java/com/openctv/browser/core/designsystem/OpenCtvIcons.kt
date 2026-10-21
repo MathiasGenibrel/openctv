@@ -31,16 +31,23 @@ object OpenCtvIcons {
     val Add: Painter @Composable get() = painterResource(R.drawable.ic_add)
     val ArrowBack: Painter @Composable get() = painterResource(R.drawable.ic_arrow_back)
     val ArrowForward: Painter @Composable get() = painterResource(R.drawable.ic_arrow_forward)
+    val CheckBox: Painter @Composable get() = painterResource(R.drawable.ic_check_box)
+    val CheckBoxOutlineBlank: Painter @Composable get() = painterResource(R.drawable.ic_check_box_outline_blank)
     val Check: Painter @Composable get() = painterResource(R.drawable.ic_check)
     val ChevronRight: Painter @Composable get() = painterResource(R.drawable.ic_chevron_right)
     val Close: Painter @Composable get() = painterResource(R.drawable.ic_close)
+    val Delete: Painter @Composable get() = painterResource(R.drawable.ic_delete)
+    val ExpandLess: Painter @Composable get() = painterResource(R.drawable.ic_expand_less)
+    val ExpandMore: Painter @Composable get() = painterResource(R.drawable.ic_expand_more)
     val FilterList: Painter @Composable get() = painterResource(R.drawable.ic_filter_list)
     val Gamepad: Painter @Composable get() = painterResource(R.drawable.ic_gamepad)
+    val GppBad: Painter @Composable get() = painterResource(R.drawable.ic_gpp_bad)
     val History: Painter @Composable get() = painterResource(R.drawable.ic_history)
     val Home: Painter @Composable get() = painterResource(R.drawable.ic_home)
     val Keyboard: Painter @Composable get() = painterResource(R.drawable.ic_keyboard)
     val Lock: Painter @Composable get() = painterResource(R.drawable.ic_lock)
     val MoreVert: Painter @Composable get() = painterResource(R.drawable.ic_more_vert)
+    val NoEncryption: Painter @Composable get() = painterResource(R.drawable.ic_no_encryption)
     val RadioButtonChecked: Painter @Composable get() = painterResource(R.drawable.ic_radio_button_checked)
     val RadioButtonUnchecked: Painter @Composable get() = painterResource(R.drawable.ic_radio_button_unchecked)
     val Refresh: Painter @Composable get() = painterResource(R.drawable.ic_refresh)
@@ -52,6 +59,7 @@ object OpenCtvIcons {
     val StarFilled: Painter @Composable get() = painterResource(R.drawable.ic_star_filled)
     val Timer: Painter @Composable get() = painterResource(R.drawable.ic_timer)
     val TravelExplore: Painter @Composable get() = painterResource(R.drawable.ic_travel_explore)
+    val Warning: Painter @Composable get() = painterResource(R.drawable.ic_warning)
     val WifiOff: Painter @Composable get() = painterResource(R.drawable.ic_wifi_off)
 }
 
@@ -67,7 +75,9 @@ private fun OpenCtvIconsPreview() {
                 OpenCtvIcons.Shield, OpenCtvIcons.Home, OpenCtvIcons.TravelExplore, OpenCtvIcons.Speed,
                 OpenCtvIcons.Timer, OpenCtvIcons.FilterList, OpenCtvIcons.WifiOff, OpenCtvIcons.History,
                 OpenCtvIcons.Check, OpenCtvIcons.ChevronRight, OpenCtvIcons.RadioButtonChecked,
-                OpenCtvIcons.RadioButtonUnchecked, OpenCtvIcons.Gamepad,
+                OpenCtvIcons.RadioButtonUnchecked, OpenCtvIcons.Gamepad, OpenCtvIcons.NoEncryption, OpenCtvIcons.GppBad,
+                OpenCtvIcons.Warning, OpenCtvIcons.CheckBox, OpenCtvIcons.CheckBoxOutlineBlank, OpenCtvIcons.ExpandMore,
+                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete,
             ).chunked(13).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     row.forEach { Icon(it, contentDescription = null, tint = OpenCtvColors.OnSurface) }

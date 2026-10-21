@@ -27,7 +27,7 @@ qui, et les enjeux (navigation au D-pad, UI à 10 pieds, vie privée, sécurité
 - Google Android/Compose guidelines + **Compose for TV** pour tout composant focalisable. Aucune logique métier dans les composables
 - **Le focus ne se perd jamais** : chaque écran a un élément focalisé visible, la touche Retour a un comportement prévisible
 - **Aucun SDK d'analytics, de crash reporting tiers ou de publicité.** Aucune donnée ne quitte la TV hors navigation
-- **WebView verrouillée par défaut** : pas d'accès fichier, pas de `addJavascriptInterface`, erreurs SSL toujours annulées
+- **WebView verrouillée par défaut** : pas d'accès fichier, pas de `addJavascriptInterface`, erreurs SSL annulées par défaut (`proceed()` uniquement pour une exception explicite hôte + empreinte de certificat choisie par l'utilisateur, page principale seulement), pages HTTP jamais affichées sans avertissement
 - Tests JUnit, nommage Gherkin (Given/When/Then), orientés comportement utilisateur
 - Simplicité d'abord. Impact minimal. Pas de correctif temporaire. Pas de phrases de remplissage.
 
