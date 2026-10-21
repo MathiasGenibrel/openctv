@@ -3,6 +3,7 @@
     <string name="app_name">OpenCTV</string>
     <string name="home_title">Où va-t-on ce soir ?</string>
     <string name="home_settings">Réglages</string>
+    <string name="home_history">Historique</string>
     <string name="home_search_placeholder">Rechercher sur %1$s ou saisir une adresse</string>
     <string name="home_favorites">Favoris</string>
     <string name="home_add">Ajouter</string>
@@ -46,6 +47,7 @@
     <string name="browser_menu_ad_block_site_off">Désactivé sur ce site</string>
     <string name="browser_menu_ad_block_global_off">Désactivé pour tous les sites</string>
     <string name="browser_menu_home">Accueil</string>
+    <string name="browser_menu_history">Historique</string>
     <string name="browser_menu_zoom">Zoom de la page</string>
     <string name="browser_menu_zoom_remembered_for">Mémorisé pour %1$s</string>
     <string name="browser_menu_zoom_note">Le niveau « Par défaut » suit Réglages › Zoom des pages. Un autre niveau est mémorisé pour ce site uniquement.</string>
@@ -58,6 +60,27 @@
     <string name="zoom_like_pc">comme un écran de PC</string>
     <string name="browser_menu_back_hint">Retour pour fermer le menu</string>
     <string name="browser_interface_help">Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page</string>
+    <string name="history_title">Historique</string>
+    <string name="history_back">Retour</string>
+    <string name="history_intro">Pages visitées sur cette TV. Rien n\'est envoyé ailleurs.</string>
+    <string name="history_clear_all">Tout effacer</string>
+    <string name="history_help">OK : ouvrir · Droite : retirer de l\'historique</string>
+    <string name="history_today">Aujourd\'hui</string>
+    <string name="history_yesterday">Hier</string>
+    <string name="history_remove">Retirer de l\'historique</string>
+    <string name="history_entry_supporting">%1$s · %2$s</string>
+    <string name="history_empty_title">Aucune page visitée</string>
+    <string name="history_empty_text">Les sites que vous ouvrez sur cette TV apparaîtront ici.</string>
+    <string name="history_empty_help">Retour pour fermer l\'historique</string>
+    <string name="history_unavailable">L\'historique n\'a pas pu être chargé.</string>
+    <string name="history_write_failed">L\'historique n\'a pas pu être modifié.</string>
+    <string name="history_clear_title">Effacer tout l\'historique ?</string>
+    <plurals name="history_clear_message">
+        <item quantity="one">La page visitée sur cette TV sera retirée. Favoris, réglages et cookies sont conservés.</item>
+        <item quantity="other">Les %d pages visitées sur cette TV seront retirées. Favoris, réglages et cookies sont conservés.</item>
+    </plurals>
+    <string name="history_clear_cancel">Annuler</string>
+    <string name="history_clear_confirm">Effacer</string>
     <string name="settings_title">Réglages</string>
     <string name="settings_back">Retour</string>
     <string name="settings_privacy_intro">Tout reste sur cette TV : aucun compte, aucune donnée envoyée.</string>

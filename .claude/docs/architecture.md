@@ -51,14 +51,16 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | `core/webview/` | Fabrique de la `WebView` **verrouillée** (réglages de sécurité centralisés), `WebViewClient`/`WebChromeClient` de base, gestion du plein écran vidéo. Un seul endroit configure la WebView. Décisions de sécurité de la page principale (HTTP, SSL, page affichée) dans `PageSecurityGuard`, Kotlin pur. |
 | `core/security/` | Exceptions de sécurité accordées par l'utilisateur (`SecurityExceptionsContract` : HTTP par hôte, certificat par hôte + empreinte SHA-256), session en mémoire + DataStore local ; `SiteHost` (hôte exact, parseur strict) |
 | `core/zoom/` | Zoom des pages : niveaux (`PageZoom` : 100 % = 960 px, 75 %, 67 %, 50 % = 1920 px), zoom propre à un site (`PageZoomContract` : DataStore local, hôte exact `SiteHost`) et niveau effectif d'une page (`effectiveZoom` : zoom du site, sinon niveau par défaut de `Settings.pageZoom`). La mise en page zoomée de la WebView (`pageZoomLayout`) et l'échelle de la vue (`PointerAwareWebView.applyPageZoom`) sont dans `core/webview/` ; `PointerAwareWebView` est le seul endroit qui convertit les coordonnées de l'écran en coordonnées de la vue (`toViewCoordinate`, `scrollByOnScreen`) : le curseur ne parle qu'en pixels de l'écran. |
+| `core/history/` | `PageVisitsContract` : le navigateur y enregistre les pages affichées, sans connaître `features/history` qui l'implémente |
 | `core/common/` | `Resource<T>`, dispatchers, utilitaires |
-| `core/database/` | Base Room de l'app |
+| `core/database/` | Base Room de l'app ; schémas versionnés dans `app/schemas/` (`exportSchema`), migrations dans `Migrations.kt` (`AllMigrations`, jamais destructives), vérifiées contre ces schémas par `MigrationSchemaTest` : toute nouvelle version de la base ajoute sa migration et commite son schéma |
 | `core/network/` | Client OkHttp (listes de filtres uniquement), HTTPS seulement |
 | `features/home/` | Écran d'accueil : grille de favoris, champ de recherche |
 | `features/browser/` | Écran de navigation : WebView, barre d'adresse, résolution URL vs recherche, gestion de la touche Retour |
 | `features/cursor/` | Curseur virtuel : état (position, vitesse, accélération), conversion OK → clic, défilement aux bords. Logique pure testable, indépendante de la WebView. |
 | `features/search/` | Saisie d'adresse/recherche : résolution saisie → URL ou recherche (`InputResolver`), suggestions locales (favoris + recherches récentes, DataStore), écran de saisie |
 | `features/bookmarks/` | Favoris : stockage Room, ajout/retrait |
+| `features/history/` | Historique : Room (table `history_entries`, migration 1→2 dans `core/database/Migrations.kt`, jamais destructive), règles pures (`HistoryPolicy` : fusion des doublons consécutifs, 90 jours / 1 000 entrées ; `groupByDay`), écran Historique (destination depuis l'accueil, surcouche du navigateur depuis son menu). Une page rouverte depuis la destination Historique y ramène à Retour, sur son entrée (`Destination.Browser.returnTo`) ; « Accueil » mène toujours à l'accueil |
 | `features/adblock/` | Téléchargement et compilation des listes (EasyList), moteur de décision bloquer/laisser passer, activation par site |
 
 Points d'attention :

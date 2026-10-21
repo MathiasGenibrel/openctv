@@ -48,7 +48,12 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
         if (!isMenuOpen) focusToolbarOr(focus.address)
     }
     AfterClosed(layers.isAddressInputOpen) { focusToolbarOr(focus.address) }
-    AfterClosed(layers.isMenuOpen) { focusToolbarOr(focus.menuButton) }
+    // « Historique » ferme le menu en ouvrant l'écran Historique : celui-ci prend le focus, le menu ne le rend pas.
+    AfterClosed(layers.isMenuOpen) {
+        val isHistoryOpen = viewModel.layers.value.isHistoryOpen
+        if (!isHistoryOpen) focusToolbarOr(focus.menuButton)
+    }
+    AfterClosed(layers.isHistoryOpen) { focusToolbarOr(focus.menuButton) }
     OnChanged(layers.mode) { focusToolbarOr(focus.address) }
     // Recréation de l'activité en mode interface : le focus ne doit pas rester sans élément.
     LaunchedEffect(Unit) { if (viewModel.layers.value.isInterfaceMode) focus.address.requestFocus() }
