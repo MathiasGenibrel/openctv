@@ -1,5 +1,6 @@
 package com.openctv.browser.core.webview
 
+import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
 /**
@@ -8,4 +9,5 @@ import org.koin.dsl.module
  */
 val webViewModule = module {
     single { LockedWebViewFactory(requestInterceptor = get(), securityExceptions = get()) }
+    single<WebDataContract> { WebViewDataCleaner(context = androidContext(), dispatchers = get()) }
 }

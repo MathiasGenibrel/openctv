@@ -59,17 +59,21 @@ private val OpenCtvButtonStyle.restingBorder: Border
         else -> Border.None
     }
 
-/** Bouton pilule d'OpenCTV : `Filled` (action principale, `primary`) ou `Tonal` (`secondaryContainer`), avec anneau de focus. */
+/** Bouton pilule d'OpenCTV : `Filled` (action principale, `primary`) ou `Tonal` (`secondaryContainer`), avec anneau de focus. [enabled] faux : grisé et non focalisable. */
 @Composable
 fun OpenCtvButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     style: OpenCtvButtonStyle = OpenCtvButtonStyle.Filled,
+    enabled: Boolean = true,
     content: @Composable RowScope.() -> Unit,
 ) {
     Button(
         onClick = onClick,
-        modifier = modifier,
+        // Désactivé : grisé et non focalisable (jamais `canFocus = true`, cf. conventions). Le bouton qui perd le
+        // focus en se désactivant est géré par l'écran.
+        modifier = modifier.focusProperties { if (!enabled) canFocus = false },
+        enabled = enabled,
         shape = ButtonDefaults.shape(CircleShape),
         border = ButtonDefaults.border(border = style.restingBorder, focusedBorder = focusRingBorder(CircleShape)),
         colors = ButtonDefaults.colors(
@@ -77,6 +81,8 @@ fun OpenCtvButton(
             contentColor = style.onContainer,
             focusedContainerColor = style.focusedContainer,
             focusedContentColor = style.onContainer,
+            disabledContainerColor = style.container.copy(alpha = DisabledContainerAlpha),
+            disabledContentColor = style.onContainer.copy(alpha = DisabledContentAlpha),
         ),
         content = content,
     )

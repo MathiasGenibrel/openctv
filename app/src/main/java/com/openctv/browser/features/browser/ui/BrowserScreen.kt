@@ -24,6 +24,7 @@ import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.DPadIcon
 import com.openctv.browser.core.designsystem.KeyHint
 import com.openctv.browser.core.designsystem.OpenCtvColors
+import com.openctv.browser.core.designsystem.OpenCtvSnackbar
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.webview.LockedWebViewFactory
@@ -195,7 +196,7 @@ private fun BottomSnackbar(text: String, hint: String? = null, modifier: Modifie
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
             Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 hint?.let { KeyHintChip(it) }
-                HelpSnackbar(text = text)
+                OpenCtvSnackbar(text = text)
             }
         }
     }

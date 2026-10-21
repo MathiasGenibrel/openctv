@@ -166,6 +166,29 @@
     <string name="settings_security_exception_http">Page HTTP autorisée</string>
     <string name="settings_security_exception_certificate">Certificat de confiance · %1$s</string>
     <string name="settings_security_exceptions_close">Fermer</string>
+    <string name="settings_clear_data">Effacer les données de navigation</string>
+    <string name="settings_clear_data_summary">Historique, recherches, cookies, cache</string>
+    <string name="settings_clear_data_title">Effacer les données</string>
+    <string name="settings_clear_data_subtitle">Sur cette TV uniquement</string>
+    <string name="settings_clear_data_history">Historique</string>
+    <string name="settings_clear_data_recent_searches">Recherches récentes</string>
+    <string name="settings_clear_data_site_data">Cookies et données de sites</string>
+    <string name="settings_clear_data_site_data_hint">Vous serez déconnecté des sites</string>
+    <string name="settings_clear_data_cache">Cache</string>
+    <string name="settings_clear_data_cache_hint">Images et fichiers temporaires</string>
+    <plurals name="settings_clear_data_pages">
+        <item quantity="one">%d page</item>
+        <item quantity="other">%d pages</item>
+    </plurals>
+    <plurals name="settings_clear_data_searches">
+        <item quantity="one">%d recherche</item>
+        <item quantity="other">%d recherches</item>
+    </plurals>
+    <string name="settings_clear_data_note">Favoris, réglages, exceptions de sécurité et zooms sont conservés.</string>
+    <string name="settings_clear_data_action">Effacer les données</string>
+    <string name="settings_clear_data_help">OK pour cocher · Retour pour revenir aux réglages</string>
+    <string name="settings_clear_data_done">Données de navigation effacées</string>
+    <string name="settings_clear_data_failed">Impossible d\'effacer : %1$s</string>
     <string name="search_back">Retour</string>
     <string name="search_clear">Effacer la saisie</string>
     <string name="search_placeholder">Rechercher sur %1$s ou saisir une adresse</string>

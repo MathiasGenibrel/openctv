@@ -12,6 +12,11 @@ import com.openctv.browser.core.zoom.PageZoomContract
 import com.openctv.browser.core.zoom.SiteZoom
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
+import com.openctv.browser.features.history.domain.HistoryContract
+import com.openctv.browser.features.search.domain.RecentSearchesContract
+import com.openctv.browser.features.settings.domain.ClearBrowsingData
+import com.openctv.browser.features.settings.domain.ClearDataSelection
+import com.openctv.browser.features.settings.domain.ClearDataStep
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.SearchEngine
@@ -28,7 +33,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Sous-panneau latéral ouvert depuis la liste des réglages. */
-enum class SettingsPanel { StartPage, SearchEngine, HudHideDelay, CursorSpeed, PageZoom, SecurityExceptions }
+enum class SettingsPanel { StartPage, SearchEngine, HudHideDelay, CursorSpeed, PageZoom, SecurityExceptions, ClearData }
 
 data class SettingsUiState(
     val settings: Settings = Settings(),
@@ -38,6 +43,14 @@ data class SettingsUiState(
     val securityExceptions: List<SiteException> = emptyList(),
     /** Sites qui ont leur propre zoom (les autres suivent `settings.pageZoom`), triés par hôte. */
     val siteZooms: List<SiteZoom> = emptyList(),
+    /** Catégories cochées dans le panneau « Effacer les données » (toutes à chaque ouverture). */
+    val clearSelection: ClearDataSelection = ClearDataSelection(),
+    /** Pages de l'historique, `null` tant que (ou si) il n'est pas lisible : le compteur est alors omis. */
+    val historyCount: Int? = null,
+    /** Recherches récentes, `null` tant que (ou si) elles ne sont pas lisibles. */
+    val recentSearchCount: Int? = null,
+    /** Résultat du dernier effacement, affiché en snackbar jusqu'à [SettingsViewModel.onClearOutcomeShown]. */
+    val clearOutcome: ClearOutcome? = null,
     val openPanel: SettingsPanel? = null,
     /** Le dernier enregistrement a échoué : le réglage affiché est resté l'ancien. */
     val isSaveFailed: Boolean = false,
@@ -45,26 +58,44 @@ data class SettingsUiState(
     val isSiteInputInvalid: Boolean = false,
 )
 
+/** Ce que dit la snackbar après « Effacer les données ». */
+sealed interface ClearOutcome {
+    data object Done : ClearOutcome
+
+    /** Ces catégories n'ont pas pu être effacées ; les autres l'ont été. */
+    data class Failed(val steps: Set<ClearDataStep>) : ClearOutcome
+}
+
 class SettingsViewModel(
     private val settings: SettingsContract,
     bookmarks: BookmarksContract,
     private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
     private val siteZooms: PageZoomContract = NoPageZoom,
+    private val clearBrowsingData: ClearBrowsingData,
+    history: HistoryContract,
+    recentSearches: RecentSearchesContract,
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<SettingsPanel?>(null)
     private val feedback = MutableStateFlow(Feedback())
+    private val clearing = MutableStateFlow(Clearing())
 
     val uiState: StateFlow<SettingsUiState> = combine(
         combine(settings.settings, bookmarks.getBookmarks(), securityExceptions.persisted, siteZooms.sites, ::StoredData),
         openPanel,
         feedback,
-    ) { stored, panel, feedback ->
+        clearing,
+        combine(history.getEntries(), recentSearches.getRecents(), ::Counts),
+    ) { stored, panel, feedback, clearing, counts ->
         SettingsUiState(
             settings = stored.settings.orDefaults(),
             bookmarks = (stored.bookmarks as? Resource.Success)?.data.orEmpty(),
             securityExceptions = (stored.securityExceptions as? Resource.Success)?.data.orEmpty(),
             siteZooms = (stored.siteZooms as? Resource.Success)?.data.orEmpty(),
+            clearSelection = clearing.selection,
+            historyCount = counts.history,
+            recentSearchCount = counts.recentSearches,
+            clearOutcome = clearing.outcome,
             openPanel = panel,
             isSaveFailed = feedback.isSaveFailed,
             isSiteInputInvalid = feedback.isSiteInputInvalid,
@@ -73,6 +104,8 @@ class SettingsViewModel(
 
     fun open(panel: SettingsPanel) {
         feedback.value = Feedback()
+        // Chaque ouverture repart de « tout coché » : on n'efface jamais sur la foi d'un choix d'une visite précédente.
+        if (panel == SettingsPanel.ClearData) clearing.update { it.copy(selection = ClearDataSelection()) }
         openPanel.value = panel
     }
 
@@ -116,6 +149,28 @@ class SettingsViewModel(
     /** Retire une exception de sécurité : la prochaine visite du site affiche de nouveau l'avertissement. */
     fun removeSecurityException(exception: SiteException) = save { securityExceptions.remove(exception) }
 
+    fun toggleClearStep(step: ClearDataStep) = clearing.update { it.copy(selection = it.selection.toggled(step)) }
+
+    /**
+     * Efface les catégories cochées, puis ferme le panneau (le focus revient à la ligne des Réglages) et publie le
+     * résultat. Sans rien de coché, ou pendant un effacement déjà lancé, ne fait rien.
+     */
+    fun clearData() {
+        val selection = clearing.value.selection
+        val isBusy = clearing.value.isClearing
+        if (selection.isEmpty || isBusy) return
+        clearing.update { it.copy(isClearing = true, outcome = null) }
+        viewModelScope.launch {
+            val result = clearBrowsingData(selection)
+            val outcome = if (result.isSuccess) ClearOutcome.Done else ClearOutcome.Failed(result.failed)
+            clearing.update { it.copy(isClearing = false, outcome = outcome) }
+            closePanel()
+        }
+    }
+
+    /** La snackbar de résultat a été montrée assez longtemps. */
+    fun onClearOutcomeShown() = clearing.update { it.copy(outcome = null) }
+
     private fun save(write: suspend () -> Resource<Unit>) {
         viewModelScope.launch {
             val isFailure = write() is Resource.Error
@@ -128,6 +183,17 @@ class SettingsViewModel(
         val bookmarks: Resource<List<Bookmark>>,
         val securityExceptions: Resource<List<SiteException>>,
         val siteZooms: Resource<List<SiteZoom>>,
+    )
+
+    private class Counts(entries: Resource<List<*>>, recents: Resource<List<*>>) {
+        val history: Int? = (entries as? Resource.Success)?.data?.size
+        val recentSearches: Int? = (recents as? Resource.Success)?.data?.size
+    }
+
+    private data class Clearing(
+        val selection: ClearDataSelection = ClearDataSelection(),
+        val isClearing: Boolean = false,
+        val outcome: ClearOutcome? = null,
     )
 
     private data class Feedback(val isSaveFailed: Boolean = false, val isSiteInputInvalid: Boolean = false)

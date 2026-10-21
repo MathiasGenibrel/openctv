@@ -1,4 +1,4 @@
-package com.openctv.browser.features.browser.ui
+package com.openctv.browser.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
@@ -10,13 +10,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
-import com.openctv.browser.core.designsystem.OpenCtvColors
-import com.openctv.browser.core.designsystem.OpenCtvShapes
-import com.openctv.browser.core.designsystem.OpenCtvTheme
 
-/** Snackbar d'aide M3 (`inverseSurface`), non focalisable : elle informe sans prendre le focus. */
+/** Snackbar M3 (`inverseSurface`), non focalisable : elle informe (aide, résultat d'une action) sans prendre le focus. */
 @Composable
-fun HelpSnackbar(text: String, modifier: Modifier = Modifier) {
+fun OpenCtvSnackbar(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.bodyLarge,
@@ -30,8 +27,8 @@ fun HelpSnackbar(text: String, modifier: Modifier = Modifier) {
 
 @Preview(device = Devices.TV_1080p)
 @Composable
-private fun HelpSnackbarPreview() {
+private fun OpenCtvSnackbarPreview() {
     OpenCtvTheme {
-        HelpSnackbar("Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page")
+        OpenCtvSnackbar("Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page")
     }
 }

@@ -31,6 +31,17 @@ class SettingsImplTest {
     )
 
     @Test
+    fun `Given a remembered last page When it is cleared Then it is forgotten and the other settings are kept`() = runTest {
+        val store = FakeSettingsStore(Settings(searchEngine = SearchEngine.Google, lastPage = "https://arte.tv"))
+        val repository = impl(store)
+
+        val result = repository.clearLastPage()
+
+        assertThat(result).isEqualTo(Resource.Success(Unit))
+        assertThat(store.current.value).isEqualTo(Settings(searchEngine = SearchEngine.Google, lastPage = null))
+    }
+
+    @Test
     fun `Given nothing stored When the app starts Then settings load with defaults and launch opens home`() = runTest {
         val repository = impl(FakeSettingsStore())
 

@@ -22,6 +22,7 @@ import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.history.PageVisitsContract
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.webview.LockedWebViewFactory
+import com.openctv.browser.core.webview.WebDataContract
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.core.zoom.PageZoomContract
 import com.openctv.browser.features.adblock.domain.AdBlockContract
@@ -42,6 +43,7 @@ import com.openctv.browser.features.search.domain.RecentSearchesContract
 import com.openctv.browser.features.search.domain.SearchRequest
 import com.openctv.browser.features.search.ui.SearchScreen
 import com.openctv.browser.features.search.ui.SearchViewModel
+import com.openctv.browser.features.settings.domain.ClearBrowsingData
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.orDefaults
 import com.openctv.browser.features.settings.ui.FilterListsStatus
@@ -70,6 +72,7 @@ class MainActivity : ComponentActivity() {
     private val pageZoom: PageZoomContract by inject()
     private val history: HistoryContract by inject()
     private val pageVisits: PageVisitsContract by inject()
+    private val webData: WebDataContract by inject()
 
     /** Zoom des Réglages pour les sites sans zoom propre : suit les Réglages, lisible tout de suite. */
     private val defaultPageZoom: StateFlow<PageZoom> by lazy {
@@ -128,7 +131,14 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                         Destination.Settings -> SettingsScreen(
-                            viewModel = viewModel { SettingsViewModel(settings, bookmarks, securityExceptions, pageZoom) },
+                            viewModel = viewModel {
+                                SettingsViewModel(
+                                    settings, bookmarks, securityExceptions, pageZoom,
+                                    clearBrowsingData = ClearBrowsingData(history, recentSearches, settings, webData),
+                                    history = history,
+                                    recentSearches = recentSearches,
+                                )
+                            },
                             filterLists = filterListsStatus,
                             // lifecycleScope : la mise à jour continue si l'utilisateur quitte les Réglages.
                             onRefreshFilterLists = { lifecycleScope.launch { adBlock.refreshNow() } },

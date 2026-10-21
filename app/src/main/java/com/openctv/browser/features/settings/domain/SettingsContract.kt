@@ -35,4 +35,7 @@ interface SettingsContract {
      * Sans attente ni résultat : n'est pas sur le chemin de navigation ; les URLs non http/https sont ignorées.
      */
     fun recordLastPage(url: String)
+
+    /** Oublie la dernière page visitée : « Reprendre la dernière page » retombe alors sur l'accueil. */
+    suspend fun clearLastPage(): Resource<Unit>
 }

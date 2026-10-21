@@ -54,6 +54,7 @@ import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.InsecurityMark
 import com.openctv.browser.core.designsystem.ListGroup
 import com.openctv.browser.core.designsystem.OpenCtvButton
+import com.openctv.browser.core.designsystem.OpenCtvButtonStyle
 import com.openctv.browser.core.security.CertificateFingerprint
 import com.openctv.browser.core.security.SiteException
 import com.openctv.browser.core.zoom.PageZoom
@@ -63,6 +64,7 @@ import com.openctv.browser.core.zoom.percentLabel
 import com.openctv.browser.core.zoom.widthLabel
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.tv.material3.Icon
+import com.openctv.browser.core.designsystem.ListCheckRow
 import com.openctv.browser.core.designsystem.ListNavigationRow
 import com.openctv.browser.core.designsystem.ListRadioOptions
 import com.openctv.browser.core.designsystem.ListRadioRow
@@ -72,18 +74,22 @@ import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIconButton
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
+import com.openctv.browser.core.designsystem.OpenCtvSnackbar
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.SidePanelOverlay
 import com.openctv.browser.core.designsystem.focusRing
 import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.features.bookmarks.domain.Bookmark
+import com.openctv.browser.features.settings.domain.ClearDataSelection
+import com.openctv.browser.features.settings.domain.ClearDataStep
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.StartPage
 import java.time.Instant
+import kotlinx.coroutines.delay
 
 /** Écran Réglages. Retour ferme le sous-panneau ouvert, puis appelle [onClose] (accueil). */
 @Composable
@@ -114,6 +120,9 @@ fun SettingsScreen(
         onRemoveSecurityException = viewModel::removeSecurityException,
         onSelectPageZoom = viewModel::selectPageZoom,
         onRemoveSiteZoom = viewModel::removeSiteZoom,
+        onToggleClearStep = viewModel::toggleClearStep,
+        onClearData = viewModel::clearData,
+        onClearOutcomeShown = viewModel::onClearOutcomeShown,
         modifier = modifier,
     )
 }
@@ -136,6 +145,9 @@ private fun SettingsContent(
     onRemoveSecurityException: (SiteException) -> Unit = {},
     onSelectPageZoom: (PageZoom) -> Unit = {},
     onRemoveSiteZoom: (String) -> Unit = {},
+    onToggleClearStep: (ClearDataStep) -> Unit = {},
+    onClearData: () -> Unit = {},
+    onClearOutcomeShown: () -> Unit = {},
 ) {
     val rowFocus = remember { SettingsPanel.entries.associateWith { FocusRequester() } }
     val isPanelOpen = state.openPanel != null
@@ -182,10 +194,32 @@ private fun SettingsContent(
                     onRemoveSecurityException = onRemoveSecurityException,
                     onSelectPageZoom = onSelectPageZoom,
                     onRemoveSiteZoom = onRemoveSiteZoom,
+                    onToggleClearStep = onToggleClearStep,
+                    onClearData = onClearData,
                     onClosePanel = onClosePanel,
                 )
             }
         }
+        state.clearOutcome?.let { outcome ->
+            val message = clearOutcomeMessage(outcome)
+            LaunchedEffect(outcome) {
+                delay(OutcomeDurationMillis)
+                onClearOutcomeShown()
+            }
+            // Non focalisable : le focus reste sur la ligne des Réglages.
+            OpenCtvSnackbar(text = message, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 48.dp))
+        }
+    }
+}
+
+private const val OutcomeDurationMillis = 4_000L
+
+@Composable
+private fun clearOutcomeMessage(outcome: ClearOutcome): String = when (outcome) {
+    ClearOutcome.Done -> stringResource(R.string.settings_clear_data_done)
+    is ClearOutcome.Failed -> {
+        val names = outcome.steps.map { stringResource(it.labelRes()).lowercase() }
+        stringResource(R.string.settings_clear_data_failed, names.joinToString(", "))
     }
 }
 
@@ -299,6 +333,13 @@ private fun SettingsList(
                 onClick = { onOpenPanel(SettingsPanel.SecurityExceptions) },
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.SecurityExceptions)),
             )
+            ListNavigationRow(
+                icon = OpenCtvIcons.DeleteSweep,
+                label = stringResource(R.string.settings_clear_data),
+                value = stringResource(R.string.settings_clear_data_summary),
+                onClick = { onOpenPanel(SettingsPanel.ClearData) },
+                modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.ClearData)),
+            )
         }
     }
 }
@@ -339,6 +380,8 @@ private fun PanelContent(
     onRemoveSecurityException: (SiteException) -> Unit,
     onSelectPageZoom: (PageZoom) -> Unit,
     onRemoveSiteZoom: (String) -> Unit,
+    onToggleClearStep: (ClearDataStep) -> Unit,
+    onClearData: () -> Unit,
     onClosePanel: () -> Unit,
 ) {
     val settings = state.settings
@@ -371,6 +414,13 @@ private fun PanelContent(
             onRemove = onRemoveSecurityException,
             onClose = onClosePanel,
         )
+        SettingsPanel.ClearData -> ClearDataPanel(
+            selection = state.clearSelection,
+            historyCount = state.historyCount,
+            recentSearchCount = state.recentSearchCount,
+            onToggle = onToggleClearStep,
+            onClear = onClearData,
+        )
         SettingsPanel.PageZoom -> PageZoomPanel(
             selected = settings.pageZoom,
             siteZooms = state.siteZooms,
@@ -386,6 +436,70 @@ private fun PanelContent(
             onSelect = onSelectCursorSpeed,
         )
     }
+}
+
+/**
+ * « Effacer les données » : une case par catégorie (toutes cochées à l'ouverture, focus initial sur la première), puis
+ * le bouton d'action risquée, inactif et non focalisable quand rien n'est coché. Le focus ne se perd pas : le bouton
+ * n'est atteignable que coché, et c'est l'écran qui ferme le panneau et rend le focus à la ligne une fois l'effacement fait.
+ */
+@Composable
+private fun ClearDataPanel(
+    selection: ClearDataSelection,
+    historyCount: Int?,
+    recentSearchCount: Int?,
+    onToggle: (ClearDataStep) -> Unit,
+    onClear: () -> Unit,
+) {
+    val firstFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { firstFocus.requestFocus() }
+
+    // padding après verticalScroll : l'anneau de focus et l'agrandissement des lignes ne sont jamais rognés.
+    Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(8.dp)) {
+        PanelTitle(stringResource(R.string.settings_clear_data_title))
+        Text(
+            text = stringResource(R.string.settings_clear_data_subtitle),
+            style = MaterialTheme.typography.bodyMedium,
+            color = OpenCtvColors.OnSurfaceVariant,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ClearDataStep.entries.forEach { step ->
+                ListCheckRow(
+                    label = stringResource(step.labelRes()),
+                    isChecked = step in selection,
+                    onClick = { onToggle(step) },
+                    supporting = clearStepSupporting(step, historyCount, recentSearchCount),
+                    modifier = if (step == ClearDataStep.entries.first()) Modifier.focusRequester(firstFocus) else Modifier,
+                )
+            }
+        }
+        Text(
+            text = stringResource(R.string.settings_clear_data_note),
+            style = MaterialTheme.typography.bodyMedium,
+            color = OpenCtvColors.OnSurfaceVariant,
+            modifier = Modifier.padding(top = 16.dp, bottom = 16.dp),
+        )
+        OpenCtvButton(onClick = onClear, style = OpenCtvButtonStyle.OutlineError, enabled = !selection.isEmpty) {
+            Icon(OpenCtvIcons.DeleteSweep, contentDescription = null)
+            Text(stringResource(R.string.settings_clear_data_action))
+        }
+        Text(
+            text = stringResource(R.string.settings_clear_data_help),
+            style = MaterialTheme.typography.labelLarge,
+            color = OpenCtvColors.OnSurfaceVariant,
+            modifier = Modifier.padding(top = 16.dp),
+        )
+    }
+}
+
+@Composable
+private fun clearStepSupporting(step: ClearDataStep, historyCount: Int?, recentSearchCount: Int?): String? = when (step) {
+    ClearDataStep.History -> historyCount?.let { pluralStringResource(R.plurals.settings_clear_data_pages, it, it) }
+    ClearDataStep.RecentSearches ->
+        recentSearchCount?.let { pluralStringResource(R.plurals.settings_clear_data_searches, it, it) }
+    ClearDataStep.SiteData -> stringResource(R.string.settings_clear_data_site_data_hint)
+    ClearDataStep.Cache -> stringResource(R.string.settings_clear_data_cache_hint)
 }
 
 /**
@@ -802,6 +916,23 @@ private fun SettingsStartPagePanelPreview() {
                 settings = Settings(startPage = StartPage.Site("https://arte.tv")),
                 bookmarks = PreviewBookmarks,
                 openPanel = SettingsPanel.StartPage,
+            ),
+            onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
+            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},
+        )
+    }
+}
+
+@Preview(device = Devices.TV_1080p)
+@Composable
+private fun SettingsClearDataPanelPreview() {
+    OpenCtvTheme {
+        SettingsContent(
+            state = SettingsUiState(
+                openPanel = SettingsPanel.ClearData,
+                historyCount = 128,
+                recentSearchCount = 7,
+                clearSelection = ClearDataSelection(setOf(ClearDataStep.History, ClearDataStep.Cache)),
             ),
             onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
             onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},

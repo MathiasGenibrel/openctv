@@ -14,6 +14,7 @@ import com.openctv.browser.features.browser.FakeSecurityExceptions
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.settings.data.SettingsImpl
+import com.openctv.browser.features.settings.domain.ClearBrowsingData
 import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.StartPage
 import com.openctv.browser.features.settings.ui.SettingsPanel
@@ -62,7 +63,12 @@ class SettingsViewModelTest {
             dispatchers = TestDispatcherProvider(StandardTestDispatcher(testScheduler)),
             scope = backgroundScope,
         )
-        return SettingsViewModel(settings, bookmarksContract, securityExceptions, siteZooms)
+        return SettingsViewModel(
+            settings, bookmarksContract, securityExceptions, siteZooms,
+            clearBrowsingData = ClearBrowsingData(FakeHistory(), FakeRecentSearches(), settings, FakeWebData()),
+            history = FakeHistory(),
+            recentSearches = FakeRecentSearches(),
+        )
     }
 
     /** `uiState` n'est actif qu'abonné (WhileSubscribed) : on s'abonne pour la durée du test. */
