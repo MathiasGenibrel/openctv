@@ -81,7 +81,9 @@ single<BookmarksContract> { BookmarksImpl(get()) }
      construction du script), et sont insérés comme tableau JSON de chaînes, jamais concaténés au code. Aucune donnée
      lue dans la page (hors `document.head` pour y rattacher le `<style>`), aucun résultat exploité. Page principale
      http/https seulement, page que le garde a laissé s'afficher, une fois par page (`onPageCommitVisible`, sinon
-     `onPageFinished`). Rien si le bloqueur est coupé (globalement ou pour le site) ou si « Bandeaux de cookies » l'est.
+     `onPageFinished`) ; jamais pour une page en échec ou sous avertissement (HTTP, certificat), même si le moteur y
+     affiche sa page d'erreur. Ces décisions vivent dans `CosmeticStyleGate` (Kotlin pur, testé) ; `SecureWebViewClient`
+     n'en est que l'adaptateur. Rien si le bloqueur est coupé (globalement ou pour le site) ou si « Bandeaux de cookies » l'est.
      `addDocumentStartJavaScript` n'est **pas** utilisé : les règles dépendent de l'hôte, il faudrait enregistrer un
      script par hôte (asynchrone, sur le thread principal, en course avec la navigation) ou embarquer toute la liste
      dans un script qui la trie dans la page. Le script est donc préparé hors du thread principal (à la requête de la
@@ -91,8 +93,16 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   `{ } ; @ \ < / !`, des non ASCII, de `url(`, `expression`, `javascript`, `import`, des pseudo-éléments, des
   pseudo-classes hors `not/is/where/has/nth-*/first-child/last-child/…` et de toute parenthèse hors de celles-ci, des
   crochets/parenthèses/guillemets mal appariés, et des sélecteurs qui masquent toute la page (`*`, `html`, `body`,
-  `head`, `:root`). Une règle dont un sélecteur est refusé est ignorée en entier. Au plus 400 000 caractères de
-  sélecteurs par page (règles du site d'abord).
+  `head`, `:root`). Une règle dont un sélecteur est refusé est ignorée en entier.
+- **Budget du script cosmétique** (performance TV : il est analysé et ses règles compilées dans chaque page) : tableau de
+  sélecteurs de 40 000 caractères au plus par page (`CosmeticStyleScript.MaxTotalChars`, script de ~40 Ko au plus contre
+  ~320 Ko pour la liste générique entière), règles du site d'abord. Les règles génériques (~15 000 dans la liste, presque
+  toutes propres à un site) sont réduites **une fois, à la compilation de la liste**, à 32 000 caractères
+  (`GenericCosmeticBudget`, ~1 800 sélecteurs, ~32 Ko) par ordre d'impact : `#id`/`.classe` des plateformes de
+  consentement connues, puis noms de bandeau génériques (`#cookie-banner`), puis autres `#id`/`.classe`, puis le reste
+  (attributs, combinateurs, pseudo-classes, plus coûteux pour le moteur CSS). Par page, seules les règles du site sont
+  encodées : l'encodage des génériques est mis en cache, la préparation dans `shouldInterceptRequest` reste de l'ordre
+  de la dizaine de microsecondes.
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :
