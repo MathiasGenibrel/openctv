@@ -66,8 +66,6 @@ class SettingsViewModelTest {
         return SettingsViewModel(
             settings, bookmarksContract, securityExceptions, siteZooms,
             clearBrowsingData = ClearBrowsingData(FakeHistory(), FakeRecentSearches(), settings, FakeWebData()),
-            history = FakeHistory(),
-            recentSearches = FakeRecentSearches(),
         )
     }
 

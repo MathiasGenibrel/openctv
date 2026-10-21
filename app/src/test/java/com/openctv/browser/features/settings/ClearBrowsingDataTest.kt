@@ -3,12 +3,18 @@ package com.openctv.browser.features.settings
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.TestDispatcherProvider
 import com.openctv.browser.features.settings.domain.ClearBrowsingData
+import com.openctv.browser.features.settings.domain.ClearDataCounts
 import com.openctv.browser.features.settings.domain.ClearDataSelection
 import com.openctv.browser.features.settings.domain.ClearDataStep
 import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.StartPage
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.runTest
@@ -146,5 +152,39 @@ class ClearBrowsingDataTest {
         // Then
         assertThat(settings.current.startPage).isEqualTo(StartPage.LastPage)
         assertThat(settings.current.lastPage).isNull()
+    }
+
+    @Test
+    fun `Given clearing has started When the screen that asked for it goes away Then every selected category is still erased`() = runTest {
+        // Given
+        val gate = CompletableDeferred<Unit>()
+        webData.siteDataGate = gate
+        val clear = clearData()
+        val request = launch { clear(ClearDataSelection()) }
+        runCurrent()
+
+        // When
+        request.cancel()
+        gate.complete(Unit)
+        advanceUntilIdle()
+
+        // Then
+        assertThat(history.entries.value).isEmpty()
+        assertThat(recents.queries.value).isEmpty()
+        assertThat(webData.hasSiteData).isFalse()
+        assertThat(webData.hasCache).isFalse()
+    }
+
+    @Test
+    fun `Given a history and recent searches When everything is cleared Then both counts drop to zero`() = runTest {
+        // Given
+        val clear = clearData()
+        assertThat(clear.counts.first()).isEqualTo(ClearDataCounts(history = 2, recentSearches = 2))
+
+        // When
+        clear(ClearDataSelection())
+
+        // Then
+        assertThat(clear.counts.first()).isEqualTo(ClearDataCounts(history = 0, recentSearches = 0))
     }
 }

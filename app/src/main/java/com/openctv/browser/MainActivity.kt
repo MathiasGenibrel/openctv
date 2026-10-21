@@ -135,8 +135,6 @@ class MainActivity : ComponentActivity() {
                                 SettingsViewModel(
                                     settings, bookmarks, securityExceptions, pageZoom,
                                     clearBrowsingData = ClearBrowsingData(history, recentSearches, settings, webData),
-                                    history = history,
-                                    recentSearches = recentSearches,
                                 )
                             },
                             filterLists = filterListsStatus,

@@ -4,6 +4,10 @@ import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.webview.WebDataContract
 import com.openctv.browser.features.history.domain.HistoryContract
 import com.openctv.browser.features.search.domain.RecentSearchesContract
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.withContext
 
 /** Une catégorie de données de navigation, effaçable séparément. */
 enum class ClearDataStep { History, RecentSearches, SiteData, Cache }
@@ -24,6 +28,9 @@ data class ClearDataResult(val failed: Set<ClearDataStep>) {
     val isSuccess: Boolean get() = failed.isEmpty()
 }
 
+/** Nombre d'éléments des catégories qui se comptent, `null` tant que (ou si) la catégorie n'est pas lisible. */
+data class ClearDataCounts(val history: Int? = null, val recentSearches: Int? = null)
+
 /**
  * Efface les données de navigation choisies. Chaque catégorie est indépendante : l'échec de l'une n'empêche pas les
  * autres, et le résultat dit lesquelles ont échoué.
@@ -31,6 +38,9 @@ data class ClearDataResult(val failed: Set<ClearDataStep>) {
  * Ne touche jamais aux favoris, aux réglages, aux exceptions de sécurité ni aux zooms par site : aucun de ces contrats
  * n'est connu d'ici. Seule exception voulue : la dernière page mémorisée (« Reprendre la dernière page ») fait partie
  * de l'historique, elle est oubliée avec lui.
+ *
+ * Un effacement lancé va jusqu'au bout, même si l'écran qui l'a demandé est quitté entre-temps : l'utilisateur qui a
+ * vu « Effacer » partir ne doit pas garder des cookies parce qu'il a appuyé sur Retour trop tôt.
  */
 class ClearBrowsingData(
     private val history: HistoryContract,
@@ -38,12 +48,20 @@ class ClearBrowsingData(
     private val settings: SettingsContract,
     private val webData: WebDataContract,
 ) {
-    suspend operator fun invoke(selection: ClearDataSelection): ClearDataResult {
+    /** Ce que contient chaque catégorie, mis à jour à chaque modification (et donc à 0 après un effacement). */
+    val counts: Flow<ClearDataCounts> = combine(history.getEntries(), recentSearches.getRecents()) { entries, recents ->
+        ClearDataCounts(
+            history = (entries as? Resource.Success)?.data?.size,
+            recentSearches = (recents as? Resource.Success)?.data?.size,
+        )
+    }
+
+    suspend operator fun invoke(selection: ClearDataSelection): ClearDataResult = withContext(NonCancellable) {
         val failed = ClearDataStep.entries
             .filter { it in selection }
             .filter { step -> run(step) is Resource.Error }
             .toSet()
-        return ClearDataResult(failed)
+        ClearDataResult(failed)
     }
 
     private suspend fun run(step: ClearDataStep): Resource<Unit> = when (step) {

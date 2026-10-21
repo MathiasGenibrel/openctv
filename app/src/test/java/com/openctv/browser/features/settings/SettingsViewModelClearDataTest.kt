@@ -16,6 +16,7 @@ import com.openctv.browser.features.settings.domain.StartPage
 import com.openctv.browser.features.settings.ui.ClearOutcome
 import com.openctv.browser.features.settings.ui.SettingsPanel
 import com.openctv.browser.features.settings.ui.SettingsViewModel
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.launch
@@ -54,8 +55,6 @@ class SettingsViewModelClearDataTest {
             securityExceptions = exceptions,
             siteZooms = zooms,
             clearBrowsingData = ClearBrowsingData(history, recents, settings, webData),
-            history = history,
-            recentSearches = recents,
         ).also { viewModel ->
             backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.uiState.collect {} }
         }
@@ -190,5 +189,24 @@ class SettingsViewModelClearDataTest {
         assertThat(zooms.current).containsExactly(SiteZoom("arte.tv", PageZoom.Half))
         assertThat(state.settings.startPage).isEqualTo(StartPage.LastPage)
         assertThat(state.settings.lastPage).isNull()
+    }
+
+    @Test
+    fun `Given clearing is under way When the user goes back and opens another panel Then that panel stays open once clearing ends`() = runTest {
+        // Given
+        val gate = CompletableDeferred<Unit>()
+        webData.siteDataGate = gate
+        val viewModel = viewModel()
+        viewModel.open(SettingsPanel.ClearData)
+        viewModel.clearData()
+
+        // When
+        viewModel.onBack()
+        viewModel.open(SettingsPanel.SearchEngine)
+        gate.complete(Unit)
+
+        // Then
+        assertThat(viewModel.uiState.value.openPanel).isEqualTo(SettingsPanel.SearchEngine)
+        assertThat(viewModel.uiState.value.clearOutcome).isEqualTo(ClearOutcome.Done)
     }
 }

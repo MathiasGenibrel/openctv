@@ -9,6 +9,7 @@ import com.openctv.browser.features.search.domain.RecentSearchesContract
 import com.openctv.browser.features.settings.data.SettingsImpl
 import com.openctv.browser.features.settings.domain.Settings
 import java.time.Instant
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,14 +46,19 @@ class FakeRecentSearches(vararg queries: String) : RecentSearchesContract {
     }
 }
 
-/** Données du moteur WebView : `true` tant qu'elles sont là, `false` une fois effacées. */
+/**
+ * Données du moteur WebView : `true` tant qu'elles sont là, `false` une fois effacées. [siteDataGate] non nul : l'effacement
+ * des données de sites attend qu'il soit complété (effacement en cours).
+ */
 class FakeWebData : WebDataContract {
     var hasSiteData = true
     var hasCache = true
     var siteDataFailure: String? = null
     var cacheFailure: String? = null
+    var siteDataGate: CompletableDeferred<Unit>? = null
 
     override suspend fun clearSiteData(): Resource<Unit> {
+        siteDataGate?.await()
         siteDataFailure?.let { return Resource.Error(it) }
         hasSiteData = false
         return Resource.Success(Unit)

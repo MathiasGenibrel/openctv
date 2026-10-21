@@ -12,8 +12,6 @@ import com.openctv.browser.core.zoom.PageZoomContract
 import com.openctv.browser.core.zoom.SiteZoom
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
-import com.openctv.browser.features.history.domain.HistoryContract
-import com.openctv.browser.features.search.domain.RecentSearchesContract
 import com.openctv.browser.features.settings.domain.ClearBrowsingData
 import com.openctv.browser.features.settings.domain.ClearDataSelection
 import com.openctv.browser.features.settings.domain.ClearDataStep
@@ -72,8 +70,6 @@ class SettingsViewModel(
     private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
     private val siteZooms: PageZoomContract = NoPageZoom,
     private val clearBrowsingData: ClearBrowsingData,
-    history: HistoryContract,
-    recentSearches: RecentSearchesContract,
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<SettingsPanel?>(null)
@@ -85,7 +81,7 @@ class SettingsViewModel(
         openPanel,
         feedback,
         clearing,
-        combine(history.getEntries(), recentSearches.getRecents(), ::Counts),
+        clearBrowsingData.counts,
     ) { stored, panel, feedback, clearing, counts ->
         SettingsUiState(
             settings = stored.settings.orDefaults(),
@@ -166,7 +162,8 @@ class SettingsViewModel(
             val result = clearBrowsingData(selection)
             val outcome = if (result.isSuccess) ClearOutcome.Done else ClearOutcome.Failed(result.failed)
             clearing.update { it.copy(isClearing = false, outcome = outcome) }
-            closePanel()
+            // Ne ferme que le panneau « Effacer » : s'il a été fermé (Retour) et un autre ouvert entre-temps, celui-ci reste.
+            openPanel.compareAndSet(SettingsPanel.ClearData, null)
         }
     }
 
@@ -186,11 +183,6 @@ class SettingsViewModel(
         val securityExceptions: Resource<List<SiteException>>,
         val siteZooms: Resource<List<SiteZoom>>,
     )
-
-    private class Counts(entries: Resource<List<*>>, recents: Resource<List<*>>) {
-        val history: Int? = (entries as? Resource.Success)?.data?.size
-        val recentSearches: Int? = (recents as? Resource.Success)?.data?.size
-    }
 
     private data class Clearing(
         val selection: ClearDataSelection = ClearDataSelection(),

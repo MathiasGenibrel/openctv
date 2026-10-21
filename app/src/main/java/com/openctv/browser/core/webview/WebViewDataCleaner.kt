@@ -35,7 +35,6 @@ class WebViewDataCleaner(
         }
         cookies.flush()
         WebStorage.getInstance().deleteAllData()
-        @Suppress("DEPRECATION")
         WebViewDatabase.getInstance(context).clearHttpAuthUsernamePassword()
     }
 
