@@ -75,7 +75,7 @@ class CosmeticStyleScriptTest {
 
         val source = build(generic = many)!!
 
-        assertThat(source.length).isLessThan(CosmeticStyleScript.MaxTotalChars * 2)
+        assertThat(source.length).isAtMost(CosmeticStyleScript.MaxTotalChars + 1_000)
         assertThat(source).contains(".cookie-banner-number-0\"")
         assertThat(source).doesNotContain(".cookie-banner-number-19999\"")
     }

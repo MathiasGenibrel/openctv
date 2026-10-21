@@ -7,6 +7,7 @@ import com.openctv.browser.core.webview.CosmeticSelection
  * (a.b.c, b.c, c). Immuable, construite hors du chemin de navigation, partagée sans verrou entre threads.
  *
  * - génériques (`##sel`) : valent partout, sauf exception globale (`#@#sel`) ou exception sur le domaine de la page ;
+ *   injectées dans chaque page, elles sont réduites une fois pour toutes aux plus utiles ([GenericCosmeticBudget]) ;
  * - par domaine (`site.com##sel`) : valent pour le domaine et ses sous-domaines ;
  * - exceptions par domaine (`site.com#@#sel`) et exclusions (`~site.com##sel`) retirent le sélecteur sur ce domaine.
  */
@@ -65,7 +66,7 @@ class CosmeticFilters private constructor(
                 }
             }
 
-            val generic = hidden.filter { it !in globalExceptions }
+            val generic = GenericCosmeticBudget.select(hidden.filter { it !in globalExceptions })
             if (generic.isEmpty() && byDomain.isEmpty()) return EMPTY
             // Un sélecteur d'exception globale retire aussi les règles par domaine du même sélecteur.
             val specific = byDomain.mapValues { (_, selectors) -> selectors.filter { it !in globalExceptions }.distinct() }

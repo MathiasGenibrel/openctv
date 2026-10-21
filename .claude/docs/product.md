@@ -109,6 +109,8 @@ La TV cible a un SoC MediaTek modeste et peu de RAM.
   recherche par domaine en O(1)), sans I/O ni allocation lourde par requête.
 - Les listes de filtres sont téléchargées et compilées **hors** du chemin de navigation, puis mises
   en cache ; le premier lancement doit fonctionner même sans liste.
+- Le masquage des bandeaux de cookies ajoute un script à chaque page : il reste borné (quelques dizaines de Ko), les
+  règles génériques de la liste étant réduites aux plus utiles à sa compilation.
 - Une seule WebView vivante pour le MVP ; libérer proprement ses ressources (`onPause`, `destroy`).
 
 ### 6. Vidéo plein écran

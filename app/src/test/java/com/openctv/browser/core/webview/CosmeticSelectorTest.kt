@@ -23,6 +23,8 @@ class CosmeticSelectorTest {
             ".a{color:red}", ".a;.b", "@import 'x'", ".a\\.b", "<script>", ".a/*", "a { }",
             ".x[href=\"javascript:alert(1)\"]", ".a:url(x)", "div:expression(alert(1))", ".a !important",
             "a[b=\"c\"]{", "é", "a\nb",
+            ".a/* x */", "/**/.a", ".a\\7d body", "#a\\000000", "[a=\"}\"]", "[a=\"x\\\"]", "@media all", ".a\tb",
+            "#a\u2028", ".a\u00a0", "#ｃookie", ".a</style><script>", "[style*=\"url(x)\"]", "[a=\"x\"];color:red",
         )
 
         dangerous.forEach { assertThat(CosmeticSelector.isSafe(it)).isFalse() }
