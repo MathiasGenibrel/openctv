@@ -207,6 +207,34 @@ fun ListRadioRow(
     )
 }
 
+/** Case à cocher d'un sous-panneau : [onClick] bascule [isChecked] ; [supporting] précise la catégorie (compteur, effet). */
+@Composable
+fun ListCheckRow(
+    label: String,
+    isChecked: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    supporting: String? = null,
+) {
+    val style = LocalListGroupStyle.current
+    ListRowLayout(
+        onClick = onClick,
+        modifier = modifier,
+        minHeight = RadioRowMinHeight,
+        horizontalPadding = RadioRowHorizontalPadding,
+        leading = {
+            Icon(
+                painter = if (isChecked) OpenCtvIcons.CheckBox else OpenCtvIcons.CheckBoxOutlineBlank,
+                contentDescription = null,
+                tint = if (isChecked) OpenCtvColors.Primary else OpenCtvColors.Outline,
+            )
+        },
+        label = label,
+        supporting = supporting,
+        supportingStyle = style.radioSupportingStyle(),
+    )
+}
+
 /** Radios d'un sous-panneau, une par option : le focus initial est sur l'option [selected]. */
 @Composable
 fun <T> ListRadioOptions(
