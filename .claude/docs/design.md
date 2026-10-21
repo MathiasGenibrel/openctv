@@ -95,24 +95,28 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
 - **Navigation / Error** `6-4952` : illustration cookie 12, headlineMedium « Impossible d'atteindre
   <site> », texte, boutons « Réessayer » (filled, focalisé) et « Accueil » (tonal).
 - **Sécurité / HTTP — Avertissement** `89-900` : même structure que l'erreur (toolbar, illustration soft burst /
-  cookie 12 de 80 dp `tertiaryContainer` + icône `warning`), **pastille de gravité** `tertiaryContainer` /
-  `onTertiaryContainer` (icône `warning`, « Connexion non chiffrée (HTTP) »), headlineMedium « Cette page n'est
+  cookie 12 de 80 dp `tertiaryContainer` + icône **`no_encryption`** 40 dp `onTertiaryContainer`), **pastille de gravité** `tertiaryContainer` /
+  `onTertiaryContainer` (icône `warning` 18 dp, « Connexion non chiffrée (HTTP) »), headlineMedium « Cette page n'est
   pas chiffrée », bodyLarge, puis « Retour en sécurité » (filled, **focalisé**) et « Options avancées » (text +
   chevron `expand_more`). `89-1266` **options avancées** : l'illustration disparaît (tient dans 540 dp) ; panneau
   `surfaceContainer` Large 720 dp : bodyMedium, ligne case à cocher (`check_box` / `check_box_outline_blank`,
-  « Toujours autoriser <hôte> en HTTP sur cette TV »), bouton outline « Afficher la page (non sécurisé) ». Le
+  « Toujours autoriser <hôte> en HTTP sur cette TV »), bouton outline « Afficher la page (non sécurisé) » avec icône `no_encryption` en tête (18 dp, 8 dp d'écart). Le
   focus va sur la case à l'ouverture, revient sur « Options avancées » à la fermeture.
 - **Sécurité / Certificat invalide — Avertissement** `89-1684` : pastille `error` / `onError` (icône `gpp_bad`,
   « Danger · certificat de sécurité invalide »), titre « Ce site n'est peut-être pas celui qu'il prétend être »,
-  carte `surfaceContainer` Medium « Cause » + « Émis pour · valide jusqu'au ». `89-1771` options : explication
+  illustration `gpp_bad` 40 dp `onError` sur `error` (cookie 12) ; carte `surfaceContainer` Medium « Cause » + « Émis pour · valide jusqu'au » : libellé `onSurface` (labelLarge), valeur bodyMedium — **Cause en `error`**, autres valeurs en `onSurfaceVariant`. `89-1771` options : explication
   (réseau local vs site public), case « Faire confiance à ce certificat pour <hôte> » (« S'il change,
-  l'avertissement reviendra »), bouton outline en `error` « Continuer malgré tout (dangereux) ».
+  l'avertissement reviendra »), bouton outline en `error` (texte, contour, icône) « Continuer malgré tout (dangereux) » avec icône `warning` en tête.
 - **Sécurité / Barre** `89-1887` (HTTP autorisé : « Non sécurisé », `tertiary`, icône `no_encryption`) et
-  `89-1950` (certificat de confiance : « Certificat non vérifié », `error`, icône `gpp_bad`) à la place du
-  cadenas, + snackbar d'information à l'ouverture.
+  `89-1950` (certificat de confiance : « Certificat non vérifié », `error`, icône `gpp_bad`) **remplace** le
+  cadenas (icône seule, à gauche du domaine) et le libellé coloré remplace « OK pour modifier » (à droite), + snackbar d'information à l'ouverture.
+  Code : la paire icône + couleur d'accent (HTTP : `no_encryption` `tertiary` ; certificat : `gpp_bad` `error`) vient
+  d'une source unique, `core/designsystem/InsecurityMark`, partagée par la barre, l'illustration d'avertissement et
+  Réglages › Exceptions de sécurité.
 - **Réglages / Exceptions de sécurité** `89-2013` : ligne « Exceptions de sécurité » (nombre) → panneau latéral
   380 dp listant hôte, type (HTTP / certificat + empreinte abrégée) ; OK retire l'exception (le focus passe à la
-  ligne suivante, au bouton Fermer s'il n'en reste plus) ; Retour : panneau → Réglages.
+  ligne suivante, au bouton Fermer s'il n'en reste plus) ; icône de tête `no_encryption` `tertiary` (HTTP) ou
+  `gpp_bad` `error` (certificat), icône de fin `delete` ; Retour : panneau → Réglages.
 - **Navigation / Plein écran** `6-6283` : page seule (HUD masqué) — note `6-6294`.
 - **Menu navigateur** `6-3518` : panneau latéral droit, scrim, groupes **Vibrant** (`tertiaryContainer`,
   Large 16) : [Bloqueur de pubs (switch, « 12 requêtes bloquées sur ce site »), Ajouter aux favoris]

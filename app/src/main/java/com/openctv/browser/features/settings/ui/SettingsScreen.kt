@@ -51,6 +51,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.InsecurityMark
 import com.openctv.browser.core.designsystem.ListGroup
 import com.openctv.browser.core.designsystem.OpenCtvButton
 import com.openctv.browser.core.security.CertificateFingerprint
@@ -402,8 +403,10 @@ private fun SecurityExceptionsPanel(
             )
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 exceptions.forEachIndexed { index, exception ->
+                    val mark = exception.mark()
                     ListRow(
-                        icon = OpenCtvIcons.Lock,
+                        icon = mark.icon,
+                        iconTint = mark.color,
                         label = exception.host,
                         supporting = securityExceptionKind(exception),
                         onClick = {
@@ -417,6 +420,11 @@ private fun SecurityExceptionsPanel(
             }
         }
     }
+}
+
+private fun SiteException.mark() = when (this) {
+    is SiteException.Http -> InsecurityMark.Http
+    is SiteException.Certificate -> InsecurityMark.Certificate
 }
 
 @Composable

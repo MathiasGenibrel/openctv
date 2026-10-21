@@ -36,6 +36,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.ExpressiveShape
+import com.openctv.browser.core.designsystem.InsecurityMark
 import com.openctv.browser.core.designsystem.ListGroup
 import com.openctv.browser.core.designsystem.ListRow
 import com.openctv.browser.core.designsystem.OpenCtvButton
@@ -158,11 +159,12 @@ internal fun SecurityWarningContent(
 
 @Composable
 private fun Illustration(style: WarningStyle) {
+    // Un Painter par site d'appel : voir [WarningStyle].
     Box(
         modifier = Modifier.size(80.dp).background(style.container, ExpressiveShape.Cookie12.asShape()),
         contentAlignment = Alignment.Center,
     ) {
-        Icon(style.icon, contentDescription = null, tint = style.onContainer, modifier = Modifier.size(40.dp))
+        Icon(style.illustrationIcon(), contentDescription = null, tint = style.onContainer, modifier = Modifier.size(40.dp))
     }
 }
 
@@ -175,7 +177,7 @@ private fun SeverityPill(style: WarningStyle) {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Icon(style.icon, contentDescription = null, tint = style.onContainer, modifier = Modifier.size(20.dp))
+        Icon(style.badgeIcon(), contentDescription = null, tint = style.onContainer, modifier = Modifier.size(18.dp))
         Text(stringResource(style.badgeRes), style = MaterialTheme.typography.labelLarge, color = style.onContainer)
     }
 }
@@ -191,18 +193,18 @@ private fun CertificateCard(warning: SecurityWarning.InvalidCertificate) {
             .padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CardLine(stringResource(R.string.security_cert_cause), causeText(warning.problem, validUntil))
+        CardLine(stringResource(R.string.security_cert_cause), causeText(warning.problem, validUntil), OpenCtvColors.Error)
         val issuedTo = warning.issuedTo ?: warning.host ?: warning.url
         val issued = if (validUntil != null) "$issuedTo · $validUntil" else issuedTo
-        CardLine(stringResource(R.string.security_cert_issued_to), issued)
+        CardLine(stringResource(R.string.security_cert_issued_to), issued, OpenCtvColors.OnSurfaceVariant)
     }
 }
 
 @Composable
-private fun CardLine(label: String, value: String) {
+private fun CardLine(label: String, value: String, valueColor: Color) {
     Column {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = OpenCtvColors.OnSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyLarge, color = OpenCtvColors.OnSurface)
+        Text(label, style = MaterialTheme.typography.labelLarge, color = OpenCtvColors.OnSurface)
+        Text(value, style = MaterialTheme.typography.bodyMedium, color = valueColor)
     }
 }
 
@@ -255,6 +257,12 @@ private fun OptionsPanel(
             onClick = onContinue,
             style = if (isCertificate) OpenCtvButtonStyle.OutlineError else OpenCtvButtonStyle.Outline,
         ) {
+            Icon(
+                painter = if (isCertificate) OpenCtvIcons.Warning else OpenCtvIcons.NoEncryption,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+            )
+            Spacer(Modifier.size(8.dp))
             Text(stringResource(if (isCertificate) R.string.security_cert_continue else R.string.security_http_show))
         }
     }
@@ -266,7 +274,11 @@ private val ContentWidth = 720.dp
 private class WarningStyle(
     val container: Color,
     val onContainer: Color,
-    val icon: Painter,
+    // Fabriques et non `Painter` : un `Painter` vectoriel garde un cache de dessin à une seule taille. Partagé
+    // entre l'illustration (40 dp) et la pastille (18 dp), il dessinait le glyphe deux fois, tronqué. Chaque
+    // site d'appel crée donc le sien (`painterResource` → `rememberVectorPainter` distincts).
+    val illustrationIcon: @Composable () -> Painter,
+    val badgeIcon: @Composable () -> Painter,
     val badgeRes: Int,
     val titleRes: Int,
     val bodyRes: Int,
@@ -277,7 +289,8 @@ private fun SecurityWarning.style(): WarningStyle = when (this) {
     is SecurityWarning.InsecureHttp -> WarningStyle(
         container = OpenCtvColors.TertiaryContainer,
         onContainer = OpenCtvColors.OnTertiaryContainer,
-        icon = OpenCtvIcons.Warning,
+        illustrationIcon = { InsecurityMark.Http.icon },
+        badgeIcon = { OpenCtvIcons.Warning },
         badgeRes = R.string.security_http_badge,
         titleRes = R.string.security_http_title,
         bodyRes = R.string.security_http_body,
@@ -285,7 +298,8 @@ private fun SecurityWarning.style(): WarningStyle = when (this) {
     is SecurityWarning.InvalidCertificate -> WarningStyle(
         container = OpenCtvColors.Error,
         onContainer = OpenCtvColors.OnError,
-        icon = OpenCtvIcons.GppBad,
+        illustrationIcon = { InsecurityMark.Certificate.icon },
+        badgeIcon = { OpenCtvIcons.GppBad },
         badgeRes = R.string.security_cert_badge,
         titleRes = R.string.security_cert_title,
         bodyRes = R.string.security_cert_body,
