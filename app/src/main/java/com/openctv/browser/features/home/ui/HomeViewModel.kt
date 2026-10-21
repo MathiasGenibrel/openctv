@@ -54,6 +54,14 @@ class HomeViewModel(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), Resource.Loading)
 
+    /** Astuce « Maintenir : options du favori » : seulement s'il existe au moins un favori à maintenir. */
+    val isFavoriteOptionsHintVisible: StateFlow<Boolean> = favorites
+        .map { resource ->
+            val shown = (resource as? Resource.Success)?.data.orEmpty()
+            shown.isNotEmpty()
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS), false)
+
     /** Nom du moteur de recherche choisi dans les réglages, affiché dans la barre de recherche. */
     val searchEngineName: StateFlow<String> = settings.settings
         .map { it.orDefaults().searchEngine.displayName }

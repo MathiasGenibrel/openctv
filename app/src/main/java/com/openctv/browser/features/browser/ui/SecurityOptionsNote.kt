@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser.ui
 import androidx.annotation.StringRes
 import com.openctv.browser.R
 import com.openctv.browser.core.security.isLocalNetworkHost
+import com.openctv.browser.core.webview.SecurityWarning
 
 /**
  * Note affichée dans « Options avancées » d'un avertissement de sécurité : rassurante pour un appareil du
@@ -16,12 +17,13 @@ internal enum class SecurityOptionsNote(@StringRes val textRes: Int) {
     CertificatePublic(R.string.security_cert_options_public),
 }
 
-internal fun securityOptionsNote(isCertificate: Boolean, host: String?): SecurityOptionsNote {
+/** Note des options avancées de cet avertissement, selon son type et l'hôte (local ou public). */
+internal fun SecurityWarning.optionsNote(): SecurityOptionsNote {
     val isLocal = isLocalNetworkHost(host)
-    return when {
-        isCertificate && isLocal -> SecurityOptionsNote.CertificateLocalNetwork
-        isCertificate -> SecurityOptionsNote.CertificatePublic
-        isLocal -> SecurityOptionsNote.HttpLocalNetwork
-        else -> SecurityOptionsNote.HttpPublic
+    return when (this) {
+        is SecurityWarning.InsecureHttp ->
+            if (isLocal) SecurityOptionsNote.HttpLocalNetwork else SecurityOptionsNote.HttpPublic
+        is SecurityWarning.InvalidCertificate ->
+            if (isLocal) SecurityOptionsNote.CertificateLocalNetwork else SecurityOptionsNote.CertificatePublic
     }
 }

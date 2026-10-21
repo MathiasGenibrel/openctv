@@ -229,7 +229,7 @@ private fun OptionsPanel(
 ) {
     val host = warning.host ?: warning.url
     val isCertificate = warning is SecurityWarning.InvalidCertificate
-    val explanation = stringResource(securityOptionsNote(isCertificate, warning.host).textRes, host)
+    val explanation = stringResource(warning.optionsNote().textRes, host)
     Column(
         modifier = Modifier
             .fillMaxWidth()
