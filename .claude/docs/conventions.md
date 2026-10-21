@@ -52,6 +52,10 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - La `WebView` n'est créée **que** par la fabrique de `core/webview/`, qui applique les réglages de
   sécurité du brief produit. Aucune feature ne modifie `WebSettings` directement.
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
+- `evaluateJavascript` autorisé **seulement** pour des commandes média constantes en plein écran vidéo
+  (`core/webview/MediaCommand` : lecture/pause, saut ±10 s). Ensemble fermé de scripts constants, aucune
+  donnée de la page ou de l'utilisateur concaténée, résultat ignoré, échec silencieux. Aucun autre usage,
+  jamais de JavaScript persistant ni d'`addJavascriptInterface`.
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :

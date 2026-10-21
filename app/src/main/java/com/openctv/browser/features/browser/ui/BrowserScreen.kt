@@ -41,7 +41,8 @@ import com.openctv.browser.features.search.domain.SearchRequest
  * - interface affichée (barre, aide) : `domain/BrowserHud.kt` ;
  * - aiguillage des touches : [consumesKey] (`BrowserKeys.kt`) ;
  * - déplacements du focus : [rememberBrowserFocus] (`BrowserFocus.kt`) ;
- * - page, chargement, erreur : [BrowserContent] (`BrowserPage.kt`).
+ * - page, chargement, erreur : [BrowserContent] (`BrowserPage.kt`) ;
+ * - vidéo plein écran : [BrowserFullscreen] (`BrowserFullscreen.kt`), ses touches : [FullscreenKeys].
  *
  * [addressInput] (saisie d'adresse) et [menu] (contenu du menu, #10) sont des surcouches fournies par la
  * racine de composition : la WebView reste vivante dessous, et le focus revient à l'élément qui les a
@@ -71,21 +72,22 @@ fun BrowserScreen(
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
     // Le plein écran vidéo naît et meurt avec la WebView : rendu à la page avant sa destruction (WebViewLifecycle).
-    val activity = context.findActivity()
+    // Créés ensemble, une seule fois : l'hôte plein écran est un client de la WebView, et ses touches pilotent
+    // cette même WebView (résolue au moment de l'appui, donc après sa création).
     val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
-    // La WebView ne naît qu'après l'hôte plein écran (il est son client) : l'hôte reçoit donc sa bascule lecture
-    // / pause par une référence résolue au moment de l'appui.
-    val webViewRef = remember { arrayOfNulls<PointerAwareWebView>(1) }
-    val fullscreen = remember(activity, backDispatcher) {
-        BrowserFullscreen(
+    val (fullscreen, webView) = remember {
+        lateinit var created: PointerAwareWebView
+        val presenter = context.findActivity()?.let { activity ->
+            DecorFullscreenPresenter(activity, backDispatcher, onMediaCommand = { command -> created.runMediaCommand(command) })
+        } ?: FullscreenPresenter.None
+        val host = BrowserFullscreen(
             onShown = viewModel::onFullscreenShown,
             onHidden = viewModel::onFullscreenHidden,
-            presenter = activity?.let {
-                DecorFullscreenPresenter(it, backDispatcher, onPlayerAction = { action -> webViewRef[0]?.perform(action) })
-            } ?: FullscreenPresenter.None,
+            presenter = presenter,
         )
+        created = webViewFactory.create(context, viewModel, host)
+        host to created
     }
-    val webView = remember { webViewFactory.create(context, viewModel, fullscreen).also { webViewRef[0] = it } }
     WebViewLifecycle(webView, fullscreen)
 
     val currentOnClose by rememberUpdatedState(onClose)
@@ -123,7 +125,8 @@ fun BrowserScreen(
     val hudAlpha = rememberHudAlpha(isHidden = hud.isHidden)
 
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
-    // en bas d'écran, menu, saisie d'adresse, vidéo plein écran (au-dessus de tout).
+    // en bas d'écran, menu, saisie d'adresse. La vidéo plein écran est hors de cette pile, au-dessus de tout
+    // (montée dans le decorView par DecorFullscreenPresenter) ; seul le mode immersif suit son état ici.
     Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
         BrowserContent(
             pageState = pageState,
@@ -165,13 +168,6 @@ fun BrowserScreen(
         layers.addressInput?.let { addressInput(it) }
         if (fullscreen.view != null) ImmersiveMode()
     }
-}
-
-private fun PointerAwareWebView.perform(action: PlayerAction) = when (action) {
-    PlayerAction.TogglePlayback -> togglePlayback()
-    PlayerAction.SeekBack -> seekBy(-FullscreenKeys.SEEK_SECONDS)
-    PlayerAction.SeekForward -> seekBy(FullscreenKeys.SEEK_SECONDS)
-    PlayerAction.None -> Unit
 }
 
 @Composable
