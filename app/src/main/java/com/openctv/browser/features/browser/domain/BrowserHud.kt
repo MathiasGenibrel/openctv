@@ -1,5 +1,6 @@
 package com.openctv.browser.features.browser.domain
 
+import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.zoom.PageZoom
 
 /** Interface affichée par-dessus la page (barre d'outils, aide) ; calculée hors de la vue, voir [browserHudOf]. */
@@ -22,6 +23,13 @@ data class BrowserHud(
     val isHidden: Boolean = false,
     /** Le pointeur est dessiné : [isCursorVisible] et interface non masquée. Il garde les touches même masqué. */
     val isCursorShown: Boolean = false,
+    /** Snackbar « Mode éléments : … » + astuce « Maintenir Haut », quelques secondes en mode page éléments. */
+    val isElementsHelpShown: Boolean = false,
+    /**
+     * Le D-pad est dans la page en navigation par éléments : il part à la page en Tab / Maj+Tab / Entrée (mêmes
+     * conditions que [isCursorVisible], l'un exclut l'autre). Seul ce champ autorise l'envoi de touches à la page.
+     */
+    val isElementsActive: Boolean = false,
 )
 
 fun browserHudOf(
@@ -30,11 +38,15 @@ fun browserHudOf(
     isCursorHelpRequested: Boolean = false,
     isIdle: Boolean = false,
     isNoticeShown: Boolean = false,
+    navigationMode: NavigationMode = NavigationMode.Cursor,
 ): BrowserHud {
     // Vidéo plein écran : aucune interface OpenCTV par-dessus le lecteur.
     if (layers.isFullscreen) return BrowserHud(isToolbarShown = false, isToolbarInteractive = false, isInterfaceHelpShown = false)
     val isLoading = pageState is PageState.Loading
-    val isCursorVisible = !layers.isInterfaceMode && !layers.isOverlayOpen && pageState !is PageState.Error
+    val isPageFocused = !layers.isInterfaceMode && !layers.isOverlayOpen && pageState !is PageState.Error
+    // Le D-pad est dans la page : au curseur, le pointeur le prend ; aux éléments, il part à la page en Tab (pas de pointeur).
+    val isCursorVisible = isPageFocused && navigationMode == NavigationMode.Cursor
+    val isElementsActive = isPageFocused && navigationMode == NavigationMode.Elements
     val isError = pageState is PageState.Error
     // Un message bref reste lisible toute sa durée : le masquage attend qu'il s'efface.
     val canHide = !layers.isOverlayOpen && !isLoading && !isError && !isNoticeShown
@@ -44,9 +56,11 @@ fun browserHudOf(
         isToolbarInteractive = layers.isInterfaceMode,
         isInterfaceHelpShown = layers.isInterfaceMode && !layers.isOverlayOpen,
         isCursorHelpShown = isCursorHelpRequested && isCursorVisible,
+        isElementsHelpShown = isCursorHelpRequested && isElementsActive,
         isCursorVisible = isCursorVisible,
         isHidden = isHidden,
         isCursorShown = isCursorVisible && !isHidden,
+        isElementsActive = isElementsActive,
     )
 }
 
@@ -64,6 +78,9 @@ sealed interface BrowserNotice {
 
     /** Le choix « toujours autoriser » n'a pas pu être mémorisé : il ne vaut que pour la session. */
     data object SecurityExceptionNotSaved : BrowserNotice
+
+    /** Mode [mode] mémorisé pour [host] (hôte exact) : la page l'applique tout de suite. */
+    data class NavigationModeChanged(val mode: NavigationMode, val host: String) : BrowserNotice
 
     /** Zoom [zoom] mémorisé pour [host] (hôte exact). */
     data class ZoomSaved(val zoom: PageZoom, val host: String) : BrowserNotice

@@ -5,6 +5,10 @@ import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.history.NoPageVisits
 import com.openctv.browser.core.history.PageVisitsContract
+import com.openctv.browser.core.navmode.NavigationMode
+import com.openctv.browser.core.navmode.NavigationModeContract
+import com.openctv.browser.core.navmode.NoNavigationModes
+import com.openctv.browser.core.navmode.navigationModeOf
 import com.openctv.browser.core.remote.RemoteAction
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
@@ -26,6 +30,10 @@ import com.openctv.browser.features.browser.domain.BrowserHud
 import com.openctv.browser.features.browser.domain.BrowserLayers
 import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
+import com.openctv.browser.features.browser.domain.ElementKeyAction
+import com.openctv.browser.features.browser.domain.ElementKeys
+import com.openctv.browser.features.browser.domain.KeyPhase
+import com.openctv.browser.features.browser.domain.PadKey
 import com.openctv.browser.features.browser.domain.HudAutoHide
 import com.openctv.browser.features.browser.domain.PageState
 import com.openctv.browser.features.browser.domain.PageUnderError
@@ -99,6 +107,8 @@ class BrowserViewModel(
     private val defaultZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
     /** Historique : reçoit chaque page principale réellement affichée (jamais un avertissement ni une erreur). */
     private val pageVisits: PageVisitsContract = NoPageVisits,
+    /** Sites passés en navigation par éléments ; les autres sont au curseur. */
+    private val navigationModes: NavigationModeContract = NoNavigationModes,
 ) : ViewModel(), WebPageListener {
     private val _pageUrl = MutableStateFlow(initialUrl)
 
@@ -115,6 +125,18 @@ class BrowserViewModel(
         viewModelScope,
         SharingStarted.Eagerly,
         effectiveZoom(initialUrl, (siteZooms.sites.value as? Resource.Success)?.data.orEmpty(), defaultZoom.value),
+    )
+
+    /**
+     * Mode de navigation de la page affichée : celui de son hôte exact, sinon le curseur. Suit la page (redirection,
+     * lien vers un autre site), donc le mode mémorisé est réappliqué à chaque page principale de cet hôte.
+     */
+    val navigationMode: StateFlow<NavigationMode> = combine(_pageUrl, navigationModes.elementHosts) { url, hosts ->
+        navigationModeOf(url, (hosts as? Resource.Success)?.data.orEmpty())
+    }.distinctUntilChanged().stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        navigationModeOf(initialUrl, (navigationModes.elementHosts.value as? Resource.Success)?.data.orEmpty()),
     )
 
     private val _canGoBack = MutableStateFlow(false)
@@ -163,12 +185,17 @@ class BrowserViewModel(
 
     private val autoHide = HudAutoHide(viewModelScope, hudHideDelay)
     private val revealKeys = RevealKeyGuard()
+    private val elementKeys = ElementKeys()
 
     /** Barre d'outils, aide et pointeur affichés par-dessus la page (masqués à l'inactivité, cf. [HudAutoHide]). */
     val hud: StateFlow<BrowserHud> = combine(
-        _layers, _pageState, _isCursorHelpRequested, autoHide.isIdle, _notice,
-    ) { layers, pageState, isCursorHelpRequested, isIdle, notice ->
-        browserHudOf(layers, pageState, isCursorHelpRequested, isIdle, isNoticeShown = notice != null)
+        combine(_layers, _pageState, _isCursorHelpRequested, autoHide.isIdle, _notice, ::HudInputs),
+        navigationMode,
+    ) { inputs, mode ->
+        browserHudOf(
+            inputs.layers, inputs.pageState, inputs.isCursorHelpRequested, inputs.isIdle,
+            isNoticeShown = inputs.notice != null, navigationMode = mode,
+        )
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
@@ -188,7 +215,15 @@ class BrowserViewModel(
 
     private fun currentHud() = browserHudOf(
         _layers.value, _pageState.value, _isCursorHelpRequested.value, autoHide.isIdle.value,
-        isNoticeShown = _notice.value != null,
+        isNoticeShown = _notice.value != null, navigationMode = navigationMode.value,
+    )
+
+    private class HudInputs(
+        val layers: BrowserLayers,
+        val pageState: PageState,
+        val isCursorHelpRequested: Boolean,
+        val isIdle: Boolean,
+        val notice: BrowserNotice?,
     )
 
     /**
@@ -500,6 +535,44 @@ class BrowserViewModel(
             }
             showNotice(notice)
         }
+    }
+
+    /**
+     * « Navigation » du menu : bascule curseur ↔ éléments pour le site de la page, ferme le menu (la page et le
+     * message restent visibles) et mémorise le mode pour l'hôte exact. Le message dit le mode obtenu ; si
+     * l'écriture échoue, le mode reste celui d'avant et le message le dit.
+     */
+    fun toggleNavigationMode() {
+        closeMenu()
+        showCursorHelp()
+        val host = SiteHost.of(_pageUrl.value)
+        if (host == null) {
+            showNotice(BrowserNotice.SettingFailed)
+            return
+        }
+        val target = navigationMode.value.other
+        viewModelScope.launch {
+            val notice = when (navigationModes.set(host, target)) {
+                is Resource.Error -> BrowserNotice.SettingFailed
+                else -> BrowserNotice.NavigationModeChanged(target, host)
+            }
+            showNotice(notice)
+        }
+    }
+
+    /**
+     * Touche du D-pad ou OK en navigation par éléments ([ElementKeys]). Hors de ce mode ([BrowserHud.isElementsActive] :
+     * curseur, surcouche, mode interface, écran d'erreur, plein écran) rien n'est pris : [ElementKeyAction.PassThrough].
+     * « Haut » maintenu ouvre la barre ici même et la touche est prise ([ElementKeyAction.Ignore]).
+     */
+    fun onElementKey(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
+        if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
+        val action = elementKeys.actionFor(key, phase, isTextFieldFocused)
+        if (action == ElementKeyAction.OpenInterface) {
+            enterInterfaceMode()
+            return ElementKeyAction.Ignore
+        }
+        return action
     }
 
     /** Le menu n'a pas pu enregistrer un choix : un message bref l'explique, sans prendre le focus. */

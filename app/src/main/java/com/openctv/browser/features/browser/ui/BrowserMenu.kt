@@ -31,10 +31,12 @@ import com.openctv.browser.core.designsystem.ListNavigationRow
 import com.openctv.browser.core.designsystem.ListRadioOptions
 import com.openctv.browser.core.designsystem.ListRow
 import com.openctv.browser.core.designsystem.ListSwitchRow
+import com.openctv.browser.core.designsystem.ListValueRow
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.SidePanelOverlay
+import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.core.zoom.percentLabel
 import com.openctv.browser.core.zoom.widthLabel
@@ -64,6 +66,7 @@ fun BrowserMenu(
             onHistory = onHistory,
             onOpenPanel = viewModel::openPanel,
             onSelectPageZoom = viewModel::selectPageZoom,
+            onToggleNavigationMode = viewModel::toggleNavigationMode,
         ),
         onBack = { if (!viewModel.onBack()) onClose() },
         modifier = modifier,
@@ -77,6 +80,7 @@ internal class MenuActions(
     val onHistory: () -> Unit,
     val onOpenPanel: (BrowserMenuPanel) -> Unit,
     val onSelectPageZoom: (PageZoom) -> Unit,
+    val onToggleNavigationMode: () -> Unit,
 )
 
 @Composable
@@ -130,6 +134,12 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
                 value = state.pageZoom.percentLabel(),
                 onClick = { rowFocus.open(BrowserMenuPanel.PageZoom, actions.onOpenPanel) },
                 modifier = Modifier.focusRequester(rowFocus.of(BrowserMenuPanel.PageZoom)),
+            )
+            ListValueRow(
+                icon = OpenCtvIcons.KeyboardTab,
+                label = stringResource(R.string.browser_menu_navigation),
+                value = navigationModeLabel(state.navigationMode),
+                onClick = actions.onToggleNavigationMode,
             )
         }
         ListGroup(style = ListGroupStyle.Vibrant) {
@@ -215,6 +225,12 @@ private fun <T> ColumnScope.MenuOptions(
 }
 
 @Composable
+private fun navigationModeLabel(mode: NavigationMode): String = when (mode) {
+    NavigationMode.Cursor -> stringResource(R.string.browser_menu_navigation_cursor)
+    NavigationMode.Elements -> stringResource(R.string.browser_menu_navigation_elements)
+}
+
+@Composable
 private fun adBlockSummary(status: AdBlockStatus): String = when (status) {
     is AdBlockStatus.Active ->
         pluralStringResource(R.plurals.browser_menu_ad_block_count, status.blockedCount, status.blockedCount)
@@ -228,7 +244,7 @@ private fun BrowserMenuPreview() {
     OpenCtvTheme {
         BrowserMenuContent(
             state = BrowserMenuState(site = "arte.tv", adBlock = AdBlockStatus.Active(12)),
-            actions = MenuActions({}, {}, {}, {}, {}, {}),
+            actions = MenuActions({}, {}, {}, {}, {}, {}, {}),
             onBack = {},
         )
     }
@@ -245,7 +261,7 @@ private fun BrowserMenuZoomPreview() {
                 zoomHost = "gitlab-dashboard.tools.internal",
                 openPanel = BrowserMenuPanel.PageZoom,
             ),
-            actions = MenuActions({}, {}, {}, {}, {}, {}),
+            actions = MenuActions({}, {}, {}, {}, {}, {}, {}),
             onBack = {},
         )
     }

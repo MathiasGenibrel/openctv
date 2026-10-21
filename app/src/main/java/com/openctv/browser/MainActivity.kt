@@ -20,6 +20,7 @@ import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.core.navigation.ScopedViewModels
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.history.PageVisitsContract
+import com.openctv.browser.core.navmode.NavigationModeContract
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.core.webview.WebDataContract
@@ -70,6 +71,7 @@ class MainActivity : ComponentActivity() {
     private val recentSearches: RecentSearchesContract by inject()
     private val securityExceptions: SecurityExceptionsContract by inject()
     private val pageZoom: PageZoomContract by inject()
+    private val navigationModes: NavigationModeContract by inject()
     private val history: HistoryContract by inject()
     private val pageVisits: PageVisitsContract by inject()
     private val webData: WebDataContract by inject()
@@ -102,6 +104,8 @@ class MainActivity : ComponentActivity() {
                         securityExceptions.persisted.first { it !is Resource.Loading }
                         // Idem pour les zooms par site : la page s'ouvre directement à son niveau, sans se remettre en page.
                         pageZoom.sites.first { it !is Resource.Loading }
+                        // Idem pour le mode de navigation par site : la page s'ouvre directement au curseur ou aux éléments.
+                        navigationModes.elementHosts.first { it !is Resource.Loading }
                         destination = launchUrl?.let(Destination::Browser) ?: Destination.Home
                     }
                 }
@@ -159,6 +163,7 @@ class MainActivity : ComponentActivity() {
                                     siteZooms = pageZoom,
                                     defaultZoom = defaultPageZoom,
                                     pageVisits = pageVisits,
+                                    navigationModes = navigationModes,
                                 )
                             }
                             // Curseur virtuel : la racine relie les features (le navigateur n'importe pas le curseur).
@@ -188,6 +193,8 @@ class MainActivity : ComponentActivity() {
                                             onWriteFailed = browser::onMenuWriteFailed,
                                             pageZoom = browser.pageZoom,
                                             onZoomChosen = browser::selectPageZoom,
+                                            navigationMode = browser.navigationMode,
+                                            onNavigationToggled = browser::toggleNavigationMode,
                                         )
                                     }
                                     BrowserMenu(

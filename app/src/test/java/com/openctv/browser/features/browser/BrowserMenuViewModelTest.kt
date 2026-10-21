@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.common.TestDispatcherProvider
+import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.adblock.domain.FilterListsState
@@ -60,6 +61,30 @@ class BrowserMenuViewModelTest {
         )
             .also { viewModel -> backgroundScope.launch { viewModel.state.collect {} } }
             .also { runCurrent() }
+    }
+
+    @Test
+    fun `Given a site in cursor mode When the user chooses Navigation Then the browser is asked to switch the mode`() = runTest {
+        val modes = MutableStateFlow(NavigationMode.Cursor)
+        var toggles = 0
+        val settings = SettingsImpl(
+            store = FakeSettingsStore(),
+            dispatchers = TestDispatcherProvider(StandardTestDispatcher(testScheduler)),
+            scope = backgroundScope,
+        )
+        val viewModel = BrowserMenuViewModel(
+            MutableStateFlow(url), settings, adBlock, bookmarks, onWriteFailed = {},
+            navigationMode = modes, onNavigationToggled = { toggles++ },
+        ).also { viewModel -> backgroundScope.launch { viewModel.state.collect {} } }
+        runCurrent()
+        assertThat(viewModel.state.value.navigationMode).isEqualTo(NavigationMode.Cursor)
+
+        viewModel.toggleNavigationMode()
+        modes.value = NavigationMode.Elements
+        runCurrent()
+
+        assertThat(toggles).isEqualTo(1)
+        assertThat(viewModel.state.value.navigationMode).isEqualTo(NavigationMode.Elements)
     }
 
     @Test

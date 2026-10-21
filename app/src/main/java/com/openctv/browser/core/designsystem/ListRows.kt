@@ -158,6 +158,25 @@ fun ListSwitchRow(
     )
 }
 
+/** Ligne qui bascule une valeur sur place (OK change la valeur) : [value] courante en texte de fin, sans chevron. */
+@Composable
+fun ListValueRow(
+    icon: Painter,
+    label: String,
+    value: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val tint = LocalListGroupStyle.current.secondaryContent
+    ListRow(
+        icon = icon,
+        label = label,
+        onClick = onClick,
+        modifier = modifier,
+        trailing = { Text(value, style = MaterialTheme.typography.labelLarge, color = tint) },
+    )
+}
+
 /** Ligne qui ouvre un sous-panneau : [value] courante et chevron. */
 @Composable
 fun ListNavigationRow(

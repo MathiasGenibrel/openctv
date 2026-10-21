@@ -1,5 +1,6 @@
 package com.openctv.browser.features.browser.domain
 
+import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.zoom.PageZoom
 
 /** Écriture du menu qui a échoué ; le navigateur décide du message affiché (cf. `BrowserViewModel.onMenuWriteFailed`). */
@@ -32,6 +33,8 @@ data class BrowserMenuState(
     val defaultZoom: PageZoom = PageZoom.Default,
     /** Hôte exact auquel se rattache le zoom mémorisé (`SiteHost`) ; `null` si l'adresse n'a pas d'hôte lisible. */
     val zoomHost: String? = null,
+    /** Mode de navigation du site (curseur ou éléments), basculé par la ligne « Navigation ». */
+    val navigationMode: NavigationMode = NavigationMode.Cursor,
     val openPanel: BrowserMenuPanel? = null,
 ) {
     val isAdBlockActive: Boolean get() = adBlock is AdBlockStatus.Active

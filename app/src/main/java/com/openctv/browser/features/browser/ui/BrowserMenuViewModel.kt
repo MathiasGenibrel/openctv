@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.security.SiteHost
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.adblock.domain.AdBlockContract
@@ -27,7 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori et zoom de la page. Accueil et Historique sont des
+ * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori, zoom et mode de navigation de la page. Accueil et Historique sont des
  * ordres du navigateur (`BrowserViewModel`), pas d'ici ; le moteur de recherche et la vitesse du curseur sont dans Réglages.
  * Un échec d'écriture est remonté par [onWriteFailed] ; l'affichage reste sur la valeur réellement stockée.
  */
@@ -41,6 +42,10 @@ class BrowserMenuViewModel(
     private val pageZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
     /** Niveau choisi pour le site : le navigateur ferme le menu, l'applique et le mémorise. */
     private val onZoomChosen: (PageZoom) -> Unit = {},
+    /** Mode de navigation de la page (porté par le navigateur, qui le mémorise par site). */
+    private val navigationMode: StateFlow<NavigationMode> = MutableStateFlow(NavigationMode.Cursor),
+    /** « Navigation » choisie : le navigateur bascule le mode, le mémorise et ferme le menu. */
+    private val onNavigationToggled: () -> Unit = {},
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<BrowserMenuPanel?>(null)
@@ -55,8 +60,8 @@ class BrowserMenuViewModel(
     }
 
     val state: StateFlow<BrowserMenuState> = combine(
-        pageSettings, settings.settings, openPanel, pageZoom,
-    ) { page, stored, panel, zoom ->
+        pageSettings, settings.settings, openPanel, combine(pageZoom, navigationMode, ::Pair),
+    ) { page, stored, panel, (zoom, mode) ->
         val current = stored.orDefaults()
         BrowserMenuState(
             site = siteLabelOf(page.url),
@@ -65,6 +70,7 @@ class BrowserMenuViewModel(
             pageZoom = zoom,
             defaultZoom = current.pageZoom,
             zoomHost = SiteHost.of(page.url),
+            navigationMode = mode,
             openPanel = panel,
         )
     }.stateIn(
@@ -75,6 +81,7 @@ class BrowserMenuViewModel(
             pageZoom = pageZoom.value,
             defaultZoom = settings.current.pageZoom,
             zoomHost = SiteHost.of(pageUrl.value),
+            navigationMode = navigationMode.value,
         ),
     )
 
@@ -124,6 +131,9 @@ class BrowserMenuViewModel(
         closePanel()
         onZoomChosen(zoom)
     }
+
+    /** « Navigation » : bascule curseur ↔ éléments pour le site ; le navigateur ferme le menu. */
+    fun toggleNavigationMode() = onNavigationToggled()
 
     private data class PageSettings(
         val url: String,
