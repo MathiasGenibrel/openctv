@@ -25,6 +25,11 @@ data class BrowserHud(
     val isCursorShown: Boolean = false,
     /** Snackbar « Mode éléments : … » + astuce « Maintenir Haut », quelques secondes en mode page éléments. */
     val isElementsHelpShown: Boolean = false,
+    /**
+     * Le D-pad est dans la page en navigation par éléments : il part à la page en Tab / Maj+Tab / Entrée (mêmes
+     * conditions que [isCursorVisible], l'un exclut l'autre). Seul ce champ autorise l'envoi de touches à la page.
+     */
+    val isElementsActive: Boolean = false,
 )
 
 fun browserHudOf(
@@ -55,6 +60,7 @@ fun browserHudOf(
         isCursorVisible = isCursorVisible,
         isHidden = isHidden,
         isCursorShown = isCursorVisible && !isHidden,
+        isElementsActive = isElementsActive,
     )
 }
 

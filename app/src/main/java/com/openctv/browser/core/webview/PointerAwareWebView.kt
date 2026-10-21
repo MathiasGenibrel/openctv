@@ -2,6 +2,7 @@ package com.openctv.browser.core.webview
 
 import android.content.Context
 import android.view.PointerIcon
+import android.view.View
 import android.webkit.WebView
 import com.openctv.browser.core.zoom.PageZoom
 import kotlin.math.roundToInt
@@ -84,6 +85,15 @@ class PointerAwareWebView(context: Context) : WebView(context) {
         val visibleHeightOnScreen = (height * pageScale).roundToInt()
         scrollByOnScreen(0, pageScrollPixels(visibleHeightOnScreen, direction))
     }
+
+    /**
+     * La page ne rend jamais le focus d'elle-même : seule l'application le déplace (`requestFocus` explicite vers la
+     * barre, une surcouche, l'écran d'erreur). Tab après le dernier élément de la page (Maj+Tab avant le premier)
+     * fait demander au moteur la vue voisine (`takeFocus` → `focusSearch`) ; une flèche que la page ne consomme pas
+     * (début d'un champ de saisie) aussi. Répondre la WebView elle-même garde le focus Android ici : le focus de la
+     * page repart du début au Tab suivant, et la barre, non focalisable en mode page, n'est jamais atteinte par surprise.
+     */
+    override fun focusSearch(direction: Int): View = this
 
     override fun setPointerIcon(pointerIcon: PointerIcon?) {
         super.setPointerIcon(pointerIcon)

@@ -79,6 +79,9 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   l'élément, **aucun style n'est injecté**. Seule cette traduction envoie des touches à la page, et seulement quand
   `BrowserViewModel.onElementKey` l'autorise : mode éléments, page affichée, ni surcouche ni mode interface ni erreur.
   Champ de saisie focalisé (`isTextFieldFocused`) : OK ouvre le clavier, Gauche/Droite restent à la page.
+  Haut agit **au relâchement** : appui court = Maj+Tab, appui long (première répétition) = barre d'adresse, sans Maj+Tab.
+  `PointerAwareWebView.focusSearch` renvoie la WebView elle-même : Tab après le dernier élément (`takeFocus` du moteur)
+  ou une flèche non consommée par la page ne font jamais sortir le focus Android de la WebView ; seule l'app le déplace.
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
 - `evaluateJavascript` autorisé pour **deux usages seulement**, tous deux dans `core/webview/`, à résultat ignoré et
   échec silencieux, jamais de JavaScript persistant ni d'`addJavascriptInterface` :

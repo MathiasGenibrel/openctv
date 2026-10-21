@@ -171,13 +171,36 @@ class BrowserNavigationModeTest {
     }
 
     @Test
-    fun `Given elements mode When Up is held Then the address bar opens and the key is taken`() {
+    fun `Given elements mode When Up is held Then the address bar opens and no Shift Tab is sent`() {
         val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
 
-        val action = viewModel.onElementKey(PadKey.Up, KeyPhase.Repeat, isTextFieldFocused = false)
+        val pressed = viewModel.press(PadKey.Up)
+        val repeated = viewModel.onElementKey(PadKey.Up, KeyPhase.Repeat, isTextFieldFocused = false)
+        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false)
 
-        assertThat(action).isEqualTo(ElementKeyAction.Ignore)
+        assertThat(pressed).isEqualTo(ElementKeyAction.Ignore)
+        assertThat(repeated).isEqualTo(ElementKeyAction.Ignore)
         assertThat(viewModel.layers.value.isInterfaceMode).isTrue()
+        assertThat(released).isEqualTo(ElementKeyAction.PassThrough)
+    }
+
+    @Test
+    fun `Given elements mode When Up is pressed briefly Then the previous element is asked on release and the page keeps the D-pad`() {
+        val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
+
+        viewModel.press(PadKey.Up)
+        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false)
+
+        assertThat(released).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
+        assertThat(viewModel.layers.value.isInterfaceMode).isFalse()
+    }
+
+    @Test
+    fun `Given elements mode When a video plays fullscreen Then no key goes to the page`() {
+        val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
+        viewModel.onFullscreenShown()
+
+        assertThat(viewModel.press(PadKey.Down)).isEqualTo(ElementKeyAction.PassThrough)
     }
 
     @Test

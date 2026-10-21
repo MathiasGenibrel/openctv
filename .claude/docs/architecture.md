@@ -69,8 +69,8 @@ Points d'attention :
 - `features/browser` consomme le curseur et le bloqueur via leurs contrats exposés dans `core/` ou
   leur `domain/`, jamais en important leurs classes `ui/` ou `data/`.
 - Mode éléments : `BrowserViewModel.navigationMode` (suit la page, donc le mode mémorisé est réappliqué à chaque page de l'hôte)
-  masque le curseur (`BrowserHud.isCursorVisible`) ; `features/cursor` n'est pas modifié, sa session devient inactive et
-  rend les touches. La traduction D-pad → Tab / Maj+Tab / Entrée est `ElementKeys` (`features/browser/domain`), jamais de JavaScript.
+  masque le curseur (`BrowserHud.isCursorVisible`) et donne le D-pad à la page (`BrowserHud.isElementsActive`, seule
+  condition d'envoi de touches) ; `features/cursor` n'est pas modifié, sa session devient inactive et rend les touches. La traduction D-pad → Tab / Maj+Tab / Entrée est `ElementKeys` (`features/browser/domain`), jamais de JavaScript.
 - Le moteur de décision du bloqueur est appelé depuis `shouldInterceptRequest` (thread de fond, une
   fois par requête) : il doit être synchrone, sans I/O, et préchargé en mémoire.
 - La logique du curseur (calcul de position, bords, accélération) est du Kotlin pur, testée en JUnit ;

@@ -17,7 +17,7 @@ sealed interface ElementKeyAction {
     /** Haut maintenu : ouvre la barre d'adresse. */
     data object OpenInterface : ElementKeyAction
 
-    /** Touche prise sans rien faire (répétition d'OK, relâchement d'une touche déjà traitée). */
+    /** Touche prise sans rien faire (Haut en attente de son relâchement, répétition d'OK, relâchement déjà traité). */
     data object Ignore : ElementKeyAction
 
     /** Touche laissée à la WebView (Gauche/Droite dans un champ de saisie : déplacement du curseur de texte). */
@@ -25,23 +25,41 @@ sealed interface ElementKeyAction {
 }
 
 /**
- * Table unique de traduction D-pad → clavier du mode éléments : Bas/Droite = Tab, Haut/Gauche = Maj+Tab, OK = Entrée.
+ * Traduction D-pad → clavier du mode éléments : Bas/Droite = Tab, Haut/Gauche = Maj+Tab, OK = Entrée.
  * Kotlin pur ; seul l'envoi des `KeyEvent` dépend d'Android (`core/webview/ElementKeyInjector`). Aucun JavaScript.
+ *
+ * **Haut agit au relâchement** : appui court = élément précédent, appui long (première répétition) = barre d'adresse,
+ * sans Maj+Tab. Sans cela, le Maj+Tab du premier appui déplacerait le focus de la page avant l'ouverture de la barre.
+ * D'où le seul état retenu : un appui sur Haut en attente de son issue. Thread principal (aiguillage des touches).
  */
-object ElementKeys {
+class ElementKeys {
+    private var isUpPending = false
+
     /**
      * Action de [key] dans [phase]. Dans un champ de saisie ([isTextFieldFocused]), Gauche/Droite restent à la page
-     * (curseur de texte) et OK ouvre le clavier ; Haut/Bas continuent de changer d'élément. Haut maintenu ouvre la
-     * barre : le premier appui a déjà changé d'élément, la première répétition ouvre la barre.
+     * (curseur de texte) et OK ouvre le clavier ; Haut/Bas continuent de changer d'élément.
      */
     fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
         val isHorizontal = key == PadKey.Left || key == PadKey.Right
         val isLeftToTextField = isTextFieldFocused && isHorizontal
         if (isLeftToTextField) return ElementKeyAction.PassThrough
+        if (key == PadKey.Up) return upAction(phase)
         return when (phase) {
-            KeyPhase.Up -> ElementKeyAction.Ignore
-            KeyPhase.Repeat -> repeatAction(key)
             KeyPhase.Down -> pressAction(key, isTextFieldFocused)
+            KeyPhase.Repeat -> if (key == PadKey.Ok) ElementKeyAction.Ignore else pressAction(key, isTextFieldFocused)
+            KeyPhase.Up -> ElementKeyAction.Ignore
+        }
+    }
+
+    /** Haut : l'appui attend ; la première répétition ouvre la barre, sinon le relâchement passe à l'élément précédent. */
+    private fun upAction(phase: KeyPhase): ElementKeyAction {
+        val wasPending = isUpPending
+        isUpPending = phase == KeyPhase.Down
+        return when {
+            phase == KeyPhase.Down -> ElementKeyAction.Ignore
+            !wasPending -> ElementKeyAction.Ignore
+            phase == KeyPhase.Repeat -> ElementKeyAction.OpenInterface
+            else -> ElementKeyAction.Send(ElementKey.Previous)
         }
     }
 
@@ -49,11 +67,5 @@ object ElementKeys {
         PadKey.Down, PadKey.Right -> ElementKeyAction.Send(ElementKey.Next)
         PadKey.Up, PadKey.Left -> ElementKeyAction.Send(ElementKey.Previous)
         PadKey.Ok -> if (isTextFieldFocused) ElementKeyAction.OpenKeyboard else ElementKeyAction.Send(ElementKey.Activate)
-    }
-
-    private fun repeatAction(key: PadKey): ElementKeyAction = when (key) {
-        PadKey.Up -> ElementKeyAction.OpenInterface
-        PadKey.Ok -> ElementKeyAction.Ignore
-        else -> pressAction(key, isTextFieldFocused = false)
     }
 }

@@ -185,6 +185,7 @@ class BrowserViewModel(
 
     private val autoHide = HudAutoHide(viewModelScope, hudHideDelay)
     private val revealKeys = RevealKeyGuard()
+    private val elementKeys = ElementKeys()
 
     /** Barre d'outils, aide et pointeur affichés par-dessus la page (masqués à l'inactivité, cf. [HudAutoHide]). */
     val hud: StateFlow<BrowserHud> = combine(
@@ -560,16 +561,13 @@ class BrowserViewModel(
     }
 
     /**
-     * Touche du D-pad ou OK en navigation par éléments ([ElementKeys]). Hors de ce mode (curseur, surcouche, mode
-     * interface, écran d'erreur) rien n'est pris : [ElementKeyAction.PassThrough]. « Haut » maintenu ouvre la barre ici
-     * même et la touche est prise ([ElementKeyAction.Ignore]).
+     * Touche du D-pad ou OK en navigation par éléments ([ElementKeys]). Hors de ce mode ([BrowserHud.isElementsActive] :
+     * curseur, surcouche, mode interface, écran d'erreur, plein écran) rien n'est pris : [ElementKeyAction.PassThrough].
+     * « Haut » maintenu ouvre la barre ici même et la touche est prise ([ElementKeyAction.Ignore]).
      */
     fun onElementKey(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
-        val layers = _layers.value
-        val isElementsPage = navigationMode.value == NavigationMode.Elements &&
-            !layers.isInterfaceMode && !layers.isOverlayOpen && _pageState.value !is PageState.Error
-        if (!isElementsPage) return ElementKeyAction.PassThrough
-        val action = ElementKeys.actionFor(key, phase, isTextFieldFocused)
+        if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
+        val action = elementKeys.actionFor(key, phase, isTextFieldFocused)
         if (action == ElementKeyAction.OpenInterface) {
             enterInterfaceMode()
             return ElementKeyAction.Ignore

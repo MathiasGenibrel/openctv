@@ -81,8 +81,9 @@ private fun BrowserViewModel.consumesElementKey(event: KeyEvent, webView: WebVie
             ElementKey.Activate -> webView.sendEnter()
         }
         ElementKeyAction.OpenKeyboard -> webView.showSoftKeyboard()
-        ElementKeyAction.Ignore -> Unit
-        ElementKeyAction.OpenInterface, ElementKeyAction.PassThrough -> return false
+        // La barre est déjà ouverte par le ViewModel (Haut maintenu) : la touche est prise, elle ne va pas à la page.
+        ElementKeyAction.Ignore, ElementKeyAction.OpenInterface -> Unit
+        ElementKeyAction.PassThrough -> return false
     }
     return true
 }
