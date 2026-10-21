@@ -7,6 +7,7 @@
 #  - Koin : les modules sont déclarés en Kotlin (lambdas), sans réflexion sur nos classes.
 #  - DataStore (préférences) : clés `stringPreferencesKey("...")` et identifiants (`SearchEngine.id`...) sont des chaînes
 #    persistées, jamais des noms d'enum ou de champ ; les règles de la lib gardent ses champs protobuf.
+#    Idem pour les exceptions de sécurité (`core/security`) : DataStore + `SiteExceptionCodec` en chaînes, aucun nom d'enum persisté.
 #  - OkHttp / Okio / coroutines : règles consommatrices fournies par les bibliothèques.
 #  - WebView : `PointerAwareWebView`, `SecureWebViewClient`, `SecureWebChromeClient` sont instanciés en Kotlin par la
 #    fabrique ; leurs surcharges de méthodes du framework sont conservées par R8. Aucune interface JavaScript n'est exposée.
