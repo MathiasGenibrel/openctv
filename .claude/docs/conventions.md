@@ -55,7 +55,16 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   le décide : erreur de la **page principale**, et exception (`SiteException.Certificate`) accordée par l'utilisateur
   pour **cet hôte exact + cette empreinte SHA-256**. Jamais pour une sous-ressource, jamais sans empreinte lisible.
 - **HTTP** : la page principale en `http://` est remplacée par un avertissement (`WebNavigationPolicy.navigationOf`,
-  appliqué au `load` du ViewModel et dans `shouldOverrideUrlLoading`), sauf exception `SiteException.Http`.
+  appliqué au `load` du ViewModel et dans `shouldOverrideUrlLoading`), sauf exception `SiteException.Http`. Chaque page
+  principale affichée est **revérifiée** à `onPageStarted` / `onPageFinished` (`PageSecurityGuard.checkShownPage`) :
+  historique, rechargement et POST ne passent pas par `shouldOverrideUrlLoading`.
+- **Décisions SSL retenues par le moteur** : après un `proceed()`, Chromium ne rappelle plus `onReceivedSslError` pour
+  ce couple hôte + certificat, même dans une autre WebView. La fabrique appelle donc `clearSslPreferences()` à chaque
+  création, et `PageSecurityGuard` retient les certificats acceptés (badge maintenu, rechargement si l'exception a été
+  retirée). Toute logique de décision vit dans `PageSecurityGuard` (Kotlin pur, testé) ; `SecureWebViewClient` n'est
+  que l'adaptateur Android.
+- **Client HTTP de l'app** (`core/network`) : HTTPS seulement (`ConnectionSpec.MODERN_TLS`, pas de `CLEARTEXT`), car
+  `usesCleartextTraffic="true"` (nécessaire à la WebView) l'autoriserait aussi.
 - **Exceptions de sécurité** : `core/security` (`SecurityExceptionsContract`), hôte normalisé par `SiteHost` (hôte
   exact, `www.` conservé, strict : l'ambiguïté donne `null`, donc aucune exception possible). Session en mémoire,
   mémorisées dans DataStore sur la TV. Ne jamais accorder une exception sans geste explicite de l'utilisateur.

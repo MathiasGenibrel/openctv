@@ -48,10 +48,11 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | Emplacement | Contenu |
 |---|---|
 | `core/designsystem/` | Thème TV (couleurs, typo lisible à 3 m, marges d'overscan ≈ 5 %), composants focalisables réutilisables (Compose for TV) |
-| `core/webview/` | Fabrique de la `WebView` **verrouillée** (réglages de sécurité centralisés), `WebViewClient`/`WebChromeClient` de base, gestion du plein écran vidéo. Un seul endroit configure la WebView. |
+| `core/webview/` | Fabrique de la `WebView` **verrouillée** (réglages de sécurité centralisés), `WebViewClient`/`WebChromeClient` de base, gestion du plein écran vidéo. Un seul endroit configure la WebView. Décisions de sécurité de la page principale (HTTP, SSL, page affichée) dans `PageSecurityGuard`, Kotlin pur. |
+| `core/security/` | Exceptions de sécurité accordées par l'utilisateur (`SecurityExceptionsContract` : HTTP par hôte, certificat par hôte + empreinte SHA-256), session en mémoire + DataStore local ; `SiteHost` (hôte exact, parseur strict) |
 | `core/common/` | `Resource<T>`, dispatchers, utilitaires |
 | `core/database/` | Base Room de l'app |
-| `core/network/` | Client OkHttp (listes de filtres uniquement) |
+| `core/network/` | Client OkHttp (listes de filtres uniquement), HTTPS seulement |
 | `features/home/` | Écran d'accueil : grille de favoris, champ de recherche |
 | `features/browser/` | Écran de navigation : WebView, barre d'adresse, résolution URL vs recherche, gestion de la touche Retour |
 | `features/cursor/` | Curseur virtuel : état (position, vitesse, accélération), conversion OK → clic, défilement aux bords. Logique pure testable, indépendante de la WebView. |

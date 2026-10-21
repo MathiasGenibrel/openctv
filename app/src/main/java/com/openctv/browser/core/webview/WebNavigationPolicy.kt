@@ -1,5 +1,6 @@
 package com.openctv.browser.core.webview
 
+import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.security.SiteException
 import com.openctv.browser.core.security.SiteHost
 
@@ -26,6 +27,10 @@ object WebNavigationPolicy {
         val isAllowed = host != null && isHttpAllowed(host)
         return if (isAllowed) NavigationDecision.Allow else NavigationDecision.WarnHttp(host)
     }
+
+    /** [navigationOf] avec les exceptions HTTP accordées par l'utilisateur (session ou mémorisées). */
+    fun navigationOf(url: String?, isMainFrame: Boolean, exceptions: SecurityExceptionsContract): NavigationDecision =
+        navigationOf(url, isMainFrame) { host -> exceptions.isAllowed(SiteException.Http(host)) }
 }
 
 /** Décision pour une navigation (cf. [WebNavigationPolicy.navigationOf]). */
@@ -34,7 +39,10 @@ sealed interface NavigationDecision {
     data object Refuse : NavigationDecision
 
     /** Page principale en HTTP, sans exception : l'avertissement s'affiche à la place. [host] : voir [SiteHost]. */
-    data class WarnHttp(val host: String?) : NavigationDecision
+    data class WarnHttp(val host: String?) : NavigationDecision {
+        /** Avertissement affiché à la place de la page [url]. */
+        fun warningFor(url: String) = SecurityWarning.InsecureHttp(url, host)
+    }
 }
 
 /**

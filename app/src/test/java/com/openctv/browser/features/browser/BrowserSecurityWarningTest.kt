@@ -260,4 +260,39 @@ class BrowserSecurityWarningTest {
             assertThat(state.isSecure).isTrue()
         }
     }
+
+    @Test
+    fun `Given a trusted certificate page left for another site When the user comes back without a new SSL check Then the badge returns`() = runTest {
+        val viewModel = viewModel(expiredUrl)
+        viewModel.onUnverifiedCertificateAccepted(expiredUrl)
+        viewModel.onPageStarted(expiredUrl)
+        viewModel.onPageStarted("https://arte.tv/")
+
+        // Le moteur a retenu le proceed() : seul le garde de la WebView signale de nouveau la page, après son début.
+        viewModel.onPageStarted(expiredUrl)
+        viewModel.onUnverifiedCertificateAccepted(expiredUrl)
+        viewModel.onPageFinished(expiredUrl)
+
+        viewModel.toolbar.test {
+            val state = expectMostRecentItem()
+            assertThat(state.insecurity).isEqualTo(PageInsecurity.UnverifiedCertificate)
+            assertThat(state.isSecure).isFalse()
+        }
+    }
+
+    @Test
+    fun `Given an http page reached from history without exception When the warning replaces it and the user presses Back Then the browser goes back`() = runTest {
+        val viewModel = viewModel("https://arte.tv/")
+        viewModel.onWebViewReady()
+        viewModel.commands.test {
+            assertThat(awaitItem()).isEqualTo(BrowserCommand.Load("https://arte.tv/"))
+            viewModel.onUrlChanged(httpUrl, canGoBack = true, canGoForward = true)
+            viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "192.168.1.10")))
+
+            viewModel.onBack(canGoBack = true)
+
+            assertThat(awaitItem()).isEqualTo(BrowserCommand.GoBack)
+        }
+        assertThat((viewModel.pageState.value as PageState.Error).warning).isNotNull()
+    }
 }

@@ -72,9 +72,10 @@ class MainActivity : ComponentActivity() {
                 }
                 LaunchedEffect(Unit) {
                     if (destination == null) {
-                        // Les exceptions mémorisées sont lues avant la page de démarrage : une page HTTP autorisée s'ouvre sans avertissement.
-                        securityExceptions.persisted.first { it !is Resource.Loading }
                         val launchUrl = settings.launchUrl()
+                        // Exceptions mémorisées lues avant la page de démarrage (une page HTTP autorisée s'ouvre sans
+                        // avertissement) ; lecture lancée dès l'Application, en parallèle de celle des préférences.
+                        securityExceptions.persisted.first { it !is Resource.Loading }
                         destination = launchUrl?.let(Destination::Browser) ?: Destination.Home
                     }
                 }

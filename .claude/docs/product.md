@@ -89,7 +89,8 @@ Une WebView mal configurée est une faille. Par défaut :
 - Pages **HTTP** (non chiffrées) : jamais affichées sans avertissement. Une page principale en `http://` (saisie,
   lien, redirection, page de démarrage, favori) affiche un écran d'avertissement ; elle ne s'affiche qu'après
   « Afficher la page » (session) ou une exception HTTP mémorisée pour l'hôte exact. Le trafic en clair est
-  autorisé au niveau de l'app (`usesCleartextTraffic`) **uniquement** parce que cet avertissement le garde.
+  autorisé au niveau de l'app (`usesCleartextTraffic`) **uniquement** parce que cet avertissement le garde ; le
+  client HTTP de l'app (listes de filtres) reste en HTTPS seulement.
 - Une page affichée par exception est signalée dans la barre d'outils (« Non sécurisé », « Certificat non vérifié »).
 - Contenu mixte bloqué (`MIXED_CONTENT_NEVER_ALLOW`), Safe Browsing activé si disponible.
 - Permissions demandées par les pages (caméra, micro, localisation) : refusées par défaut.

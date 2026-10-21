@@ -5,11 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
-import com.openctv.browser.core.security.SiteException
 import com.openctv.browser.core.security.SiteHost
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.NavigationDecision
-import com.openctv.browser.core.webview.SecurityWarning
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.WebNavigationPolicy
 import com.openctv.browser.core.webview.WebPageListener
@@ -487,14 +485,10 @@ class BrowserViewModel(
 
     private fun freshStateFor(url: String): PageState {
         val site = siteLabelOf(url)
-        val decision = WebNavigationPolicy.navigationOf(url, isMainFrame = true) { host ->
-            securityExceptions.isAllowed(SiteException.Http(host))
-        }
-        return when (decision) {
+        return when (val decision = WebNavigationPolicy.navigationOf(url, isMainFrame = true, securityExceptions)) {
             NavigationDecision.Allow -> PageState.Loading(site, progress = 0f)
             NavigationDecision.Refuse -> PageState.Error(site, LoadErrorCause.Unknown)
-            is NavigationDecision.WarnHttp ->
-                PageState.Error(site, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(url, decision.host))
+            is NavigationDecision.WarnHttp -> PageState.Error(site, LoadErrorCause.Unknown, decision.warningFor(url))
         }
     }
 

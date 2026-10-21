@@ -76,10 +76,11 @@ internal fun SecurityWarningContent(
 ) {
     val optionsFocus = remember { FocusRequester() }
     val checkboxFocus = remember { FocusRequester() }
-    var isRemembered by remember { mutableStateOf(false) }
+    // Liés à l'avertissement : une case cochée pour un hôte ne doit jamais rester cochée pour le suivant.
+    var isRemembered by remember(warning) { mutableStateOf(false) }
     val canContinue = warning.exception != null
 
-    LaunchedEffect(Unit) { primaryFocus.requestFocus() }
+    LaunchedEffect(warning) { primaryFocus.requestFocus() }
     // Dépliées, les options prennent le focus (la case) ; repliées, il revient sur le bouton qui les a ouvertes.
     var wasOptionsOpen by remember { mutableStateOf(false) }
     LaunchedEffect(isOptionsOpen) {

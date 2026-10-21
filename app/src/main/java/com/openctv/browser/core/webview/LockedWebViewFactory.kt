@@ -65,6 +65,10 @@ class LockedWebViewFactory(
                     WebSettingsCompat.setSafeBrowsingEnabled(this, true)
                 }
             }
+            // Un proceed() SSL est retenu par le moteur au-delà de la WebView qui l'a décidé : on repart de zéro pour
+            // que toute page affichée malgré un certificat invalide repasse par le garde de cette WebView (badge,
+            // exception retirée entre-temps). Cf. PageSecurityGuard.
+            clearSslPreferences()
             webViewClient = SecureWebViewClient(listener, requestInterceptor, securityExceptions)
             webChromeClient = SecureWebChromeClient(listener, fullscreenHost)
         }
