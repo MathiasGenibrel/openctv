@@ -19,6 +19,7 @@ import com.openctv.browser.features.adblock.domain.DefaultAdBlockEngine
 import java.time.Clock
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import okhttp3.OkHttpClient
 import org.koin.android.ext.koin.androidContext
 import org.koin.dsl.module
 
@@ -27,7 +28,7 @@ private val Context.adBlockDataStore by preferencesDataStore(name = "adblock")
 val adBlockModule = module {
     single<AdBlockEngine> { DefaultAdBlockEngine() }
     single { BlockedRequestCounter() }
-    single<FilterListFetcher> { OkHttpFilterListFetcher(client = get()) }
+    single<FilterListFetcher> { OkHttpFilterListFetcher(client = lazy { get<OkHttpClient>() }) }
     single<FilterListCache> { FileFilterListCache(androidContext().filesDir, Clock.systemUTC()) }
     single<DisabledSitesStore> { DataStoreDisabledSitesStore(androidContext().adBlockDataStore) }
     single<AdBlockContract> {

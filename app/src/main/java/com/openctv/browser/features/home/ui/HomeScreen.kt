@@ -212,7 +212,7 @@ internal fun HomeContent(
         val target = focusToRestore()
         gridIndexOf(target, currentFavorites)?.let { gridState.bringIntoView(it) }
         // La cible peut ne pas être (encore) attachée (grille recomposée après un retrait) : l'effet
-        // repart dès que la grille ou l'état vide change (clés), et la focus de repli est de toute façon déjà passé.
+        // repart dès que la grille ou l'état vide change (clés), et le focus de repli est de toute façon déjà passé.
         runCatching { focusTargets.requester(target).requestFocus() }
         onFocusRestored()
     }

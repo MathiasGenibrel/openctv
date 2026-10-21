@@ -178,14 +178,32 @@ class BrowserViewModelTest {
             val results = "https://duckduckgo.com/?q=badssl"
             val expired = "https://expired.badssl.com/"
             val viewModel = BrowserViewModel(results, bookmarks)
+            viewModel.onUrlChanged(results, canGoBack = true, canGoForward = false)
+            viewModel.onPageFinished(results)
             viewModel.onPageStarted(expired)
+            // Certificat refusé : la page expirée n'entre jamais dans l'historique, la WebView garde les résultats.
             viewModel.onLoadError(WebLoadError(expired, LoadErrorCause.InvalidCertificate))
 
-            // La WebView affiche toujours les résultats : la page expirée n'a jamais été ajoutée à son historique.
-            viewModel.onBack(canGoBack = true, shownPageUrl = results)
+            viewModel.onBack(canGoBack = true)
 
             assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("duckduckgo.com"))
             assertThat(viewModel.pageUrl.value).isEqualTo(results)
+            viewModel.commands.test { expectNoEvents() }
+        }
+
+    @Test
+    fun `Given a link to a page with a refused certificate When the user presses Back Then the page that held the link is shown again`() =
+        runTest {
+            val results = "https://duckduckgo.com/?q=badssl"
+            val viewModel = BrowserViewModel(results, bookmarks)
+            viewModel.onUrlChanged(results, canGoBack = true, canGoForward = false)
+            viewModel.onPageFinished(results)
+            // Lien suivi : la WebView signale l'erreur sans jamais avoir commencé la page en échec.
+            viewModel.onLoadError(WebLoadError("https://expired.badssl.com/", LoadErrorCause.InvalidCertificate))
+
+            viewModel.onBack(canGoBack = true)
+
+            assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("duckduckgo.com"))
             viewModel.commands.test { expectNoEvents() }
         }
 
@@ -195,8 +213,10 @@ class BrowserViewModelTest {
             val viewModel = BrowserViewModel(url, bookmarks)
             viewModel.onPageStarted(url)
             viewModel.onLoadError(WebLoadError(url, LoadErrorCause.Unreachable))
+            // La WebView a ajouté sa page d'erreur à l'historique.
+            viewModel.onUrlChanged(url, canGoBack = true, canGoForward = false)
 
-            viewModel.onBack(canGoBack = true, shownPageUrl = url)
+            viewModel.onBack(canGoBack = true)
 
             viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.GoBack) }
         }
@@ -207,7 +227,7 @@ class BrowserViewModelTest {
         viewModel.onPageStarted(url)
         viewModel.onLoadError(WebLoadError(url, LoadErrorCause.InvalidCertificate))
 
-        viewModel.onBack(canGoBack = false, shownPageUrl = null)
+        viewModel.onBack(canGoBack = false)
 
         viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Close) }
     }

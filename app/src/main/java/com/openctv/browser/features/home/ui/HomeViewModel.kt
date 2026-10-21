@@ -80,18 +80,18 @@ class HomeViewModel(
 
     private var lastFocused: HomeFocus? = null
 
-    /** L'utilisateur a placé le focus sur [focus] : c'est là qu'il reviendra. */
-    fun onFocused(focus: HomeFocus) {
-        if (isRestoringFocus) return
-        lastFocused = focus
-    }
-
     /**
      * Vrai entre la fermeture du petit menu d'un favori et la restitution du focus : le menu qui quitte la
      * composition libère le focus, que le moteur donne alors à la première cible (la recherche). Ce focus
      * de repli ne doit pas écraser l'élément à restituer.
      */
     private var isRestoringFocus = false
+
+    /** L'utilisateur a placé le focus sur [focus] : c'est là qu'il reviendra. */
+    fun onFocused(focus: HomeFocus) {
+        if (isRestoringFocus) return
+        lastFocused = focus
+    }
 
     /** Élément à focaliser quand l'accueil (ré)apparaît ou que la saisie se ferme. */
     fun focusToRestore(): HomeFocus = HomeFocus.restore(lastFocused, favorites.value)

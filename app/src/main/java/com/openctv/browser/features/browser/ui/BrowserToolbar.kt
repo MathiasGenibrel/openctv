@@ -13,6 +13,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -76,8 +77,11 @@ fun BrowserToolbar(
     // passe au voisin actif au lieu de se perdre. Les autres éléments l'effacent en prenant le focus.
     var lastFocused by remember { mutableStateOf<ToolbarButton?>(null) }
     fun trackFocus(button: ToolbarButton?) = Modifier.onFocusChanged { if (it.isFocused) lastFocused = button }
-    LaunchedEffect(state.canGoBack, state.canGoForward, isInteractive) {
-        val fallback = if (isInteractive) focusFallbackOf(lastFocused, state) else null
+    // Seul un changement d'historique déclenche le repli : l'entrée en mode interface reste à BrowserFocus, qui
+    // pose le focus sur le champ d'adresse (sinon un `lastFocused` d'une visite précédente le lui disputerait).
+    val currentIsInteractive by rememberUpdatedState(isInteractive)
+    LaunchedEffect(state.canGoBack, state.canGoForward) {
+        val fallback = if (currentIsInteractive) focusFallbackOf(lastFocused, state) else null
         when (fallback) {
             ToolbarButton.Back -> backFocus
             ToolbarButton.Forward -> forwardFocus
