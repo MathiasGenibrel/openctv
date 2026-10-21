@@ -42,21 +42,42 @@ enum class BackAction {
 }
 
 /**
- * Retour retire la couche la plus haute ; sur la page seule, il recule dans l'historique, puis revient
- * à l'accueil. Jamais de sortie de l'application depuis le navigateur.
- *
- * [isUnrecordedErrorShown] : un écran d'erreur recouvre la page, alors que la page en échec n'a pas été ajoutée à
- * l'historique de la WebView (ex. certificat refusé) : la page courante de la WebView est celle d'avant, que
- * Retour doit simplement ré-afficher, que l'historique ait ou non une page avant elle (c'est souvent la première).
- * Reculer d'un cran sauterait cette page.
+ * Page que la WebView affiche encore sous un écran d'erreur, parce que la page en échec n'est pas entrée dans son
+ * historique : Retour la ré-affiche ([BackAction.DismissError]) au lieu de reculer d'un cran, qui la sauterait.
  */
-fun BrowserLayers.backAction(canGoBack: Boolean, isUnrecordedErrorShown: Boolean = false): BackAction = when {
-    isFullscreen -> BackAction.ExitFullscreen
-    isAddressInputOpen -> BackAction.CloseAddressInput
-    isMenuOpen -> BackAction.CloseMenu
-    isInterfaceMode -> BackAction.ExitInterface
-    isWarningOptionsOpen -> BackAction.CollapseWarningOptions
-    isUnrecordedErrorShown -> BackAction.DismissError
-    canGoBack -> BackAction.GoBackInHistory
-    else -> BackAction.LeaveBrowser
+enum class PageUnderError {
+    /** Aucun écran d'erreur, ou la page en échec est entrée dans l'historique : Retour recule normalement. */
+    None,
+
+    /**
+     * Avertissement de sécurité (HTTP, certificat refusé) : la navigation a été refusée avant d'aboutir, la page
+     * d'avant est intacte, même quand elle est la première de l'historique.
+     */
+    BehindSecurityWarning,
+
+    /** Erreur de chargement ordinaire : la page d'avant n'est ré-affichée que si l'historique remonte au-delà. */
+    BehindLoadError,
+}
+
+/**
+ * Retour retire la couche la plus haute ; sur la page seule, il ré-affiche la page restée sous un écran d'erreur
+ * ([pageUnderError]), recule dans l'historique, puis revient à l'accueil. Jamais de sortie de l'application depuis
+ * le navigateur.
+ */
+fun BrowserLayers.backAction(canGoBack: Boolean, pageUnderError: PageUnderError = PageUnderError.None): BackAction {
+    val isPreviousPageShownAgain = when (pageUnderError) {
+        PageUnderError.None -> false
+        PageUnderError.BehindSecurityWarning -> true
+        PageUnderError.BehindLoadError -> canGoBack
+    }
+    return when {
+        isFullscreen -> BackAction.ExitFullscreen
+        isAddressInputOpen -> BackAction.CloseAddressInput
+        isMenuOpen -> BackAction.CloseMenu
+        isInterfaceMode -> BackAction.ExitInterface
+        isWarningOptionsOpen -> BackAction.CollapseWarningOptions
+        isPreviousPageShownAgain -> BackAction.DismissError
+        canGoBack -> BackAction.GoBackInHistory
+        else -> BackAction.LeaveBrowser
+    }
 }

@@ -19,6 +19,7 @@ import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.HudAutoHide
 import com.openctv.browser.features.browser.domain.PageState
+import com.openctv.browser.features.browser.domain.PageUnderError
 import com.openctv.browser.features.browser.domain.RemoteKey
 import com.openctv.browser.features.browser.domain.RevealKeyGuard
 import com.openctv.browser.features.browser.domain.ToolbarState
@@ -189,19 +190,14 @@ class BrowserViewModel(
 
     fun retry() = load(_pageUrl.value)
 
-    /** Retour retire la couche la plus haute, puis recule dans l'historique, puis revient à l'accueil ([backAction]). */
+    /**
+     * Retour retire la couche la plus haute, ré-affiche la page restée sous un écran d'erreur, recule dans
+     * l'historique, puis revient à l'accueil : la règle est dans [backAction], le ViewModel n'en fournit que les faits.
+     */
     fun onBack(canGoBack: Boolean) {
         autoHide.onUserActivity()
-        val isErrorShown = _pageState.value is PageState.Error
         val shownPageUrl = committedUrl
-        val isWarningShown = (_pageState.value as? PageState.Error)?.warning != null
-        // La dernière page entrée dans l'historique n'est pas celle en échec (ex. certificat refusé, schéma
-        // interdit) : la WebView l'affiche toujours sous l'écran d'erreur. Un avertissement de sécurité la
-        // ré-affiche même si elle est la première de l'historique ; une erreur réseau garde la règle d'avant
-        // (il faut une page à laquelle revenir dans l'historique).
-        val isPreviousPageBehind = isErrorShown && shownPageUrl != null && shownPageUrl != failedUrl
-        val isUnrecordedErrorShown = isPreviousPageBehind && (isWarningShown || canGoBack)
-        when (_layers.value.backAction(canGoBack, isUnrecordedErrorShown)) {
+        when (_layers.value.backAction(canGoBack, pageUnderError(shownPageUrl))) {
             BackAction.DismissError -> shownPageUrl?.let(::showPreviousPage)
             BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
             BackAction.CloseAddressInput -> closeAddressInput()
@@ -210,6 +206,20 @@ class BrowserViewModel(
             BackAction.CollapseWarningOptions -> setWarningOptionsOpen(false)
             BackAction.GoBackInHistory -> _commands.trySend(BrowserCommand.GoBack)
             BackAction.LeaveBrowser -> _commands.trySend(BrowserCommand.Close)
+        }
+    }
+
+    /**
+     * Ce que l'écran d'erreur recouvre : la dernière page entrée dans l'historique ([shownPageUrl]) n'est pas celle
+     * en échec (ex. certificat refusé, schéma interdit), la WebView l'affiche donc toujours dessous ([backAction]).
+     */
+    private fun pageUnderError(shownPageUrl: String?): PageUnderError {
+        val error = _pageState.value as? PageState.Error ?: return PageUnderError.None
+        val isPreviousPageBehind = shownPageUrl != null && shownPageUrl != failedUrl
+        return when {
+            !isPreviousPageBehind -> PageUnderError.None
+            error.warning != null -> PageUnderError.BehindSecurityWarning
+            else -> PageUnderError.BehindLoadError
         }
     }
 

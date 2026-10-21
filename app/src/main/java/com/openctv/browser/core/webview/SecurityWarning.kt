@@ -17,15 +17,13 @@ internal fun certificateProblemOf(
     validNotAfter: Instant? = null,
     now: Instant = Instant.now(),
 ): CertificateProblem = when (primaryError) {
-    SSL_DATE_INVALID -> dateProblemOf(validNotBefore, validNotAfter, now)
     0 -> CertificateProblem.NotYetValid
     1 -> CertificateProblem.Expired
     2 -> CertificateProblem.NameMismatch
     3 -> CertificateProblem.Untrusted
+    4 -> dateProblemOf(validNotBefore, validNotAfter, now)
     else -> CertificateProblem.Invalid
 }
-
-private const val SSL_DATE_INVALID = 4
 
 /** `SSL_DATE_INVALID` ne dit pas de quel côté : les dates du certificat départagent expiré / pas encore valide. */
 private fun dateProblemOf(validNotBefore: Instant?, validNotAfter: Instant?, now: Instant): CertificateProblem {

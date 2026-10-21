@@ -6,6 +6,7 @@ import com.openctv.browser.features.browser.domain.BackAction
 import com.openctv.browser.features.browser.domain.BrowserLayers
 import com.openctv.browser.features.browser.domain.BrowserMode
 import com.openctv.browser.features.browser.domain.PageState
+import com.openctv.browser.features.browser.domain.PageUnderError
 import com.openctv.browser.features.browser.domain.backAction
 import com.openctv.browser.features.browser.domain.browserHudOf
 import com.openctv.browser.features.search.domain.SearchMode
@@ -37,6 +38,31 @@ class BrowserLayersTest {
         val menuOnly = BrowserLayers(isMenuOpen = true)
 
         assertThat(menuOnly.backAction(canGoBack = false)).isEqualTo(BackAction.CloseMenu)
+    }
+
+    @Test
+    fun `Given a security warning over the first page of the history When Back is pressed Then that page is shown again instead of leaving`() {
+        val action = BrowserLayers().backAction(canGoBack = false, pageUnderError = PageUnderError.BehindSecurityWarning)
+
+        assertThat(action).isEqualTo(BackAction.DismissError)
+    }
+
+    @Test
+    fun `Given a load error over a previous page When Back is pressed Then the page is shown again only if the history goes further back`() {
+        val layers = BrowserLayers()
+
+        assertThat(layers.backAction(canGoBack = true, pageUnderError = PageUnderError.BehindLoadError))
+            .isEqualTo(BackAction.DismissError)
+        assertThat(layers.backAction(canGoBack = false, pageUnderError = PageUnderError.BehindLoadError))
+            .isEqualTo(BackAction.LeaveBrowser)
+    }
+
+    @Test
+    fun `Given a security warning with its options open When Back is pressed Then the options fold before the page is shown again`() {
+        val layers = BrowserLayers(isWarningOptionsOpen = true)
+
+        assertThat(layers.backAction(canGoBack = false, pageUnderError = PageUnderError.BehindSecurityWarning))
+            .isEqualTo(BackAction.CollapseWarningOptions)
     }
 
     @Test
