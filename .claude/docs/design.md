@@ -118,11 +118,13 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
   ligne suivante, au bouton Fermer s'il n'en reste plus) ; icône de tête `no_encryption` `tertiary` (HTTP) ou
   `gpp_bad` `error` (certificat), icône de fin `delete` ; Retour : panneau → Réglages.
 - **Navigation / Plein écran** `6-6283` : page seule (HUD masqué) — note `6-6294`.
-- **Menu navigateur** `6-3518` : panneau latéral droit, scrim, groupes **Vibrant** (`tertiaryContainer`,
-  Large 16) : [Bloqueur de pubs (switch, « 12 requêtes bloquées sur ce site »), Ajouter aux favoris,
-  Zoom de la page → valeur « 100 % » (icône `zoom_in`)] [Accueil] [Moteur de recherche → valeur, Vitesse du
-  curseur → valeur] ; « Retour pour fermer le menu ». « Actualiser la page » n'y est plus (déjà dans la
-  barre) : le menu tient ainsi en 540 dp.
+- **Menu navigateur** `94:2416` (remplace `6-3518`) : panneau latéral droit, scrim, groupes **Vibrant**
+  (`tertiaryContainer`, Large 16) : [Bloqueur de pubs (switch, « 12 requêtes bloquées sur ce site »), Ajouter aux
+  favoris, Zoom de la page → « 100 % » (icône `zoom_in`), Navigation → « Curseur » / « Éléments » (icône
+  `keyboard_tab`)] [Accueil, Historique (icône `history`)] ; « Retour pour fermer le menu ». « Actualiser la page »
+  (dans la barre), « Moteur de recherche » et « Vitesse du curseur » (dans Réglages) n'y sont plus : le menu tient en
+  540 dp. Navigation : OK bascule le mode pour le site ouvert (mémorisé), le menu se ferme, snackbar
+  « Navigation par éléments pour <hôte> » / « Navigation au curseur pour <hôte> ».
 - **Menu / Moteur de recherche** `6-5331` : radios DuckDuckGo (Par défaut), Google, Bing, Qwant (Sans
   pistage), Ecosia, Brave Search (Sans pistage).
 - **Zoom des pages** `93:1436` (menu `93:1437`, sous-menu `93:1650`, Réglages `93:1769`, rendus `93:2058` /
@@ -142,6 +144,34 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
     niveau choisi s'il n'en reste plus).
   - Seule la page change de taille : barre, menus, curseur et clavier gardent la leur ; le curseur garde sa
     position à l'écran.
+- **Navigation, historique & données** `94:2415` (note `95:3779`) :
+  - **Mode éléments** `95:2598` : page seule, pas de curseur ; l'élément focalisé porte le contour de focus **dessiné par
+    la page** (`:focus-visible` du site, aucun style injecté) ; barre basse : snackbar « Mode éléments : Haut/Bas pour
+    changer d'élément · OK pour activer » + puce « Maintenir Haut : barre d'adresse ». Haut/Gauche = élément
+    précédent (Maj+Tab), Bas/Droite = suivant (Tab), OK = Entrée.
+  - **Historique** `95:2623` : même structure que Réglages — colonne gauche (bouton retour tonal, displaySmall
+    « Historique », « Pages visitées sur cette TV. Rien n'est envoyé ailleurs. », bouton outline `error` « Tout
+    effacer » (icône `delete_sweep`), aide en bas « OK : ouvrir · Droite : retirer de l'historique ») ; liste à droite :
+    libellé de jour (« Aujourd'hui », « Hier », puis date) en `onSurfaceVariant`, groupe `surfaceContainer` Large 16 par
+    jour ; ligne : icône `language`, titre (label), « domaine · HH:mm » (supporting), icône de fin `delete`
+    focalisable (Droite depuis la ligne). Focus initial : première entrée.
+  - **Historique / Empty** `95:2779` : illustration soft burst `tertiaryContainer` 120 dp + icône `history`,
+    « Aucune page visitée », « Les sites que vous ouvrez sur cette TV apparaîtront ici. » ; pas de « Tout effacer » ;
+    focus sur le bouton retour ; aide « Retour pour revenir à l'accueil ».
+  - **Historique / Confirmation** `95:2843` : scrim + dialogue `surfaceContainerHigh` Extra-large 28, 420 dp, titre
+    headlineSmall « Effacer tout l'historique ? », bodyMedium « Les N pages visitées sur cette TV seront retirées.
+    Favoris, réglages et cookies sont conservés. », boutons texte « Annuler » (**focalisé**) et « Effacer » (`error`).
+  - **Réglages** `95:2988` (liste défilée) : 2e groupe + « Zoom des pages » ; 3e groupe : Bloqueur de pubs (switch),
+    **Bandeaux de cookies** (switch, icône `cookie`, « Masqués · vous refusez par défaut », activé par défaut), Listes
+    de filtres (« EasyList, EasyList Cookie · il y a N jours ») ; 4e groupe : Exceptions de sécurité (icône `lock`),
+    **Effacer les données de navigation** (icône `delete_sweep`, « Historique, recherches, cookies, cache »).
+  - **Réglages / Effacer les données** `95:3271` : panneau latéral 380 dp, titre « Effacer les données », sous-titre
+    « Sur cette TV uniquement », cases (`check_box` / `check_box_outline_blank`, `primary`) cochées par défaut :
+    Historique (« N pages »), Recherches récentes (« N recherches »), Cookies et données de sites (« Vous serez
+    déconnecté des sites »), Cache (« Images et fichiers temporaires ») ; note « Favoris, réglages, exceptions de
+    sécurité et zooms sont conservés. » ; bouton outline `error` « Effacer les données » (icône `delete_sweep`) ;
+    aide « OK pour cocher · Retour pour revenir aux réglages ». Focus initial : première case.
+  - **Confirmation** `95:3593` : snackbar « Données de navigation effacées », focus rendu à la ligne des Réglages.
 - **Recherche / Saisie** `6-3725` : barre (retour, texte saisi, effacer) bord `primary`, liste de
   suggestions `surfaceContainer` (favori = étoile « Favori · ouvrir », recherche récente = horloge), clavier
   système en bas.
