@@ -134,6 +134,11 @@ class CursorController(private val config: CursorConfig) {
     /**
      * « Haut » maintenu au bord haut d'une page déjà en haut : `true` une seule fois, quand il faut ouvrir le
      * mode interface (barre d'adresse).
+     *
+     * Règle : le décompte ([CursorConfig.interfaceHoldNanos]) court tant que le pointeur pousse contre le bord haut
+     * **et** que la page ne peut plus remonter, en temps réel (indépendant de la cadence des frames). Tant que la
+     * page peut encore défiler vers le haut, « Haut » la fait défiler et le décompte reste à zéro ; il démarre
+     * dès que le sommet est atteint.
      */
     fun consumeInterfaceRequest(): Boolean {
         val wasRequested = isInterfaceRequested
@@ -176,7 +181,7 @@ class CursorController(private val config: CursorConfig) {
         velocityX = if (dt > 0f) (x - previousX) / dt else 0f
         velocityY = if (dt > 0f) (y - previousY) / dt else 0f
 
-        applyEdges(active, dirX, dirY, dt, dtNanos.coerceIn(0L, MAX_FRAME_NANOS), canScrollUp)
+        applyEdges(active, dirX, dirY, dt, dtNanos.coerceIn(0L, MAX_HOLD_FRAME_NANOS), canScrollUp)
         return x != previousX || y != previousY
     }
 
@@ -252,6 +257,13 @@ class CursorController(private val config: CursorConfig) {
         const val NANOS_PER_SECOND = 1_000_000_000f
         const val NOMINAL_FRAME_NANOS = 16_666_667L
         const val MAX_FRAME_NANOS = 50_000_000L
+
+        /**
+         * Plafond d'une frame pour le décompte du maintien « Haut » : plus large que [MAX_FRAME_NANOS] (qui borne
+         * le déplacement pour éviter les sauts). Sur une page lourde (YouTube, Qwant) les frames dépassent 50 ms :
+         * avec le même plafond, 600 ms « de maintien » duraient plusieurs secondes réelles.
+         */
+        const val MAX_HOLD_FRAME_NANOS = 500_000_000L
         const val DIAGONAL = 0.70710678f
         const val EDGE_EPSILON = 0.5f
     }

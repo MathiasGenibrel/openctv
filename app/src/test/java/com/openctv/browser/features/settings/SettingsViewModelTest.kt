@@ -77,6 +77,18 @@ class SettingsViewModelTest {
     }
 
     @Test
+    fun `Given a sub panel open When the user presses Back twice Then the first closes the panel and the second returns home`() = runTest {
+        val viewModel = viewModel()
+        viewModel.open(SettingsPanel.StartPage)
+
+        val firstBackConsumed = viewModel.onBack()
+        val secondBackConsumed = viewModel.onBack()
+
+        assertThat(firstBackConsumed).isTrue()
+        assertThat(secondBackConsumed).isFalse()
+    }
+
+    @Test
     fun `Given the settings screen When the user picks a favorite as start page Then it is saved as a precise site`() = runTest {
         val store = FakeSettingsStore()
         val viewModel = viewModel(store)

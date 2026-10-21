@@ -29,6 +29,17 @@ sealed interface HomeFocus {
             }
         }
 
+        /**
+         * Cible de « Bas » depuis la barre de recherche : la première tuile de la grille (1er favori), ou le
+         * bouton d'ajout quand il n'y a aucun favori (état vide ou erreur de stockage). `null` pendant le
+         * chargement : rien n'est affiché sous la barre, le déplacement reste celui par défaut.
+         */
+        fun belowSearch(favorites: Resource<List<HomeFavorite>>): HomeFocus? = when (favorites) {
+            Resource.Loading -> null
+            is Resource.Error -> Add
+            is Resource.Success -> favorites.data.firstOrNull()?.let { Favorite(it.url) } ?: Add
+        }
+
         private fun initial(favorites: Resource<List<HomeFavorite>>): HomeFocus {
             val isEmpty = favorites is Resource.Success && favorites.data.isEmpty()
             return if (isEmpty) Add else Search

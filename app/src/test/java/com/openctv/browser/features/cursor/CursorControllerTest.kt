@@ -132,6 +132,36 @@ class CursorControllerTest {
     }
 
     @Test
+    fun `Given a heavy page with slow frames When Up is held at the top Then the interface opens after the real hold time`() {
+        val slowFrame = 200_000_000L // 5 images/s : au-delà du plafond de déplacement (50 ms)
+        controller.press(CursorDirection.Up, now)
+        run(40, canScrollUp = false) // pointeur au bord haut
+        controller.consumeInterfaceRequest()
+        controller.releaseAll()
+
+        controller.press(CursorDirection.Up, now)
+        repeat(4) { // 4 x 200 ms = 800 ms réelles, 1 s au plus
+            now += slowFrame
+            controller.step(now, canScrollUp = false)
+        }
+
+        assertThat(controller.consumeInterfaceRequest()).isTrue()
+    }
+
+    @Test
+    fun `Given a page scrolled down When Up is held Then the page scrolls first and the interface opens only after reaching the top`() {
+        controller.press(CursorDirection.Up, now)
+        run(60, canScrollUp = true) // défile vers le haut : aucune ouverture
+        assertThat(controller.consumeInterfaceRequest()).isFalse()
+
+        run(25, canScrollUp = false) // sommet atteint : ~400 ms
+        assertThat(controller.consumeInterfaceRequest()).isFalse()
+
+        run(15, canScrollUp = false) // > 600 ms depuis le sommet
+        assertThat(controller.consumeInterfaceRequest()).isTrue()
+    }
+
+    @Test
     fun `Given Up released before the hold delay at the top When it is pressed again Then the hold restarts`() {
         controller.press(CursorDirection.Up, now)
         run(40, canScrollUp = true) // au bord haut, la page défile encore

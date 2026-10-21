@@ -67,9 +67,10 @@ fun BrowserToolbar(
             .shadow(elevation = 6.dp, shape = OpenCtvShapes.Full)
             .background(OpenCtvColors.PrimaryContainer, OpenCtvShapes.Full)
             .padding(horizontal = 12.dp, vertical = 8.dp)
-            // Pas de focusTarget sur la Row : chaque bouton remonte ses ancêtres jusqu'au premier focusTarget
-            // et hérite de ce canFocus (le plus externe l'emporte). Ne pas ajouter de focusGroup ici.
-            .focusProperties { canFocus = isInteractive },
+            // S'applique aux premiers focusTarget en dessous : les boutons (pas de focusGroup entre la Row et eux,
+            // sinon seul le groupe serait concerné). On ne fait que retirer le focus, jamais `canFocus = true`, qui
+            // rendrait focalisable un conteneur non focalisable et lui ferait avaler Retour (cf. conventions).
+            .focusProperties { if (!isInteractive) canFocus = false },
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
@@ -128,6 +129,9 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
             focusedContainerColor = OpenCtvColors.SurfaceContainer,
             focusedContentColor = OpenCtvColors.OnSurface,
         ),
+        // Pas d'agrandissement : le champ occupe déjà toute la largeur libre et un zoom recouvrirait
+        // Actualiser et Favori. L'anneau de focus (3 dp + 2 dp d'écart) tient dans l'espacement de 8 dp.
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
         Row(
             Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 20.dp),
