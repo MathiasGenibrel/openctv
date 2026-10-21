@@ -10,7 +10,7 @@ import org.junit.Test
 /**
  * Génère le Baseline Profile d'OpenCTV en rejouant, à la télécommande (D-pad + OK + Menu + Retour), le parcours
  * le plus fréquent : démarrage à froid -> accueil -> saisie -> page -> curseur -> barre et menu -> réglages -> Retour.
- * À lancer sur la TV : `./gradlew :app:generateBaselineProfile` (voir CLAUDE.md).
+ * À lancer sur la TV, qui perd alors l'installation d'OpenCTV (favoris, réglages) : procédure dans CLAUDE.md.
  *
  * Les touches sont espacées : l'interface TV anime ses changements de focus, une rafale serait perdue.
  */

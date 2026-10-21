@@ -7,9 +7,9 @@ plugins {
     alias(libs.plugins.androidx.baselineprofile)
 }
 
-// Clé de signature release : clé debug locale par défaut (installation facile sur la TV), surchargeable par
-// `local.properties` ou l'environnement (OPENCTV_RELEASE_STORE_FILE / _STORE_PASSWORD / _KEY_ALIAS / _KEY_PASSWORD).
-// Aucun secret n'est versionné.
+// Clé de signature release : clé debug locale par défaut (installation facile sur la TV, build NON distribuable),
+// surchargeable par l'environnement (OPENCTV_RELEASE_STORE_FILE / _STORE_PASSWORD / _KEY_ALIAS / _KEY_PASSWORD) ou
+// `local.properties` (openctv.release.store_file / ...). Aucun secret n'est versionné ni journalisé.
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use(::load)
@@ -17,6 +17,8 @@ val localProperties = Properties().apply {
 
 fun releaseSigningValue(name: String): String? =
     System.getenv("OPENCTV_RELEASE_$name") ?: localProperties.getProperty("openctv.release.${name.lowercase()}")
+
+val releaseStoreFile: String? = releaseSigningValue("STORE_FILE")
 
 android {
     namespace = "com.openctv.browser"
@@ -31,10 +33,9 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            val storeFilePath = releaseSigningValue("STORE_FILE")
-            if (storeFilePath != null) {
-                storeFile = file(storeFilePath)
+        if (releaseStoreFile != null) {
+            create("release") {
+                storeFile = file(releaseStoreFile)
                 storePassword = releaseSigningValue("STORE_PASSWORD")
                 keyAlias = releaseSigningValue("KEY_ALIAS")
                 keyPassword = releaseSigningValue("KEY_PASSWORD")
@@ -44,8 +45,7 @@ android {
 
     buildTypes {
         release {
-            val hasCustomReleaseKey = releaseSigningValue("STORE_FILE") != null
-            signingConfig = signingConfigs.getByName(if (hasCustomReleaseKey) "release" else "debug")
+            signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
