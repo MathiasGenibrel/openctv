@@ -38,9 +38,13 @@ class BrowserHudAutoHideTest {
     private val okPress = RemoteKey(code = 23L, phase = KeyPhase.Down)
     private val backPress = RemoteKey(code = 4L, phase = KeyPhase.Down, isBack = true)
 
-    /** Touches reçues par le curseur virtuel (il prend toutes les flèches et OK de la page). */
+    /** Touches reçues par le curseur virtuel (il prend les flèches et OK de la page, et elles seules). */
     private val cursorKeys = mutableListOf<KeyEvent>()
-    private val cursor = PageKeyHandler { event -> cursorKeys += event; true }
+    private val cursor = PageKeyHandler { event ->
+        val isCursorKey = event.nativeKeyEvent.keyCode in android.view.KeyEvent.KEYCODE_DPAD_UP..android.view.KeyEvent.KEYCODE_DPAD_CENTER
+        if (isCursorKey) cursorKeys += event
+        isCursorKey
+    }
     private val webView = mockk<WebView>(relaxed = true)
 
     @Before
@@ -123,6 +127,42 @@ class BrowserHudAutoHideTest {
         assertThat(viewModel.hud.value.isHidden).isFalse()
         idleFor(1)
         assertThat(viewModel.hud.value.isHidden).isTrue()
+    }
+
+    @Test
+    fun `Given a hidden HUD When Channel Down is pressed Then it only reveals the HUD and the page does not scroll`() = runTest {
+        val viewModel = loadedViewModel()
+        idleFor(5_000)
+        viewModel.commands.test {
+            val isSwallowed = viewModel.down(android.view.KeyEvent.KEYCODE_CHANNEL_DOWN)
+            viewModel.up(android.view.KeyEvent.KEYCODE_CHANNEL_DOWN)
+
+            assertThat(isSwallowed).isTrue()
+            assertThat(viewModel.hud.value.isHidden).isFalse()
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `Given a visible HUD When Channel Down is pressed Then the page scrolls one screen`() = runTest {
+        val viewModel = loadedViewModel()
+        viewModel.commands.test {
+            val isConsumed = viewModel.down(android.view.KeyEvent.KEYCODE_CHANNEL_DOWN)
+
+            assertThat(isConsumed).isTrue()
+            assertThat(awaitItem())
+                .isEqualTo(BrowserCommand.ScrollPage(com.openctv.browser.core.remote.ScrollDirection.Down))
+        }
+    }
+
+    @Test
+    fun `Given the address input open When the user presses a digit Then the key is left to the text field`() = runTest {
+        val viewModel = loadedViewModel()
+        viewModel.openAddressInput()
+
+        val isConsumed = viewModel.down(android.view.KeyEvent.KEYCODE_3)
+
+        assertThat(isConsumed).isFalse()
     }
 
     @Test

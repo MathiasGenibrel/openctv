@@ -4,6 +4,7 @@ import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.navigation.Destination
+import com.openctv.browser.core.remote.RemoteAction
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.home.domain.DoubleBackPress
@@ -27,6 +28,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.resetMain
@@ -402,6 +404,56 @@ class HomeViewModelTest {
             assertThat(viewModel.isExitHintVisible.value).isTrue()
             expectNoEvents()
         }
+    }
+
+    @Test
+    fun `Given two favorites When the user presses digit 2 Then the second favorite opens in the browser`() = runTest {
+        val second = Bookmark("https://www.france.tv/", "France TV", Instant.EPOCH)
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte, second)))
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.favorites.collect {} }
+
+        viewModel.events.test {
+            val isConsumed = viewModel.onRemoteAction(RemoteAction.OpenFavorite(2), isRepeat = false)
+
+            assertThat(isConsumed).isTrue()
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Browser(second.url)))
+        }
+    }
+
+    @Test
+    fun `Given one favorite When the user presses digit 4 Then nothing opens`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+        backgroundScope.launch(UnconfinedTestDispatcher(testScheduler)) { viewModel.favorites.collect {} }
+
+        viewModel.events.test {
+            viewModel.onRemoteAction(RemoteAction.OpenFavorite(4), isRepeat = false)
+
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `Given the home When the user presses the search key Then the address input opens`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        val isConsumed = viewModel.onRemoteAction(RemoteAction.OpenSearch, isRepeat = false)
+
+        assertThat(isConsumed).isTrue()
+        assertThat(viewModel.searchInput.value).isEqualTo(SearchRequest(SearchMode.Browse))
+    }
+
+    @Test
+    fun `Given the search input open When the user presses a digit Then the key is left to the text field`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+        viewModel.onOpenSearch()
+
+        val isConsumed = viewModel.onRemoteAction(RemoteAction.OpenFavorite(1), isRepeat = false)
+
+        assertThat(isConsumed).isFalse()
     }
 
     private class MutableClock : Clock() {

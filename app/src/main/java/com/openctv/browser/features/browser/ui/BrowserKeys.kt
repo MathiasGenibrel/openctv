@@ -6,6 +6,7 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import com.openctv.browser.core.remote.RemoteKeyMap
 import com.openctv.browser.features.browser.domain.KeyPhase
 import com.openctv.browser.features.browser.domain.RemoteKey
 
@@ -42,6 +43,8 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
     if (isPageMode && pageKeys.onPageKey(event)) return true
     val isKeyDown = event.type == KeyEventType.KeyDown
     if (!isKeyDown) return false
+    val remoteAction = RemoteKeyMap.actionFor(event.nativeKeyEvent.keyCode)
+    if (remoteAction != null) return onRemoteAction(remoteAction, isRepeat = event.nativeKeyEvent.repeatCount > 0)
     return when (event.key) {
         Key.DirectionUp -> onDpadUp(canScrollUp = webView.canScrollVertically(-1))
         Key.DirectionDown -> onDpadDown()

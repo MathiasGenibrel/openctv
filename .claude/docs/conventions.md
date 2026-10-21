@@ -69,10 +69,19 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   exact, `www.` conservé, strict : l'ambiguïté donne `null`, donc aucune exception possible). Session en mémoire,
   mémorisées dans DataStore sur la TV. Ne jamais accorder une exception sans geste explicite de l'utilisateur.
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
-- `evaluateJavascript` autorisé **seulement** pour des commandes média constantes en plein écran vidéo
-  (`core/webview/MediaCommand` : lecture/pause, saut ±10 s). Ensemble fermé de scripts constants, aucune
+- `evaluateJavascript` autorisé **seulement** pour des commandes média constantes sur la vidéo de la page, en plein
+  écran **comme hors plein écran** (`core/webview/MediaCommand` : lecture/pause, lecture, pause, saut ±10 s ; déclenchées
+  par les touches média de la télécommande, `core/remote/RemoteKeyMap`). Ensemble fermé de scripts constants, aucune
   donnée de la page ou de l'utilisateur concaténée, résultat ignoré, échec silencieux. Aucun autre usage,
   jamais de JavaScript persistant ni d'`addJavascriptInterface`.
+
+## Touches de la télécommande
+- Table unique : `core/remote/RemoteKeyMap` (Kotlin pur, testée). Ajuster une touche = changer cette table. Toute touche
+  absente (Accueil, Retour, Volume, Muet, Alimentation, source, Réglages, Guide, touches d'applis, croix) n'est jamais
+  interceptée : **ne jamais y ajouter une touche système**.
+- Aiguillage : `BrowserViewModel.onRemoteAction` / `HomeViewModel.onRemoteAction`. Sous une surcouche (saisie, menu,
+  historique, plein écran) rien n'est consommé ; le premier appui d'un HUD masqué ne fait que le réafficher
+  (`onRemoteKey`, avant l'aiguillage).
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :

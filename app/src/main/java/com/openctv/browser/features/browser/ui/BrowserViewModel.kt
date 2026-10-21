@@ -5,10 +5,13 @@ import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.history.NoPageVisits
 import com.openctv.browser.core.history.PageVisitsContract
+import com.openctv.browser.core.remote.RemoteAction
+import com.openctv.browser.core.remote.ScrollDirection
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.security.SiteHost
 import com.openctv.browser.core.webview.LoadErrorCause
+import com.openctv.browser.core.webview.MediaCommand
 import com.openctv.browser.core.webview.NavigationDecision
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.WebNavigationPolicy
@@ -73,6 +76,12 @@ sealed interface BrowserCommand {
 
     /** « Accueil » (menu, écran d'erreur) : quitter le navigateur vers l'accueil, quel que soit l'écran d'origine. */
     data object GoHome : BrowserCommand
+
+    /** Chaîne + / − : défile la WebView d'un écran. */
+    data class ScrollPage(val direction: ScrollDirection) : BrowserCommand
+
+    /** Touche média : commande sur la vidéo de la page. */
+    data class Media(val command: MediaCommand) : BrowserCommand
 }
 
 class BrowserViewModel(
@@ -339,6 +348,38 @@ class BrowserViewModel(
         val shouldReturnToPage = layers.isInterfaceMode && !layers.isOverlayOpen
         if (shouldReturnToPage) exitInterfaceMode()
         return shouldReturnToPage
+    }
+
+    /**
+     * Touche « confort » de la télécommande ([RemoteKeyMap]), appui initial ou répétition. Renvoie `true` si elle
+     * est consommée. Sous une surcouche (saisie, menu, historique, plein écran) rien n'est pris : le chiffre tapé
+     * dans la saisie reste un chiffre, et la page dessous ne bouge pas. Le réveil de l'interface masquée est
+     * décidé avant ([onRemoteKey]) : ces touches ne le contournent pas.
+     */
+    fun onRemoteAction(action: RemoteAction, isRepeat: Boolean): Boolean {
+        val layers = _layers.value
+        if (layers.isOverlayOpen) return false
+        if (isRepeat && !action.repeatsWhenHeld) return true
+        val isPageShown = _pageState.value !is PageState.Error
+        when (action) {
+            is RemoteAction.ScrollPage -> if (isPageShown) _commands.trySend(BrowserCommand.ScrollPage(action.direction))
+            is RemoteAction.Media -> if (isPageShown) _commands.trySend(BrowserCommand.Media(action.command))
+            RemoteAction.OpenSearch -> openAddressInput()
+            RemoteAction.OpenMenu -> openMenu()
+            is RemoteAction.OpenFavorite -> openFavorite(action.position)
+        }
+        return true
+    }
+
+    /** Favori de rang [position] (1 = premier de l'accueil) ; sans favori à ce rang, rien ne se passe. */
+    private fun openFavorite(position: Int) {
+        viewModelScope.launch {
+            val stored = bookmarks.getBookmarks().first { it !is Resource.Loading }
+            val favorite = (stored as? Resource.Success)?.data?.getOrNull(position - 1) ?: return@launch
+            _layers.update { it.copy(mode = BrowserMode.Page) }
+            showCursorHelp()
+            load(favorite.url)
+        }
     }
 
     /** Touche Menu de la télécommande : ouvre le mode interface. Renvoie `true` si consommé. */

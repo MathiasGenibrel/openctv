@@ -64,6 +64,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.remote.RemoteKeyMap
 import com.openctv.browser.core.designsystem.DPadIcon
 import com.openctv.browser.core.designsystem.ExpressiveShape
 import com.openctv.browser.core.designsystem.FocusableTile
@@ -123,7 +124,13 @@ fun HomeScreen(
     // Petit menu d'un favori ouvert : son propre BackHandler le ferme (Retour annule).
     BackHandler(enabled = !isSearchOpen && favoriteMenu == null) { viewModel.onBack() }
 
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier.fillMaxSize().onPreviewKeyEvent { event ->
+            val isKeyDown = event.type == KeyEventType.KeyDown
+            val action = RemoteKeyMap.actionFor(event.nativeKeyEvent.keyCode)
+            isKeyDown && action != null && viewModel.onRemoteAction(action, isRepeat = event.nativeKeyEvent.repeatCount > 0)
+        },
+    ) {
         HomeContent(
             favorites = favorites,
             isExitHintVisible = isExitHintVisible,
