@@ -69,10 +69,30 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   exact, `www.` conservé, strict : l'ambiguïté donne `null`, donc aucune exception possible). Session en mémoire,
   mémorisées dans DataStore sur la TV. Ne jamais accorder une exception sans geste explicite de l'utilisateur.
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
-- `evaluateJavascript` autorisé **seulement** pour des commandes média constantes en plein écran vidéo
-  (`core/webview/MediaCommand` : lecture/pause, saut ±10 s). Ensemble fermé de scripts constants, aucune
-  donnée de la page ou de l'utilisateur concaténée, résultat ignoré, échec silencieux. Aucun autre usage,
-  jamais de JavaScript persistant ni d'`addJavascriptInterface`.
+- `evaluateJavascript` autorisé pour **deux usages seulement**, tous deux dans `core/webview/`, à résultat ignoré et
+  échec silencieux, jamais de JavaScript persistant ni d'`addJavascriptInterface` :
+  1. commandes média constantes en plein écran vidéo (`MediaCommand` : lecture/pause, saut ±10 s) : ensemble fermé de
+     scripts constants, aucune donnée de la page ou de l'utilisateur concaténée ;
+  2. **masquage des bandeaux de cookies** (`CosmeticStyleScript`, liste « EasyList Cookie », réglage « Bandeaux de
+     cookies ») : un **modèle de script constant** qui n'ajoute qu'un élément `<style>` et y insère, par
+     `CSSStyleSheet.insertRule` (une règle par appel, donc rien ne « sort » de sa règle ; non bloqué par une CSP
+     `style-src`), des règles `sélecteur { display: none !important }`. Les sélecteurs viennent **uniquement** de la liste
+     compilée (jamais de la page ni de l'utilisateur), passent la liste blanche de `CosmeticSelector` (revérifiée à la
+     construction du script), et sont insérés comme tableau JSON de chaînes, jamais concaténés au code. Aucune donnée
+     lue dans la page (hors `document.head` pour y rattacher le `<style>`), aucun résultat exploité. Page principale
+     http/https seulement, page que le garde a laissé s'afficher, une fois par page (`onPageCommitVisible`, sinon
+     `onPageFinished`). Rien si le bloqueur est coupé (globalement ou pour le site) ou si « Bandeaux de cookies » l'est.
+     `addDocumentStartJavaScript` n'est **pas** utilisé : les règles dépendent de l'hôte, il faudrait enregistrer un
+     script par hôte (asynchrone, sur le thread principal, en course avec la navigation) ou embarquer toute la liste
+     dans un script qui la trie dans la page. Le script est donc préparé hors du thread principal (à la requête de la
+     page principale) pour l'hôte exact, puis évalué à son premier rendu.
+- **Liste blanche des sélecteurs cosmétiques** (`CosmeticSelector.isSafe`, appliquée au parsing **et** à la
+  construction du script) : caractères `A-Za-z0-9 _-.#>+~*:[]()="'^$|,` seulement ; 256 caractères au plus ; refus de
+  `{ } ; @ \ < / !`, des non ASCII, de `url(`, `expression`, `javascript`, `import`, des pseudo-éléments, des
+  pseudo-classes hors `not/is/where/has/nth-*/first-child/last-child/…` et de toute parenthèse hors de celles-ci, des
+  crochets/parenthèses/guillemets mal appariés, et des sélecteurs qui masquent toute la page (`*`, `html`, `body`,
+  `head`, `:root`). Une règle dont un sélecteur est refusé est ignorée en entier. Au plus 400 000 caractères de
+  sélecteurs par page (règles du site d'abord).
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :

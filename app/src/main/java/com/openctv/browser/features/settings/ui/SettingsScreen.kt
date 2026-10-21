@@ -109,6 +109,7 @@ fun SettingsScreen(
         onSelectHudHideDelay = viewModel::selectHudHideDelay,
         onSelectCursorSpeed = viewModel::selectCursorSpeed,
         onAdBlockChange = viewModel::setAdBlockEnabled,
+        onCookieBannerChange = viewModel::setCookieBannerBlockEnabled,
         filterLists = filterLists,
         onRefreshFilterLists = onRefreshFilterLists,
         onRemoveSecurityException = viewModel::removeSecurityException,
@@ -130,6 +131,7 @@ private fun SettingsContent(
     onSelectHudHideDelay: (HudHideDelay) -> Unit,
     onSelectCursorSpeed: (CursorSpeed) -> Unit,
     onAdBlockChange: (Boolean) -> Unit,
+    onCookieBannerChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     filterLists: FilterListsStatus = FilterListsStatus(),
     onRefreshFilterLists: () -> Unit = {},
@@ -162,6 +164,7 @@ private fun SettingsContent(
                     rowFocus = rowFocus,
                     onOpenPanel = onOpenPanel,
                     onAdBlockChange = onAdBlockChange,
+                    onCookieBannerChange = onCookieBannerChange,
                     filterLists = filterLists,
                     onRefreshFilterLists = onRefreshFilterLists,
                     modifier = Modifier.weight(0.6f),
@@ -227,6 +230,7 @@ private fun SettingsList(
     rowFocus: Map<SettingsPanel, FocusRequester>,
     onOpenPanel: (SettingsPanel) -> Unit,
     onAdBlockChange: (Boolean) -> Unit,
+    onCookieBannerChange: (Boolean) -> Unit,
     filterLists: FilterListsStatus,
     onRefreshFilterLists: () -> Unit,
     modifier: Modifier = Modifier,
@@ -283,6 +287,15 @@ private fun SettingsList(
                 isChecked = settings.isAdBlockEnabled,
                 onClick = { onAdBlockChange(!settings.isAdBlockEnabled) },
             )
+            val cookieBannerValue =
+                if (settings.isCookieBannerBlockEnabled) R.string.settings_cookie_banners_on else R.string.settings_cookie_banners_off
+            ListSwitchRow(
+                icon = OpenCtvIcons.Cookie,
+                label = stringResource(R.string.settings_cookie_banners),
+                supporting = stringResource(cookieBannerValue),
+                isChecked = settings.isCookieBannerBlockEnabled,
+                onClick = { onCookieBannerChange(!settings.isCookieBannerBlockEnabled) },
+            )
             // OK = mettre à jour maintenant ; sans effet pendant une mise à jour (le focus reste sur la ligne).
             ListRow(
                 icon = OpenCtvIcons.FilterList,
@@ -304,13 +317,16 @@ private fun SettingsList(
 }
 
 @Composable
-private fun filterListsSummary(status: FilterListsStatus): String = when (val summary = status.summary(Instant.now())) {
-    FilterListsSummary.Updating -> stringResource(R.string.settings_filter_lists_updating)
-    FilterListsSummary.Failed -> stringResource(R.string.settings_filter_lists_failed)
-    FilterListsSummary.Never -> stringResource(R.string.settings_filter_lists_never)
-    FilterListsSummary.Today -> stringResource(R.string.settings_filter_lists_today)
-    is FilterListsSummary.DaysAgo ->
-        pluralStringResource(R.plurals.settings_filter_lists_days_ago, summary.days, summary.days)
+private fun filterListsSummary(status: FilterListsStatus): String {
+    val freshness = when (val summary = status.summary(Instant.now())) {
+        FilterListsSummary.Updating -> stringResource(R.string.settings_filter_lists_updating)
+        FilterListsSummary.Failed -> stringResource(R.string.settings_filter_lists_failed)
+        FilterListsSummary.Never -> stringResource(R.string.settings_filter_lists_never)
+        FilterListsSummary.Today -> stringResource(R.string.settings_filter_lists_today)
+        is FilterListsSummary.DaysAgo ->
+            pluralStringResource(R.plurals.settings_filter_lists_days_ago, summary.days, summary.days)
+    }
+    return stringResource(R.string.settings_filter_lists_summary, freshness)
 }
 
 @Composable
@@ -772,7 +788,7 @@ private fun SettingsPreview() {
         SettingsContent(
             state = SettingsUiState(bookmarks = PreviewBookmarks),
             onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
-            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},
+            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {}, onCookieBannerChange = {},
         )
     }
 }
@@ -788,7 +804,7 @@ private fun SettingsPageZoomPanelPreview() {
                 openPanel = SettingsPanel.PageZoom,
             ),
             onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
-            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},
+            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {}, onCookieBannerChange = {},
         )
     }
 }
@@ -804,7 +820,7 @@ private fun SettingsStartPagePanelPreview() {
                 openPanel = SettingsPanel.StartPage,
             ),
             onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
-            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},
+            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {}, onCookieBannerChange = {},
         )
     }
 }

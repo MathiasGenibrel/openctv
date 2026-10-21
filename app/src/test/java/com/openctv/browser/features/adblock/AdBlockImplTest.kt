@@ -7,6 +7,7 @@ import com.openctv.browser.features.adblock.data.AdBlockImpl
 import com.openctv.browser.features.adblock.data.DisabledSitesStore
 import com.openctv.browser.features.adblock.data.FileFilterListCache
 import com.openctv.browser.features.adblock.data.FilterListFetcher
+import com.openctv.browser.features.adblock.data.FilterListId
 import com.openctv.browser.features.adblock.domain.BlockedRequestCounter
 import com.openctv.browser.features.adblock.domain.DefaultAdBlockEngine
 import java.io.ByteArrayInputStream
@@ -46,10 +47,10 @@ class AdBlockImplTest {
     private val cache by lazy { FileFilterListCache(cacheDir, clock) }
 
     private var downloads = 0
-    private var download: () -> String = { error("réseau non prévu") }
-    private val fetcher = FilterListFetcher {
+    private var download: (FilterListId) -> String = { error("réseau non prévu") }
+    private val fetcher = FilterListFetcher { list ->
         downloads++
-        ByteArrayInputStream(download().toByteArray())
+        ByteArrayInputStream(download(list).toByteArray())
     }
 
     private val appScopes = mutableListOf<CoroutineScope>()
@@ -72,10 +73,12 @@ class AdBlockImplTest {
         )
     }
 
-    private fun cachedList(content: String, age: Duration) {
-        File(cacheDir, "filters.txt").apply {
-            writeText(content)
-            setLastModified(now.minus(age).toEpochMilli())
+    private fun cachedList(content: String, age: Duration, cookieContent: String = "||cookies.example.com^\n") {
+        mapOf(FilterListId.EasyList to content, FilterListId.EasyListCookie to cookieContent).forEach { (list, text) ->
+            File(cacheDir, list.cacheFileName).apply {
+                writeText(text)
+                setLastModified(now.minus(age).toEpochMilli())
+            }
         }
     }
 
@@ -109,7 +112,7 @@ class AdBlockImplTest {
         advanceUntilIdle()
 
         // Then
-        assertThat(downloads).isEqualTo(1)
+        assertThat(downloads).isEqualTo(2)
         assertThat(isBlocked("https://new-ads.example.com/x")).isTrue()
         assertThat(adBlock.filterLists.value.lastUpdated).isEqualTo(now)
     }
@@ -146,7 +149,7 @@ class AdBlockImplTest {
         // Then
         assertThat(result).isEqualTo(Resource.Error("HTTP 503"))
         assertThat(isBlocked("https://ads.example.com/banner.js")).isTrue()
-        assertThat(cache.readLines { it.toList() }).containsExactly("||ads.example.com^")
+        assertThat(cache.readLines(FilterListId.EasyList) { it.toList() }).containsExactly("||ads.example.com^")
     }
 
     @Test
@@ -249,11 +252,11 @@ class AdBlockImplTest {
         }
 
         // When
-        val result = runCatching { cache.stage(brokenStream) }
+        val result = runCatching { cache.stage(FilterListId.EasyList, brokenStream) }
 
         // Then
         assertThat(result.exceptionOrNull()).isInstanceOf(IOException::class.java)
-        assertThat(cacheDir.list()).asList().containsExactly("filters.txt")
+        assertThat(cacheDir.list()).asList().containsExactly("filters.txt", "filters-cookie.txt")
         assertThat(isBlocked("https://ads.example.com/banner.js")).isTrue()
         assertThat(adBlock.filterLists.value.lastUpdated).isNotNull()
     }
@@ -270,6 +273,79 @@ class AdBlockImplTest {
         // Then
         assertThat(isEnabled).isTrue()
         assertThat(count).isEqualTo(0)
+    }
+
+    @Test
+    fun `Given a cached cookie list When the app starts Then consent scripts are blocked and banners hidden without any download`() = runTest {
+        // Given
+        cachedList("||ads.example.com^\n", age = Duration.ofDays(1), cookieContent = "||cmp.example.net^\n##.cookie-banner\n")
+        val adBlock = adBlock()
+
+        // When
+        adBlock.start()
+        advanceUntilIdle()
+
+        // Then
+        assertThat(isBlocked("https://cmp.example.net/consent.js")).isTrue()
+        assertThat(engine.cosmeticSelectionFor("https://site.org/").generic).containsExactly(".cookie-banner")
+        assertThat(downloads).isEqualTo(0)
+    }
+
+    @Test
+    fun `Given the cookie list unreachable When the lists are refreshed Then the main list is still updated and the error is reported`() = runTest {
+        // Given
+        download = { list ->
+            if (list == FilterListId.EasyListCookie) throw IOException("HTTP 404") else "||new-ads.example.com^\n"
+        }
+        val adBlock = adBlock()
+
+        // When
+        val result = adBlock.refreshNow()
+
+        // Then
+        assertThat(result).isEqualTo(Resource.Error("HTTP 404"))
+        assertThat(isBlocked("https://new-ads.example.com/x")).isTrue()
+        assertThat(adBlock.filterLists.value.error).isEqualTo("HTTP 404")
+    }
+
+    @Test
+    fun `Given an active cookie list When the refresh brings an empty one Then the old cookie list stays active`() = runTest {
+        // Given
+        cachedList("||ads.example.com^\n", age = Duration.ofDays(10), cookieContent = "##.cookie-banner\n")
+        val adBlock = adBlock()
+        adBlock.start()
+        advanceUntilIdle()
+        download = { list -> if (list == FilterListId.EasyListCookie) "! rien\n" else "||ads.example.com^\n" }
+
+        // When
+        val result = adBlock.refreshNow()
+
+        // Then
+        assertThat(result).isInstanceOf(Resource.Error::class.java)
+        assertThat(engine.cosmeticSelectionFor("https://site.org/").generic).containsExactly(".cookie-banner")
+    }
+
+    @Test
+    fun `Given the cookie list is the only stale one When the app starts Then it is refreshed`() = runTest {
+        // Given
+        cachedList("||ads.example.com^\n", age = Duration.ofDays(1))
+        File(cacheDir, FilterListId.EasyListCookie.cacheFileName).setLastModified(now.minus(Duration.ofDays(10)).toEpochMilli())
+        download = { "||ads.example.com^\n##.fresh\n" }
+        val adBlock = adBlock()
+
+        // When
+        adBlock.start()
+        advanceUntilIdle()
+
+        // Then
+        assertThat(downloads).isGreaterThan(0)
+        assertThat(engine.cosmeticSelectionFor("https://site.org/").generic).containsExactly(".fresh")
+    }
+
+    @Test
+    fun `Given the official cookie list URL When listed Then it is downloaded over HTTPS`() {
+        FilterListId.entries.forEach { assertThat(it.url).startsWith("https://") }
+        assertThat(FilterListId.EasyListCookie.url).isEqualTo("https://secure.fanboy.co.nz/fanboy-cookiemonster.txt")
     }
 
     private class InMemorySitesStore : DisabledSitesStore {

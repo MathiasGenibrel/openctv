@@ -20,12 +20,30 @@ import com.openctv.browser.core.security.SiteHost
  * - SSL : `cancel()` par défaut ; `proceed()` seulement pour la page principale, avec une exception de
  *   l'utilisateur pour cet hôte et cette empreinte de certificat ([SslErrorPolicy.shouldProceed]) ;
  * - page affichée par un `proceed()` retenu par le moteur : badge maintenu, ou rechargement si l'exception a été retirée.
+ *
+ * Masquage des bandeaux de cookies (seconde exception à l'interdiction d'`evaluateJavascript`, cf. [CosmeticStyleScript]) :
+ * le script de la page est préparé hors du thread principal dès la requête de la page principale, puis évalué une seule
+ * fois, à son premier rendu (`onPageCommitVisible`, sinon `onPageFinished`), pour une page http/https que le garde
+ * a laissé s'afficher. Jamais pour un avertissement, une page refusée ni une sous-ressource.
  */
 class SecureWebViewClient(
     private val listener: WebPageListener,
     private val requestInterceptor: RequestInterceptor = RequestInterceptor.PassThrough,
     securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+    private val cosmetics: CosmeticSelectionSource = CosmeticSelectionSource.None,
 ) : WebViewClient() {
+
+    private class PreparedStyle(val host: String, val script: String?)
+
+    private val styleScript = CosmeticStyleScript()
+
+    /** Écrite par le thread de `shouldInterceptRequest`, lue sur le thread principal. */
+    @Volatile
+    private var preparedStyle: PreparedStyle? = null
+
+    /** Page courante autorisée à recevoir le style, et style déjà appliqué à cette page. Thread principal. */
+    private var isStyleAllowed = false
+    private var isStyleApplied = false
 
     /** Écrite sur le thread principal, lue depuis le thread de `shouldInterceptRequest`. */
     @Volatile
@@ -47,10 +65,12 @@ class SecureWebViewClient(
         val requestUrl = request.url.toString()
         // `loadUrl` ne passe pas par shouldOverrideUrlLoading : c'est ici qu'on voit la page principale demandée.
         guard.onMainFrameRequest(requestUrl, request.isForMainFrame)
+        if (request.isForMainFrame) prepareStyle(requestUrl)
         return requestInterceptor.intercept(requestUrl, currentPageUrl, request.isForMainFrame)
     }
 
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
+        isStyleAllowed = false
         val check = guard.checkShownPage(url) { CertificateDetails.of(view.certificate).fingerprint }
         if (check is ShownPageCheck.HttpNotAllowed) {
             // Arrivée sans décision (historique, POST…) : la page ne va pas plus loin, l'avertissement la remplace.
@@ -59,19 +79,41 @@ class SecureWebViewClient(
             return
         }
         currentPageUrl = url
+        isStyleAllowed = WebNavigationPolicy.isUrlAllowed(url)
+        isStyleApplied = false
         listener.onPageStarted(url)
         onCertificateCheck(view, url, check)
     }
 
     override fun onPageCommitVisible(view: WebView, url: String) {
         listener.onPageCommitVisible(url)
+        applyStyle(view, url)
     }
 
     override fun onPageFinished(view: WebView, url: String) {
         listener.onPageFinished(url)
+        applyStyle(view, url)
         // Le certificat de la page n'est pas forcément connu dès onPageStarted : seconde vérification.
         val check = guard.checkShownPage(url) { CertificateDetails.of(view.certificate).fingerprint }
         onCertificateCheck(view, url, check)
+    }
+
+    /** Hors du thread principal : l'hôte demandé est connu avant le document, le script est prêt avant son rendu. */
+    private fun prepareStyle(pageUrl: String) {
+        val host = SiteHost.of(pageUrl) ?: return
+        preparedStyle = PreparedStyle(host, scriptFor(pageUrl))
+    }
+
+    private fun scriptFor(pageUrl: String): String? = styleScript.build(cosmetics.selectionFor(pageUrl))
+
+    private fun applyStyle(view: WebView, url: String) {
+        if (!isStyleAllowed || isStyleApplied) return
+        val host = SiteHost.of(url) ?: return
+        isStyleApplied = true
+        val prepared = preparedStyle
+        // Redirection : la page affichée n'est pas celle demandée, le script se prépare alors pour son hôte.
+        val script = if (prepared != null && prepared.host == host) prepared.script else scriptFor(url)
+        if (script != null) view.evaluateJavascript(script, null)
     }
 
     private fun onCertificateCheck(view: WebView, url: String, check: ShownPageCheck) {

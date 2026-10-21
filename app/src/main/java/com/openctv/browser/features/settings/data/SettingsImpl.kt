@@ -53,6 +53,9 @@ class SettingsImpl(
 
     override suspend fun setAdBlockEnabled(isEnabled: Boolean) = write { it.copy(isAdBlockEnabled = isEnabled) }
 
+    override suspend fun setCookieBannerBlockEnabled(isEnabled: Boolean) =
+        write { it.copy(isCookieBannerBlockEnabled = isEnabled) }
+
     override fun recordLastPage(url: String) {
         val isWebPage = WebNavigationPolicy.isUrlAllowed(url)
         if (!isWebPage) return

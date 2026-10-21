@@ -69,14 +69,19 @@
     <string name="settings_ad_block">Bloqueur de pubs</string>
     <string name="settings_ad_block_on">Activé sur tous les sites</string>
     <string name="settings_ad_block_off">Désactivé</string>
+    <string name="settings_cookie_banners">Bandeaux de cookies</string>
+    <string name="settings_cookie_banners_on">Masqués · vous refusez par défaut</string>
+    <string name="settings_cookie_banners_off">Affichés</string>
     <string name="settings_filter_lists">Listes de filtres</string>
-    <string name="settings_filter_lists_never">Jamais mises à jour</string>
-    <string name="settings_filter_lists_today">Mises à jour aujourd\'hui</string>
-    <string name="settings_filter_lists_updating">Mise à jour en cours…</string>
-    <string name="settings_filter_lists_failed">Échec de la mise à jour : OK pour réessayer</string>
+    <!-- %1$s : listes, %2$s : état des mises à jour -->
+    <string name="settings_filter_lists_summary">EasyList, EasyList Cookie · %1$s</string>
+    <string name="settings_filter_lists_never">jamais mises à jour</string>
+    <string name="settings_filter_lists_today">mises à jour aujourd\'hui</string>
+    <string name="settings_filter_lists_updating">mise à jour en cours…</string>
+    <string name="settings_filter_lists_failed">échec de la mise à jour : OK pour réessayer</string>
     <plurals name="settings_filter_lists_days_ago">
-        <item quantity="one">Mises à jour il y a %d jour</item>
-        <item quantity="other">Mises à jour il y a %d jours</item>
+        <item quantity="one">mises à jour il y a %d jour</item>
+        <item quantity="other">mises à jour il y a %d jours</item>
     </plurals>
     <string name="settings_default_badge">Par défaut</string>
     <string name="settings_no_tracking">Sans pistage</string>

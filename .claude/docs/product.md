@@ -45,7 +45,7 @@ Conséquences à garder en tête :
 | **Masquage auto du HUD** | L'interface (barre d'adresse, menus) se masque après 3 / 5 / 10 s ou Jamais (**5 s par défaut**). Le premier appui sur la télécommande ne fait que réafficher le HUD, sans déclencher d'action. |
 | **Favoris** | Ajouter / retirer / ouvrir, persistés localement. |
 | **Curseur virtuel** | Pointeur à l'écran déplacé par le D-pad, OK = clic, défilement quand le pointeur touche un bord. **C'est le cœur du produit** (voir enjeux). |
-| **Bloqueur de pubs** | Filtrage des requêtes à partir de listes type EasyList, via `WebViewClient.shouldInterceptRequest`. Activable/désactivable par site. |
+| **Bloqueur de pubs** | Filtrage des requêtes à partir de listes type EasyList, via `WebViewClient.shouldInterceptRequest`. Activable/désactivable par site. **Bandeaux de cookies** (réglage, activé par défaut) : liste « EasyList Cookie » (scripts des plateformes de consentement bloqués, donc « refus par défaut », + bandeaux restants masqués par une feuille de style). |
 
 **Hors MVP** (ne pas implémenter sans tâche dédiée) : onglets multiples, historique synchronisé,
 comptes, saisie vocale, navigation « de lien en lien », téléchargements, mode privé, publication
@@ -81,6 +81,12 @@ fermer une popup ou faire défiler une page, **le produit a échoué**, quel que
 Une WebView mal configurée est une faille. Par défaut :
 - `allowFileAccess = false`, `allowContentAccess = false`, pas d'accès fichier depuis les URL `file://`.
 - **Aucun `addJavascriptInterface`** exposé aux pages web.
+- **JavaScript injecté : deux exceptions étroites**, toutes deux dans `core/webview/`, à résultat ignoré et échec silencieux :
+  les commandes média constantes du plein écran vidéo, et le **masquage des bandeaux de cookies** (script constant qui
+  n'ajoute qu'un `<style>` avec des règles `display: none !important`). Les sélecteurs viennent uniquement de la liste
+  « EasyList Cookie » téléchargée en HTTPS, validés par une liste blanche stricte (rien de `{ } ; @ \ < url( expression`,
+  longueur bornée) puis encodés en JSON, jamais lus dans la page. Page principale http/https seulement ; rien si le
+  bloqueur est coupé (globalement ou pour le site) ou si « Bandeaux de cookies » l'est. Détail : `conventions.md`.
 - Erreurs SSL (`onReceivedSslError`) : **`cancel()` par défaut**. `proceed()` est autorisé **uniquement** pour
   la page principale (jamais une sous-ressource), si l'utilisateur a explicitement accordé, sur un écran
   d'avertissement, une exception pour **cet hôte exact et l'empreinte SHA-256 de ce certificat** : un autre
