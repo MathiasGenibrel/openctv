@@ -9,7 +9,7 @@ import com.openctv.browser.features.history.data.HistoryDao
 import com.openctv.browser.features.history.data.HistoryEntryEntity
 
 /** Base Room de l'app. Les données restent sur l'appareil (pas de sauvegarde cloud). */
-@Database(entities = [BookmarkEntity::class, HistoryEntryEntity::class], version = 2, exportSchema = false)
+@Database(entities = [BookmarkEntity::class, HistoryEntryEntity::class], version = 2, exportSchema = true)
 @TypeConverters(InstantConverters::class)
 abstract class OpenCtvDatabase : RoomDatabase() {
     abstract fun bookmarkDao(): BookmarkDao

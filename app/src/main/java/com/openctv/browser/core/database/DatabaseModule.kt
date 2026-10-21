@@ -9,7 +9,7 @@ val databaseModule = module {
     single {
         Room.databaseBuilder(androidContext(), OpenCtvDatabase::class.java, "openctv.db")
             // Jamais de migration destructive : elle effacerait les favoris.
-            .addMigrations(Migration1To2)
+            .addMigrations(*AllMigrations.toTypedArray())
             .build()
     }
 }
