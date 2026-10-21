@@ -19,6 +19,7 @@ import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.core.navigation.ScopedViewModels
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.history.PageVisitsContract
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.core.zoom.PageZoom
@@ -32,6 +33,9 @@ import com.openctv.browser.features.browser.ui.BrowserViewModel
 import com.openctv.browser.features.browser.ui.PageKeyHandler
 import com.openctv.browser.features.cursor.ui.CursorOverlay
 import com.openctv.browser.features.cursor.ui.rememberCursorSession
+import com.openctv.browser.features.history.domain.HistoryContract
+import com.openctv.browser.features.history.ui.HistoryScreen
+import com.openctv.browser.features.history.ui.HistoryViewModel
 import com.openctv.browser.features.home.ui.HomeScreen
 import com.openctv.browser.features.home.ui.HomeViewModel
 import com.openctv.browser.features.search.domain.RecentSearchesContract
@@ -64,6 +68,8 @@ class MainActivity : ComponentActivity() {
     private val recentSearches: RecentSearchesContract by inject()
     private val securityExceptions: SecurityExceptionsContract by inject()
     private val pageZoom: PageZoomContract by inject()
+    private val history: HistoryContract by inject()
+    private val pageVisits: PageVisitsContract by inject()
 
     /** Zoom des Réglages pour les sites sans zoom propre : suit les Réglages, lisible tout de suite. */
     private val defaultPageZoom: StateFlow<PageZoom> by lazy {
@@ -128,6 +134,12 @@ class MainActivity : ComponentActivity() {
                             onRefreshFilterLists = { lifecycleScope.launch { adBlock.refreshNow() } },
                             onClose = { destination = Destination.Home },
                         )
+                        is Destination.History -> HistoryScreen(
+                            viewModel = viewModel { HistoryViewModel(history, focusedEntryId = current.focusedEntryId) },
+                            // Retour depuis la page ouverte ramène ici, sur cette entrée (cf. Destination.Browser.returnTo).
+                            onOpen = { entry -> destination = Destination.Browser(entry.url, openedFromHistoryEntry = entry.id) },
+                            onClose = { destination = Destination.Home },
+                        )
                         is Destination.Browser -> {
                             val browser = viewModel {
                                 BrowserViewModel(
@@ -138,6 +150,7 @@ class MainActivity : ComponentActivity() {
                                     securityExceptions = securityExceptions,
                                     siteZooms = pageZoom,
                                     defaultZoom = defaultPageZoom,
+                                    pageVisits = pageVisits,
                                 )
                             }
                             // Curseur virtuel : la racine relie les features (le navigateur n'importe pas le curseur).
@@ -155,7 +168,8 @@ class MainActivity : ComponentActivity() {
                                 },
                                 webViewFactory = webViewFactory,
                                 viewModel = browser,
-                                onClose = { destination = Destination.Home },
+                                onClose = { destination = current.returnTo },
+                                onHome = { destination = Destination.Home },
                                 menu = {
                                     val menu = viewModel {
                                         BrowserMenuViewModel(
@@ -171,8 +185,19 @@ class MainActivity : ComponentActivity() {
                                     BrowserMenu(
                                         viewModel = menu,
                                         onHome = browser::goHome,
+                                        onHistory = browser::openHistory,
                                         onClose = browser::closeMenu,
                                     )
+                                },
+                                // Historique en surcouche : la page reste vivante dessous ; ViewModel neuf à chaque ouverture.
+                                history = {
+                                    ScopedViewModels("history") {
+                                        HistoryScreen(
+                                            viewModel = viewModel { HistoryViewModel(history) },
+                                            onOpen = { entry -> browser.onHistoryEntryChosen(entry.url) },
+                                            onClose = browser::closeHistory,
+                                        )
+                                    }
                                 },
                                 addressInput = { request ->
                                     SearchInput(

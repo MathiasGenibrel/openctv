@@ -3,7 +3,7 @@ package com.openctv.browser.features.browser.domain
 import com.openctv.browser.features.search.domain.SearchRequest
 
 /**
- * Ce qui recouvre la page, de la couche la plus haute à la plus basse : plein écran vidéo > saisie d'adresse > menu >
+ * Ce qui recouvre la page, de la couche la plus haute à la plus basse : plein écran vidéo > historique > saisie d'adresse > menu >
  * mode interface > page. La couche la plus haute capte Retour ([backAction]) et le D-pad avant les autres.
  *
  * Une seule valeur pour toutes les couches : chaque transition est atomique, l'écran ne voit jamais
@@ -20,18 +20,20 @@ data class BrowserLayers(
     val isFullscreen: Boolean = false,
     /** Panneau « Options avancées » déplié sur un avertissement de sécurité : Retour le replie d'abord. */
     val isWarningOptionsOpen: Boolean = false,
+    /** Historique ouvert en surcouche plein écran (depuis le menu, qui s'est fermé) : il traite Retour lui-même. */
+    val isHistoryOpen: Boolean = false,
 ) {
     val isAddressInputOpen: Boolean get() = addressInput != null
 
     /** Une surcouche modale a le focus : les touches de bascule page ↔ interface lui sont laissées. */
-    val isOverlayOpen: Boolean get() = isAddressInputOpen || isMenuOpen || isFullscreen
+    val isOverlayOpen: Boolean get() = isAddressInputOpen || isMenuOpen || isFullscreen || isHistoryOpen
 
     val isInterfaceMode: Boolean get() = mode == BrowserMode.Interface
 }
 
 /** Effet de la touche Retour, décidé par [backAction]. */
 enum class BackAction {
-    ExitFullscreen, CloseAddressInput, CloseMenu, ExitInterface,
+    ExitFullscreen, CloseHistory, CloseAddressInput, CloseMenu, ExitInterface,
 
     /** Avertissement de sécurité aux options avancées dépliées : on les replie, sans quitter l'avertissement. */
     CollapseWarningOptions,
@@ -72,6 +74,7 @@ fun BrowserLayers.backAction(canGoBack: Boolean, pageUnderError: PageUnderError 
     }
     return when {
         isFullscreen -> BackAction.ExitFullscreen
+        isHistoryOpen -> BackAction.CloseHistory
         isAddressInputOpen -> BackAction.CloseAddressInput
         isMenuOpen -> BackAction.CloseMenu
         isInterfaceMode -> BackAction.ExitInterface

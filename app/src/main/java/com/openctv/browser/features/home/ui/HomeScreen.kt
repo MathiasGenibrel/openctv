@@ -133,6 +133,7 @@ fun HomeScreen(
             onOpenSearch = viewModel::onOpenSearch,
             onAddBookmark = viewModel::onAddBookmark,
             onOpenSettings = viewModel::onOpenSettings,
+            onOpenHistory = viewModel::onOpenHistory,
             onFavoriteMenu = viewModel::onFavoriteMenuRequested,
             isSearchOpen = isSearchOpen,
             isFavoriteMenuOpen = favoriteMenu != null,
@@ -169,7 +170,7 @@ private fun gridIndexOf(focus: HomeFocus, favorites: Resource<List<HomeFavorite>
     return when (focus) {
         is HomeFocus.Favorite -> shown.indexOfFirst { it.url == focus.url }.takeIf { it >= 0 }
         HomeFocus.Add -> shown.size
-        HomeFocus.Search, HomeFocus.Settings -> null
+        HomeFocus.Search, HomeFocus.Settings, HomeFocus.History -> null
     }
 }
 
@@ -193,6 +194,7 @@ internal fun HomeContent(
     onOpenSearch: () -> Unit,
     onAddBookmark: () -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenHistory: () -> Unit,
     modifier: Modifier = Modifier,
     onFavoriteMenu: (HomeFavorite) -> Unit = {},
     isSearchOpen: Boolean = false,
@@ -223,7 +225,12 @@ internal fun HomeContent(
     OverscanSafeArea(modifier) {
         Box(Modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
             Column(Modifier.fillMaxSize()) {
-                HomeHeader(onOpenSettings = onOpenSettings, settingsModifier = focusTargets.modifier(HomeFocus.Settings))
+                HomeHeader(
+                    onOpenSettings = onOpenSettings,
+                    onOpenHistory = onOpenHistory,
+                    settingsModifier = focusTargets.modifier(HomeFocus.Settings),
+                    historyModifier = focusTargets.modifier(HomeFocus.History),
+                )
                 Spacer(Modifier.height(16.dp))
                 Text(
                     text = stringResource(R.string.home_title),
@@ -274,7 +281,12 @@ internal fun HomeContent(
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
-private fun HomeHeader(onOpenSettings: () -> Unit, settingsModifier: Modifier = Modifier) {
+private fun HomeHeader(
+    onOpenSettings: () -> Unit,
+    onOpenHistory: () -> Unit,
+    settingsModifier: Modifier = Modifier,
+    historyModifier: Modifier = Modifier,
+) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(36.dp).background(OpenCtvColors.Primary, ExpressiveShape.Cookie9.asShape()))
         Spacer(Modifier.width(12.dp))
@@ -284,6 +296,13 @@ private fun HomeHeader(onOpenSettings: () -> Unit, settingsModifier: Modifier = 
             color = OpenCtvColors.OnSurface,
         )
         Spacer(Modifier.weight(1f))
+        OpenCtvIconButton(
+            icon = OpenCtvIcons.History,
+            contentDescription = stringResource(R.string.home_history),
+            onClick = onOpenHistory,
+            modifier = historyModifier,
+        )
+        Spacer(Modifier.width(8.dp))
         OpenCtvIconButton(
             icon = OpenCtvIcons.Settings,
             contentDescription = stringResource(R.string.home_settings),
@@ -571,7 +590,7 @@ private fun HomePreview() {
             isExitHintVisible = false,
             isFavoriteOptionsHintVisible = true,
             searchPlaceholder = "Rechercher sur DuckDuckGo ou saisir une adresse",
-            onOpenFavorite = {}, onOpenSearch = {}, onAddBookmark = {}, onOpenSettings = {},
+            onOpenFavorite = {}, onOpenSearch = {}, onAddBookmark = {}, onOpenSettings = {}, onOpenHistory = {},
         )
     }
 }
@@ -585,7 +604,7 @@ private fun HomeEmptyPreview() {
             isExitHintVisible = true,
             isFavoriteOptionsHintVisible = false,
             searchPlaceholder = "Rechercher sur DuckDuckGo ou saisir une adresse",
-            onOpenFavorite = {}, onOpenSearch = {}, onAddBookmark = {}, onOpenSettings = {},
+            onOpenFavorite = {}, onOpenSearch = {}, onAddBookmark = {}, onOpenSettings = {}, onOpenHistory = {},
         )
     }
 }

@@ -66,6 +66,12 @@ kotlin {
     jvmToolchain(17)
 }
 
+// Schémas Room versionnés (app/schemas/) : chaque version de la base est figée, et MigrationSchemaTest vérifie
+// que les migrations mènent exactement au schéma suivant (les favoris d'une installation existante sont préservés).
+ksp {
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(platform(libs.koin.bom))

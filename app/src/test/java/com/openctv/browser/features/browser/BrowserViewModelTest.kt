@@ -702,13 +702,14 @@ class BrowserViewModelTest {
     }
 
     @Test
-    fun `Given the menu is open When the user chooses Accueil Then the browser asks to close`() = runTest {
+    fun `Given the menu is open When the user chooses Accueil Then the browser asks to go to the home screen`() = runTest {
         val viewModel = BrowserViewModel(url, bookmarks)
         viewModel.openMenu()
 
         viewModel.goHome()
 
-        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Close) }
+        // Pas `Close` : « Accueil » mène à l'accueil même quand la page a été ouverte depuis l'Historique.
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.GoHome) }
     }
 
     @Test
@@ -724,12 +725,12 @@ class BrowserViewModelTest {
     }
 
     @Test
-    fun `Given the menu could not save a setting When it reports the failure Then a brief notice explains it`() = runTest {
+    fun `Given the menu could not save the ad blocker choice When it reports the failure Then a brief notice explains it`() = runTest {
         val viewModel = BrowserViewModel(url, bookmarks)
 
-        viewModel.onMenuWriteFailed(MenuWriteFailure.Setting)
+        viewModel.onMenuWriteFailed(MenuWriteFailure.AdBlock)
 
-        assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.SettingFailed)
+        assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.AdBlockFailed)
         advanceTimeBy(BrowserViewModel.NOTICE_DURATION)
         runCurrent()
         assertThat(viewModel.notice.value).isNull()

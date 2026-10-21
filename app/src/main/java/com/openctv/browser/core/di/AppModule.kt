@@ -9,6 +9,7 @@ import com.openctv.browser.core.webview.webViewModule
 import com.openctv.browser.core.zoom.zoomModule
 import com.openctv.browser.features.adblock.di.adBlockModule
 import com.openctv.browser.features.bookmarks.di.bookmarksModule
+import com.openctv.browser.features.history.di.historyModule
 import com.openctv.browser.features.search.di.searchModule
 import com.openctv.browser.features.settings.di.settingsModule
 import org.koin.dsl.module
@@ -19,5 +20,5 @@ val appModule = module {
 }
 
 val appModules = listOf(
-    appModule, networkModule, securityModule, zoomModule, webViewModule, adBlockModule, databaseModule, bookmarksModule, settingsModule, searchModule,
+    appModule, networkModule, securityModule, zoomModule, webViewModule, adBlockModule, databaseModule, bookmarksModule, historyModule, settingsModule, searchModule,
 )

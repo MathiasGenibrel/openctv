@@ -34,7 +34,8 @@ import com.openctv.browser.features.search.domain.SearchRequest
 
 /**
  * Écran de navigation de [viewModel] (portée = la destination, cf. DestinationHost : un ViewModel neuf à
- * chaque ouverture).
+ * chaque ouverture). [onClose] : Retour depuis la première page, vers l'écran d'où l'on vient (accueil ou
+ * Historique) ; [onHome] : « Accueil » (menu, écran d'erreur), toujours vers l'accueil.
  *
  * Le ViewModel décide, l'écran exécute. Chaque responsabilité a son fichier :
  * - couches (saisie, menu, mode interface) et Retour : `domain/BrowserLayers.kt` ;
@@ -44,9 +45,10 @@ import com.openctv.browser.features.search.domain.SearchRequest
  * - page, chargement, erreur : [BrowserContent] (`BrowserPage.kt`) ;
  * - vidéo plein écran : [BrowserFullscreen] (`BrowserFullscreen.kt`), ses touches : [FullscreenKeys].
  *
- * [addressInput] (saisie d'adresse) et [menu] (contenu du menu, #10) sont des surcouches fournies par la
- * racine de composition : la WebView reste vivante dessous, et le focus revient à l'élément qui les a
- * ouvertes quand elles se ferment. [menu] doit piéger le focus (`focusTrap`).
+ * [addressInput] (saisie d'adresse), [menu] (contenu du menu, #10) et [history] (écran Historique, ouvert depuis le
+ * menu) sont des surcouches fournies par la racine de composition : la WebView reste vivante dessous, et le focus
+ * revient à l'élément qui les a ouvertes quand elles se ferment. [menu] et [history] doivent piéger le focus
+ * (`focusTrap`) ; [history] traite Retour lui-même.
  *
  * Le curseur virtuel (#8) arrive par [pageKeys] (flèches et OK en mode page, avant la WebView) et par le slot
  * [cursor] (surcouche et injection des événements sur la WebView reçue ; `isActive` = le D-pad est dans la
@@ -58,8 +60,10 @@ fun BrowserScreen(
     webViewFactory: LockedWebViewFactory,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
+    onHome: () -> Unit = onClose,
     addressInput: @Composable (SearchRequest) -> Unit = {},
     menu: @Composable () -> Unit = {},
+    history: @Composable () -> Unit = {},
     pageKeys: PageKeyHandler = PageKeyHandler.None,
     cursor: @Composable (webView: PointerAwareWebView, isActive: Boolean, isVisible: Boolean) -> Unit = { _, _, _ -> },
 ) {
@@ -92,6 +96,7 @@ fun BrowserScreen(
     WebViewLifecycle(webView, fullscreen)
 
     val currentOnClose by rememberUpdatedState(onClose)
+    val currentOnHome by rememberUpdatedState(onHome)
     LaunchedEffect(viewModel, webView) {
         viewModel.onWebViewReady()
         viewModel.commands.collect { command ->
@@ -103,13 +108,14 @@ fun BrowserScreen(
                 BrowserCommand.Stop -> webView.stopLoading()
                 BrowserCommand.ExitFullscreen -> fullscreen.exit()
                 BrowserCommand.Close -> currentOnClose()
+                BrowserCommand.GoHome -> currentOnHome()
             }
         }
     }
 
     // La décision revient au ViewModel ; la vue ne fournit que l'état d'historique de sa WebView.
-    // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
-    BackHandler(enabled = !layers.isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
+    // Saisie ou historique ouverts : c'est eux qui traitent Retour (leur BackHandler ferme la surcouche).
+    BackHandler(enabled = !layers.isAddressInputOpen && !layers.isHistoryOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
     val focus = rememberBrowserFocus(viewModel, webView, layers)
     val toolbarActions = remember(viewModel) {
@@ -141,7 +147,7 @@ fun BrowserScreen(
             pageState = pageState,
             pageView = { PageView(webView, pageZoom, isVisible = pageState !is PageState.Error) },
             onRetry = viewModel::retry,
-            onHome = onClose,
+            onHome = onHome,
             retryFocus = focus.retry,
             warningActions = warningActions,
             isWarningOptionsOpen = layers.isWarningOptionsOpen,
@@ -176,6 +182,8 @@ fun BrowserScreen(
         // Plein écran : le menu (son Retour, son piège à focus) laisse la main au lecteur, et revient après.
         val isMenuShown = layers.isMenuOpen && !layers.isFullscreen
         if (isMenuShown) menu()
+        val isHistoryShown = layers.isHistoryOpen && !layers.isFullscreen
+        if (isHistoryShown) history()
         layers.addressInput?.let { addressInput(it) }
         if (fullscreen.view != null) ImmersiveMode()
     }

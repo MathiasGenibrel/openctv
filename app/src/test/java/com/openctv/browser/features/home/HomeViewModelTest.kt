@@ -374,6 +374,18 @@ class HomeViewModelTest {
     }
 
     @Test
+    fun `Given the history button When the user opens the history Then the history destination is requested`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
+        val viewModel = viewModel()
+
+        viewModel.events.test {
+            viewModel.onOpenHistory()
+
+            assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.History()))
+        }
+    }
+
+    @Test
     fun `Given the exit warning When the user leaves the home and comes back Then the next Back only warns`() = runTest {
         every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(emptyList()))
         val viewModel = viewModel()

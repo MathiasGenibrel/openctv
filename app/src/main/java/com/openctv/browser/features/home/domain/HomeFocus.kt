@@ -6,6 +6,7 @@ import com.openctv.browser.core.common.Resource
 sealed interface HomeFocus {
     data object Search : HomeFocus
     data object Settings : HomeFocus
+    data object History : HomeFocus
 
     /** Ajout d'un favori : tuile « Ajouter » de la grille, ou bouton de l'état vide. */
     data object Add : HomeFocus
@@ -20,7 +21,7 @@ sealed interface HomeFocus {
             val default = initial(favorites)
             return when (remembered) {
                 null -> default
-                Search, Settings -> remembered
+                Search, Settings, History -> remembered
                 Add -> if (favorites is Resource.Loading) default else Add
                 is Favorite -> {
                     val isStillShown = favorites is Resource.Success && favorites.data.any { it.url == remembered.url }

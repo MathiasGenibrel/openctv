@@ -1,6 +1,5 @@
 package com.openctv.browser.features.browser.ui
 
-import androidx.annotation.StringRes
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -42,8 +41,6 @@ import com.openctv.browser.core.zoom.widthLabel
 import com.openctv.browser.features.browser.domain.AdBlockStatus
 import com.openctv.browser.features.browser.domain.BrowserMenuPanel
 import com.openctv.browser.features.browser.domain.BrowserMenuState
-import com.openctv.browser.features.settings.domain.CursorSpeed
-import com.openctv.browser.features.settings.domain.SearchEngine
 
 /**
  * Menu du navigateur : panneau latéral droit sur la page assombrie, qui piège le focus. Retour ferme le
@@ -53,6 +50,7 @@ import com.openctv.browser.features.settings.domain.SearchEngine
 fun BrowserMenu(
     viewModel: BrowserMenuViewModel,
     onHome: () -> Unit,
+    onHistory: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -63,10 +61,9 @@ fun BrowserMenu(
             onToggleAdBlock = viewModel::toggleAdBlock,
             onToggleBookmark = viewModel::toggleBookmark,
             onHome = onHome,
+            onHistory = onHistory,
             onOpenPanel = viewModel::openPanel,
             onSelectPageZoom = viewModel::selectPageZoom,
-            onSelectSearchEngine = viewModel::selectSearchEngine,
-            onSelectCursorSpeed = viewModel::selectCursorSpeed,
         ),
         onBack = { if (!viewModel.onBack()) onClose() },
         modifier = modifier,
@@ -77,10 +74,9 @@ internal class MenuActions(
     val onToggleAdBlock: () -> Unit,
     val onToggleBookmark: () -> Unit,
     val onHome: () -> Unit,
+    val onHistory: () -> Unit,
     val onOpenPanel: (BrowserMenuPanel) -> Unit,
     val onSelectPageZoom: (PageZoom) -> Unit,
-    val onSelectSearchEngine: (SearchEngine) -> Unit,
-    val onSelectCursorSpeed: (CursorSpeed) -> Unit,
 )
 
 @Composable
@@ -138,22 +134,7 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
         }
         ListGroup(style = ListGroupStyle.Vibrant) {
             ListRow(OpenCtvIcons.Home, stringResource(R.string.browser_menu_home), onClick = actions.onHome)
-        }
-        ListGroup(style = ListGroupStyle.Vibrant) {
-            ListNavigationRow(
-                icon = OpenCtvIcons.TravelExplore,
-                label = stringResource(R.string.settings_search_engine),
-                value = state.searchEngine.displayName,
-                onClick = { rowFocus.open(BrowserMenuPanel.SearchEngine, actions.onOpenPanel) },
-                modifier = Modifier.focusRequester(rowFocus.of(BrowserMenuPanel.SearchEngine)),
-            )
-            ListNavigationRow(
-                icon = OpenCtvIcons.Speed,
-                label = stringResource(R.string.settings_cursor_speed),
-                value = stringResource(state.cursorSpeed.labelRes()),
-                onClick = { rowFocus.open(BrowserMenuPanel.CursorSpeed, actions.onOpenPanel) },
-                modifier = Modifier.focusRequester(rowFocus.of(BrowserMenuPanel.CursorSpeed)),
-            )
+            ListRow(OpenCtvIcons.History, stringResource(R.string.browser_menu_history), onClick = actions.onHistory)
         }
     }
     Text(
@@ -198,27 +179,6 @@ private fun ColumnScope.MenuPanel(panel: BrowserMenuPanel, state: BrowserMenuSta
             hint = stringResource(R.string.browser_menu_zoom_hint),
             onSelect = actions.onSelectPageZoom,
         )
-        BrowserMenuPanel.SearchEngine -> MenuOptions(
-            title = stringResource(R.string.settings_search_engine),
-            options = SearchEngine.entries,
-            selected = state.searchEngine,
-            label = { it.displayName },
-            supporting = { engine ->
-                listOfNotNull(
-                    defaultBadge.takeIf { engine == SearchEngine.Default },
-                    stringResource(R.string.settings_no_tracking).takeIf { engine.isTrackingFree },
-                ).joinToString(" · ").ifEmpty { null }
-            },
-            onSelect = actions.onSelectSearchEngine,
-        )
-        BrowserMenuPanel.CursorSpeed -> MenuOptions(
-            title = stringResource(R.string.settings_cursor_speed),
-            options = CursorSpeed.entries,
-            selected = state.cursorSpeed,
-            label = { stringResource(it.labelRes()) },
-            supporting = { speed -> defaultBadge.takeIf { speed == CursorSpeed.Default } },
-            onSelect = actions.onSelectCursorSpeed,
-        )
     }
 }
 
@@ -262,20 +222,13 @@ private fun adBlockSummary(status: AdBlockStatus): String = when (status) {
     AdBlockStatus.DisabledEverywhere -> stringResource(R.string.browser_menu_ad_block_global_off)
 }
 
-@StringRes
-private fun CursorSpeed.labelRes(): Int = when (this) {
-    CursorSpeed.Slow -> R.string.settings_cursor_slow
-    CursorSpeed.Normal -> R.string.settings_cursor_normal
-    CursorSpeed.Fast -> R.string.settings_cursor_fast
-}
-
 @Preview(device = Devices.TV_1080p)
 @Composable
 private fun BrowserMenuPreview() {
     OpenCtvTheme {
         BrowserMenuContent(
             state = BrowserMenuState(site = "arte.tv", adBlock = AdBlockStatus.Active(12)),
-            actions = MenuActions({}, {}, {}, {}, {}, {}, {}),
+            actions = MenuActions({}, {}, {}, {}, {}, {}),
             onBack = {},
         )
     }
@@ -292,7 +245,7 @@ private fun BrowserMenuZoomPreview() {
                 zoomHost = "gitlab-dashboard.tools.internal",
                 openPanel = BrowserMenuPanel.PageZoom,
             ),
-            actions = MenuActions({}, {}, {}, {}, {}, {}, {}),
+            actions = MenuActions({}, {}, {}, {}, {}, {}),
             onBack = {},
         )
     }
