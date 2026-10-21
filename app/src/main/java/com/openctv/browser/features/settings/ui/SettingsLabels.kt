@@ -2,6 +2,7 @@ package com.openctv.browser.features.settings.ui
 
 import androidx.annotation.StringRes
 import com.openctv.browser.R
+import com.openctv.browser.features.settings.domain.ClearDataStep
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.StartPage
@@ -26,4 +27,12 @@ internal fun StartPage.labelRes(): Int = when (this) {
     StartPage.Home -> R.string.settings_start_home
     StartPage.LastPage -> R.string.settings_start_last
     is StartPage.Site -> R.string.settings_start_site
+}
+
+@StringRes
+internal fun ClearDataStep.labelRes(): Int = when (this) {
+    ClearDataStep.History -> R.string.settings_clear_data_history
+    ClearDataStep.RecentSearches -> R.string.settings_clear_data_recent_searches
+    ClearDataStep.SiteData -> R.string.settings_clear_data_site_data
+    ClearDataStep.Cache -> R.string.settings_clear_data_cache
 }

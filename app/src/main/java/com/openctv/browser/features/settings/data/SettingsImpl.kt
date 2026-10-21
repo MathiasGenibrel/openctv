@@ -62,6 +62,8 @@ class SettingsImpl(
         scope.launch { write { it.copy(lastPage = url.trim()) } }
     }
 
+    override suspend fun clearLastPage() = write { it.copy(lastPage = null) }
+
     private suspend fun write(transform: (Settings) -> Settings): Resource<Unit> =
         withContext(dispatchers.io) {
             try {
