@@ -92,7 +92,8 @@
     <string name="security_http_badge">Connexion non chiffrée (HTTP)</string>
     <string name="security_http_title">Cette page n\'est pas chiffrée</string>
     <string name="security_http_body">%1$s utilise HTTP : ce que vous y saisissez (mots de passe, formulaires) peut être lu par d\'autres personnes sur le réseau.</string>
-    <string name="security_http_options_text">Affichez cette page seulement si vous connaissez ce site : c\'est courant pour une box, un NAS ou un appareil de votre réseau local. Sur un site public, préférez sa version sécurisée (HTTPS).</string>
+    <string name="security_http_options_local">Cet appareil semble être sur votre réseau local (%1$s) : le HTTP y est courant (box, NAS, serveur maison). Affichez la page si vous reconnaissez cet appareil.</string>
+    <string name="security_http_options_public">%1$s est un site public : le HTTP y expose ce que vous saisissez. Préférez sa version sécurisée (HTTPS) et n\'affichez la page que si vous savez ce que vous faites.</string>
     <string name="security_http_remember">Toujours autoriser %1$s en HTTP sur cette TV</string>
     <string name="security_http_remember_hint">Sinon, autorisé jusqu\'à la fermeture de l\'application.</string>
     <string name="security_http_show">Afficher la page (non sécurisé)</string>
@@ -107,7 +108,7 @@
     <string name="security_cause_untrusted">Autorité de certification non reconnue (certificat auto-signé ou inconnu)</string>
     <string name="security_cause_not_yet_valid">Le certificat n\'est pas encore valide</string>
     <string name="security_cause_invalid">Le certificat est invalide</string>
-    <string name="security_cert_options_local">Ce nom désigne un appareil de votre réseau local : un certificat invalide y est courant (box, NAS, caméra). Continuez seulement si vous reconnaissez cet appareil.</string>
+    <string name="security_cert_options_local">Ce nom (%1$s) désigne un appareil de votre réseau local : un certificat invalide y est courant (box, NAS, caméra). Continuez seulement si vous reconnaissez cet appareil.</string>
     <string name="security_cert_options_public">Ce site est public : un certificat invalide est très probablement une attaque. Il est déconseillé de continuer.</string>
     <string name="security_cert_remember">Faire confiance à ce certificat pour %1$s</string>
     <string name="security_cert_remember_hint">S\'il change, l\'avertissement reviendra.</string>

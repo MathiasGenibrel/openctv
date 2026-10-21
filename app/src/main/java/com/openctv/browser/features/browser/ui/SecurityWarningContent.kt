@@ -47,7 +47,6 @@ import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.CertificateProblem
 import com.openctv.browser.core.webview.SecurityWarning
-import com.openctv.browser.core.security.isLocalNetworkHost
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -230,11 +229,7 @@ private fun OptionsPanel(
 ) {
     val host = warning.host ?: warning.url
     val isCertificate = warning is SecurityWarning.InvalidCertificate
-    val explanation = when {
-        !isCertificate -> R.string.security_http_options_text
-        isLocalNetworkHost(warning.host) -> R.string.security_cert_options_local
-        else -> R.string.security_cert_options_public
-    }
+    val explanation = stringResource(securityOptionsNote(isCertificate, warning.host).textRes, host)
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -243,7 +238,7 @@ private fun OptionsPanel(
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = stringResource(explanation),
+            text = explanation,
             style = MaterialTheme.typography.bodyMedium,
             color = OpenCtvColors.OnSurfaceVariant,
         )
