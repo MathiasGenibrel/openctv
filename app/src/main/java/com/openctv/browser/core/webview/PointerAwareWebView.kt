@@ -33,6 +33,14 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     /** Appelé sur le thread UI quand [pointerKind] change. */
     var onPointerKindChanged: ((PointerKind) -> Unit)? = null
 
+    /**
+     * Envoie [command] à la vidéo plein écran de la page. À n'appeler qu'en plein écran vidéo. Script ponctuel et
+     * constant ([MediaCommand]), résultat ignoré, sans état ni interface exposée à la page.
+     */
+    fun runMediaCommand(command: MediaCommand) {
+        evaluateJavascript(command.script, null)
+    }
+
     override fun setPointerIcon(pointerIcon: PointerIcon?) {
         super.setPointerIcon(pointerIcon)
         val kind = kindOf(pointerIcon)

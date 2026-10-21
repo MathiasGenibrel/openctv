@@ -26,7 +26,7 @@ class BrowserFocus(
  *   interface, à la page sinon.
  * - Un changement de mode déplace le focus entre la page et la barre.
  * - En sortie du plein écran vidéo, le focus revient à la page (au menu s'il était ouvert : il le reprend
- *   lui-même en réapparaissant). L'entrée est gérée par `FullscreenLayer`, qui attache le lecteur hors de
+ *   lui-même en réapparaissant). L'entrée est gérée par `DecorFullscreenPresenter`, qui attache le lecteur hors de
  *   Compose et lui donne le focus Android.
  * - La page = la WebView, ou le bouton Réessayer quand une erreur la remplace.
  */
