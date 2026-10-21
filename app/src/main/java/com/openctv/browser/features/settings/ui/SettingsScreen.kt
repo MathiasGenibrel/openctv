@@ -26,11 +26,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -79,6 +81,8 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
+    // Seul gestionnaire de Retour de l'écran (le SidePanel n'en installe pas : cf. handlesBack) : un sous-panneau
+    // ouvert se ferme d'abord, sinon retour direct à l'accueil.
     BackHandler { if (!viewModel.onBack()) onClose() }
 
     SettingsContent(
@@ -120,11 +124,24 @@ private fun SettingsContent(
     // Focus initial sur la première ligne ; à la fermeture d'un panneau, retour sur la ligne qui l'a ouvert.
     var lastOpenedPanel by remember { mutableStateOf(SettingsPanel.StartPage) }
     state.openPanel?.let { lastOpenedPanel = it }
-    LaunchedEffect(isPanelOpen) {
-        if (!isPanelOpen) rowFocus.getValue(lastOpenedPanel).requestFocus()
+
+    // Filet « le focus ne se perd jamais » : tant qu'aucun panneau n'est ouvert et que rien dans l'écran n'est
+    // focalisé (ouverture, panneau qui vient de disparaître avec son focus), on le rend à la ligne d'origine.
+    // Après une frame : les propriétés de focus (canFocus de la liste) sont alors à jour.
+    var hasFocus by remember { mutableStateOf(false) }
+    LaunchedEffect(isPanelOpen, hasFocus) {
+        if (!isPanelOpen && !hasFocus) {
+            withFrameNanos { }
+            rowFocus.getValue(lastOpenedPanel).requestFocus()
+        }
     }
 
-    Box(modifier = modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(OpenCtvColors.Surface)
+            .onFocusChanged { hasFocus = it.hasFocus },
+    ) {
         OverscanSafeArea {
             Row(
                 // Panneau ouvert : la liste derrière ne reçoit plus le focus.
@@ -147,7 +164,7 @@ private fun SettingsContent(
             Box(Modifier.fillMaxSize().background(OpenCtvColors.Scrim.copy(alpha = 0.5f)))
             OverscanSafeArea {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-                    SidePanel(onDismiss = onClosePanel) {
+                    SidePanel(onDismiss = onClosePanel, handlesBack = false) {
                         PanelContent(
                             panel = panel,
                             state = state,
@@ -347,9 +364,18 @@ private fun StartPagePanel(
     onSelectStartSite: (String) -> Unit,
 ) {
     val current = state.settings.startPage
-    val initialFocus = remember { FocusRequester() }
+    val homeFocus = remember { FocusRequester() }
+    val lastPageFocus = remember { FocusRequester() }
+    val siteFocus = remember { FocusRequester() }
     val addressFocus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { initialFocus.requestFocus() }
+    // Focus initial sur l'option sélectionnée (celle que l'utilisateur vient vérifier ou changer).
+    LaunchedEffect(Unit) {
+        when (current) {
+            StartPage.Home -> homeFocus
+            StartPage.LastPage -> lastPageFocus
+            is StartPage.Site -> siteFocus
+        }.requestFocus()
+    }
     var address by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
@@ -360,12 +386,13 @@ private fun StartPagePanel(
                 isSelected = current == StartPage.Home,
                 onClick = { onSelectStartPage(StartPage.Home) },
                 supporting = stringResource(R.string.settings_default_badge),
-                modifier = Modifier.focusRequester(initialFocus),
+                modifier = Modifier.focusRequester(homeFocus),
             )
             ListRadioRow(
                 label = stringResource(R.string.settings_start_last),
                 isSelected = current == StartPage.LastPage,
                 onClick = { onSelectStartPage(StartPage.LastPage) },
+                modifier = Modifier.focusRequester(lastPageFocus),
             )
             val site = current as? StartPage.Site
             ListRadioRow(
@@ -374,6 +401,7 @@ private fun StartPagePanel(
                 // Sans site déjà choisi, il n'y a rien à valider : on amène à la saisie.
                 onClick = { if (site == null) addressFocus.requestFocus() },
                 supporting = site?.url ?: stringResource(R.string.settings_start_site_unset),
+                modifier = Modifier.focusRequester(siteFocus),
             )
         }
         if (state.bookmarks.isNotEmpty()) {

@@ -36,4 +36,22 @@ class HomeFocusTest {
         assertThat(HomeFocus.restore(HomeFocus.Add, Resource.Error("disk"))).isEqualTo(HomeFocus.Add)
         assertThat(HomeFocus.restore(HomeFocus.Add, withArte)).isEqualTo(HomeFocus.Add)
     }
+
+    @Test
+    fun `Given favorites When the user presses Down on the search bar Then the first tile is targeted`() {
+        val wiki = HomeFavorite("https://wikipedia.org", "Wikipedia", "wikipedia.org", "W", 1)
+
+        assertThat(HomeFocus.belowSearch(Resource.Success(listOf(arte, wiki)))).isEqualTo(HomeFocus.Favorite("https://arte.tv"))
+    }
+
+    @Test
+    fun `Given no favorite or a storage error When the user presses Down on the search bar Then the add button is targeted`() {
+        assertThat(HomeFocus.belowSearch(none)).isEqualTo(HomeFocus.Add)
+        assertThat(HomeFocus.belowSearch(Resource.Error("disk"))).isEqualTo(HomeFocus.Add)
+    }
+
+    @Test
+    fun `Given the favorites are loading When the user presses Down on the search bar Then the default move applies`() {
+        assertThat(HomeFocus.belowSearch(Resource.Loading)).isNull()
+    }
 }

@@ -128,6 +128,9 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
             focusedContainerColor = OpenCtvColors.SurfaceContainer,
             focusedContentColor = OpenCtvColors.OnSurface,
         ),
+        // Pas d'agrandissement : le champ occupe déjà toute la largeur libre et un zoom recouvrirait
+        // Actualiser et Favori. L'anneau de focus (3 dp + 2 dp d'écart) tient dans l'espacement de 8 dp.
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1f),
     ) {
         Row(
             Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 20.dp),

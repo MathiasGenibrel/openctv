@@ -35,6 +35,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -222,10 +223,15 @@ internal fun HomeContent(
                     color = OpenCtvColors.OnSurface,
                 )
                 Spacer(Modifier.height(16.dp))
+                // Bas depuis la recherche : toujours la première tuile (sinon le moteur de focus choisit la plus
+                // proche géométriquement, parfois une autre colonne).
+                val belowSearch = HomeFocus.belowSearch(favorites)?.let { focusTargets.requester(it) }
                 SearchBar(
                     placeholder = searchPlaceholder,
                     onClick = onOpenSearch,
-                    modifier = focusTargets.modifier(HomeFocus.Search),
+                    modifier = Modifier
+                        .focusProperties { down = belowSearch ?: FocusRequester.Default }
+                        .then(focusTargets.modifier(HomeFocus.Search)),
                 )
                 Spacer(Modifier.height(16.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {

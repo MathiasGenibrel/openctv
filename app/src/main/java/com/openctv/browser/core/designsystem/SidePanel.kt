@@ -23,14 +23,17 @@ val SidePanelWidth: Dp = 380.dp
  * Panneau latéral droit (réglages, menu) : `surfaceContainerHigh`, coins Extra-large.
  * Retour appelle [onDismiss] : le panneau se ferme avant toute autre action de Retour.
  * L'appelant place le focus initial sur un élément du contenu.
+ *
+ * [handlesBack] faux : l'écran englobant possède déjà le Retour (décision unique, pas de gestionnaires concurrents).
  */
 @Composable
 fun SidePanel(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    handlesBack: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    BackHandler(onBack = onDismiss)
+    BackHandler(enabled = handlesBack, onBack = onDismiss)
     Surface(
         modifier = modifier.width(SidePanelWidth).fillMaxHeight(),
         shape = OpenCtvShapes.ExtraLarge,
