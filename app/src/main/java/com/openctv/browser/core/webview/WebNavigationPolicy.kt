@@ -16,9 +16,40 @@ object SslErrorPolicy {
     @Suppress("UNUSED_PARAMETER")
     fun shouldProceed(primaryError: Int): Boolean = false
 
-    /** Une erreur SSL ne casse la page que si elle concerne le document principal, pas une sous-ressource. */
-    fun isMainFrameError(errorUrl: String?, pageUrl: String?): Boolean =
-        errorUrl != null && errorUrl == pageUrl
+    /**
+     * Une erreur SSL ne casse la page que si elle concerne le document principal, pas une sous-ressource.
+     * [mainFrameUrl] est la dernière URL demandée pour le cadre principal (cf. [MainFrameTracker]) : la
+     * comparaison tolère `/` final, fragment et casse du schéma/hôte (`loadUrl("https://a.org")` demande
+     * `https://a.org/`).
+     */
+    fun isMainFrameError(errorUrl: String?, mainFrameUrl: String?): Boolean =
+        errorUrl != null && mainFrameUrl != null && comparable(errorUrl) == comparable(mainFrameUrl)
+
+    private fun comparable(url: String): String {
+        val withoutFragment = url.trim().substringBefore('#')
+        val schemeEnd = withoutFragment.indexOf("://")
+        if (schemeEnd < 0) return withoutFragment
+        val pathStart = withoutFragment.indexOf('/', schemeEnd + 3).takeIf { it >= 0 } ?: withoutFragment.length
+        val origin = withoutFragment.substring(0, pathStart).lowercase()
+        return origin + withoutFragment.substring(pathStart).trimEnd('/')
+    }
+}
+
+/**
+ * Mémorise l'URL du cadre principal dès qu'elle est demandée (`loadUrl`, lien suivi, redirection), avant
+ * `onPageStarted` qui n'a pas forcément eu lieu quand l'erreur SSL arrive. Écrite depuis le thread de
+ * `shouldInterceptRequest` et le thread principal, lue sur le thread principal : champ `@Volatile`.
+ */
+class MainFrameTracker {
+    @Volatile
+    var requestedUrl: String? = null
+        private set
+
+    fun onRequest(url: String, isMainFrame: Boolean) {
+        if (isMainFrame) requestedUrl = url
+    }
+
+    fun isMainFrameError(errorUrl: String?): Boolean = SslErrorPolicy.isMainFrameError(errorUrl, requestedUrl)
 }
 
 /** Permissions demandées par les pages (caméra, micro, localisation…) : toujours refusées. */

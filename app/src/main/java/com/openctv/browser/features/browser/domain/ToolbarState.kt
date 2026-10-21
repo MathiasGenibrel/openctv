@@ -23,12 +23,14 @@ fun toolbarStateOf(
     isBookmarked: Boolean,
 ): ToolbarState {
     val isLoading = pageState is PageState.Loading
+    // Une page refusée (certificat, réseau) n'est pas affichée : jamais de cadenas sur son adresse.
+    val isPageShown = pageState !is PageState.Error
     return ToolbarState(
         canGoBack = canGoBack,
         canGoForward = canGoForward,
         reloadAction = if (isLoading) ReloadAction.Stop else ReloadAction.Reload,
         site = siteLabelOf(pageUrl),
-        isSecure = pageUrl.trim().startsWith("https://", ignoreCase = true),
+        isSecure = isPageShown && pageUrl.trim().startsWith("https://", ignoreCase = true),
         isBookmarked = isBookmarked,
     )
 }

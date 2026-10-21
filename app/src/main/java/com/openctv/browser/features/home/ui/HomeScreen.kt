@@ -37,6 +37,11 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -98,6 +103,7 @@ fun HomeScreen(
     val searchEngineName by viewModel.searchEngineName.collectAsStateWithLifecycle()
     val isExitHintVisible by viewModel.isExitHintVisible.collectAsStateWithLifecycle()
     val searchRequest by viewModel.searchInput.collectAsStateWithLifecycle()
+    val favoriteMenu by viewModel.favoriteMenu.collectAsStateWithLifecycle()
     val isSearchOpen = searchRequest != null
 
     val currentOnNavigate by rememberUpdatedState(onNavigate)
@@ -112,7 +118,8 @@ fun HomeScreen(
     }
 
     // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
-    BackHandler(enabled = !isSearchOpen) { viewModel.onBack() }
+    // Petit menu d'un favori ouvert : son propre BackHandler le ferme (Retour annule).
+    BackHandler(enabled = !isSearchOpen && favoriteMenu == null) { viewModel.onBack() }
 
     Box(modifier.fillMaxSize()) {
         HomeContent(
@@ -123,11 +130,21 @@ fun HomeScreen(
             onOpenSearch = viewModel::onOpenSearch,
             onAddBookmark = viewModel::onAddBookmark,
             onOpenSettings = viewModel::onOpenSettings,
+            onFavoriteMenu = viewModel::onFavoriteMenuRequested,
             isSearchOpen = isSearchOpen,
+            isFavoriteMenuOpen = favoriteMenu != null,
             focusToRestore = viewModel::focusToRestore,
             onFocused = viewModel::onFocused,
         )
         searchRequest?.let { searchInput(it) }
+        favoriteMenu?.let { favorite ->
+            FavoriteMenu(
+                favorite = favorite,
+                onOpen = viewModel::onOpenFromMenu,
+                onRemove = viewModel::onRemoveFromMenu,
+                onDismiss = viewModel::onFavoriteMenuClosed,
+            )
+        }
     }
 }
 
@@ -172,7 +189,9 @@ internal fun HomeContent(
     onAddBookmark: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier,
+    onFavoriteMenu: (HomeFavorite) -> Unit = {},
     isSearchOpen: Boolean = false,
+    isFavoriteMenuOpen: Boolean = false,
     focusToRestore: () -> HomeFocus = { HomeFocus.Search },
     onFocused: (HomeFocus) -> Unit = {},
 ) {
@@ -185,8 +204,8 @@ internal fun HomeContent(
     // Focus à l'ouverture, au chargement des favoris et à la fermeture de la saisie : l'élément mémorisé
     // (cf. HomeFocus.restore), sinon la recherche, ou le bouton d'ajout de l'état vide.
     val currentFavorites by rememberUpdatedState(favorites)
-    LaunchedEffect(isSearchOpen, isLoaded, isEmpty) {
-        if (isSearchOpen) return@LaunchedEffect
+    LaunchedEffect(isSearchOpen, isFavoriteMenuOpen, isLoaded, isEmpty) {
+        if (isSearchOpen || isFavoriteMenuOpen) return@LaunchedEffect
         val target = focusToRestore()
         gridIndexOf(target, currentFavorites)?.let { gridState.bringIntoView(it) }
         focusTargets.requester(target).requestFocus()
@@ -222,7 +241,7 @@ internal fun HomeContent(
                             if (favorites.data.isEmpty()) {
                                 EmptyFavorites(onAdd = onAddBookmark, addModifier = focusTargets.modifier(HomeFocus.Add))
                             } else {
-                                FavoritesGrid(favorites.data, gridState, focusTargets, onOpenFavorite, onAddBookmark)
+                                FavoritesGrid(favorites.data, gridState, focusTargets, onOpenFavorite, onFavoriteMenu, onAddBookmark)
                             }
                     }
                 }
@@ -296,6 +315,7 @@ private fun FavoritesGrid(
     gridState: LazyGridState,
     focusTargets: HomeFocusTargets,
     onOpenFavorite: (HomeFavorite) -> Unit,
+    onFavoriteMenu: (HomeFavorite) -> Unit,
     onAddBookmark: () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
@@ -327,6 +347,7 @@ private fun FavoritesGrid(
                 FavoriteTile(
                     favorite,
                     onClick = { onOpenFavorite(favorite) },
+                    onMenu = { onFavoriteMenu(favorite) },
                     modifier = focusTargets.modifier(HomeFocus.Favorite(favorite.url)),
                 )
             }
@@ -338,10 +359,21 @@ private fun FavoritesGrid(
 private val TileModifier = Modifier.fillMaxWidth().height(96.dp)
 
 @Composable
-private fun FavoriteTile(favorite: HomeFavorite, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun FavoriteTile(
+    favorite: HomeFavorite,
+    onClick: () -> Unit,
+    onMenu: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val interactionSource = remember { MutableInteractionSource() }
     val isFocused by interactionSource.collectIsFocusedAsState()
-    FocusableTile(onClick = onClick, modifier = modifier.then(TileModifier), interactionSource = interactionSource) {
+    // Appui long sur OK ou touche Menu : actions du favori (Ouvrir / Retirer).
+    val tileModifier = modifier.then(TileModifier).onPreviewKeyEvent { event ->
+        val isMenuPress = event.key == Key.Menu && event.type == KeyEventType.KeyDown
+        if (isMenuPress) onMenu()
+        isMenuPress
+    }
+    FocusableTile(onClick = onClick, onLongClick = onMenu, modifier = tileModifier, interactionSource = interactionSource) {
         Row(
             Modifier.fillMaxSize().padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -484,6 +516,7 @@ private fun RemoteHints() {
     ) {
         KeyHint(stringResource(R.string.home_hint_navigate)) { DPadIcon() }
         KeyHint(stringResource(R.string.home_hint_select)) { Icon(OpenCtvIcons.Keyboard, contentDescription = null) }
+        KeyHint(stringResource(R.string.home_hint_options)) { KeyCap("OK") }
         KeyHint(stringResource(R.string.home_hint_quit)) { KeyCap("⟵") }
     }
 }

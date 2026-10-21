@@ -486,6 +486,34 @@ class BrowserViewModelTest {
     }
 
     @Test
+    fun `Given a certificate error on a site When the error screen shows Then the bar shows no padlock for the refused address`() =
+        runTest {
+            val viewModel = pageOnScreen()
+            viewModel.onAddressChosen("https://expired.badssl.com")
+
+            viewModel.onLoadError(WebLoadError("https://expired.badssl.com/", LoadErrorCause.InvalidCertificate))
+
+            assertThat(viewModel.pageState.value)
+                .isEqualTo(PageState.Error("expired.badssl.com", LoadErrorCause.InvalidCertificate))
+            viewModel.toolbar.test {
+                val state = expectMostRecentItem()
+                assertThat(state.site).isEqualTo("expired.badssl.com")
+                assertThat(state.isSecure).isFalse()
+            }
+        }
+
+    @Test
+    fun `Given wikipedia org is a favorite When the site redirects to www wikipedia org Then the star is filled`() =
+        runTest {
+            bookmarks.seed("https://wikipedia.org")
+            val viewModel = BrowserViewModel("https://wikipedia.org", bookmarks)
+
+            viewModel.onUrlChanged("https://www.wikipedia.org/", canGoBack = false, canGoForward = false)
+
+            viewModel.toolbar.test { assertThat(expectMostRecentItem().isBookmarked).isTrue() }
+        }
+
+    @Test
     fun `Given a page that is not a favorite When the user toggles the favorite Then it is added then removed`() = runTest {
         val viewModel = pageOnScreen()
 

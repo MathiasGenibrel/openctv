@@ -25,11 +25,24 @@ object BookmarkUrl {
     }
 
     /**
-     * Nom lisible du site : hôte sans `www.` (`https://www.arte.tv/fr` -> `arte.tv`), ou l'URL entière
-     * si elle n'a pas d'hôte. Sert de titre par défaut à un favori.
+     * Clé de comparaison d'un site : [normalize] sans le schéma ni le `www.` initial. Une redirection
+     * `wikipedia.org` -> `https://www.wikipedia.org` ou `http` -> `https` désigne le même favori.
+     * Le favori stocké garde son adresse d'origine : seule la comparaison est tolérante.
+     */
+    fun key(raw: String): String {
+        val normalized = normalize(raw)
+        val withoutScheme = normalized.substringAfter("://", missingDelimiterValue = normalized)
+        return withoutScheme.removePrefix("www.")
+    }
+
+    /**
+     * Nom lisible du site : hôte sans `www.` ni port ni identifiants (`https://www.arte.tv/fr` -> `arte.tv`),
+     * ou la saisie brute si aucun hôte n'est lisible. Titre par défaut d'un favori et libellé du navigateur.
      */
     fun siteName(url: String): String {
-        val host = runCatching { URI(url).host }.getOrNull() ?: return url
-        return host.removePrefix("www.")
+        val withoutScheme = url.trim().substringAfter("://")
+        val authority = withoutScheme.substringBefore('/').substringBefore('?').substringBefore('#')
+        val host = authority.substringAfterLast('@').substringBefore(':').removePrefix("www.")
+        return host.ifEmpty { url }
     }
 }

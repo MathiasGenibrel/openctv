@@ -12,6 +12,9 @@
     <string name="home_exit_hint">Appuyez encore sur Retour pour quitter</string>
     <string name="home_hint_navigate">Naviguer</string>
     <string name="home_hint_select">Sélectionner</string>
+    <string name="home_hint_options">Maintenir : options du favori</string>
+    <string name="home_favorite_open">Ouvrir</string>
+    <string name="home_favorite_remove">Retirer des favoris</string>
     <string name="home_hint_quit">Quitter</string>
     <string name="browser_loading">Chargement de %1$s…</string>
     <string name="browser_error_title">Impossible d\'atteindre %1$s</string>

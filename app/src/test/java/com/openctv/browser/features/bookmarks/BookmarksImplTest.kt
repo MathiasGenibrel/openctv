@@ -119,14 +119,76 @@ class BookmarksImplTest {
     }
 
     @Test
-    fun `Given a url spelled differently When asking if bookmarked Then the normalized url is queried`() =
+    fun `Given wikipedia org is bookmarked When the site redirects to https www wikipedia org Then it is still bookmarked`() =
         runTest {
-            every { dao.observeExists("https://arte.tv") } returns flowOf(true)
+            every { dao.observeAll() } returns flowOf(listOf(BookmarkEntity("https://wikipedia.org", "Wikipedia", now)))
 
-            repository().isBookmarked("https://ARTE.tv/").test {
+            repository().isBookmarked("https://www.wikipedia.org/").test {
                 assertThat(awaitItem()).isEqualTo(Resource.Loading)
                 assertThat(awaitItem()).isEqualTo(Resource.Success(true))
                 awaitComplete()
             }
         }
+
+    @Test
+    fun `Given arte tv is bookmarked When asking for another page of another site Then it is not bookmarked`() =
+        runTest {
+            every { dao.observeAll() } returns flowOf(listOf(BookmarkEntity("https://arte.tv", "Arte", now)))
+
+            repository().isBookmarked("https://www.arte.fr").test {
+                assertThat(awaitItem()).isEqualTo(Resource.Loading)
+                assertThat(awaitItem()).isEqualTo(Resource.Success(false))
+                awaitComplete()
+            }
+        }
+
+    @Test
+    fun `Given wikipedia org is bookmarked When the user adds www wikipedia org Then nothing is inserted`() = runTest {
+        coEvery { dao.getAll() } returns listOf(BookmarkEntity("https://wikipedia.org", "Wikipedia", now))
+
+        val result = repository().add("https://www.wikipedia.org/", "wikipedia.org")
+
+        assertThat(result).isEqualTo(Resource.Success(Unit))
+        coVerify(exactly = 0) { dao.insert(any()) }
+    }
+
+    @Test
+    fun `Given wikipedia org is bookmarked When the user removes it from www wikipedia org Then the stored entry is deleted`() =
+        runTest {
+            coEvery { dao.getAll() } returns listOf(BookmarkEntity("https://wikipedia.org", "Wikipedia", now))
+
+            val result = repository().remove("https://www.wikipedia.org/")
+
+            assertThat(result).isEqualTo(Resource.Success(Unit))
+            coVerify { dao.delete("https://wikipedia.org") }
+        }
+
+    @Test
+    fun `Given two stored spellings of one site When listing Then only the oldest is shown and no favorite is lost`() =
+        runTest {
+            val bare = BookmarkEntity("https://wikipedia.org", "Wikipedia", now)
+            val www = BookmarkEntity("https://www.wikipedia.org", "wikipedia.org", now.plusSeconds(5))
+            val arte = BookmarkEntity("https://arte.tv", "Arte", now.plusSeconds(9))
+            every { dao.observeAll() } returns flowOf(listOf(bare, www, arte))
+
+            repository().getBookmarks().test {
+                assertThat(awaitItem()).isEqualTo(Resource.Loading)
+                val shown = (awaitItem() as Resource.Success).data
+                assertThat(shown.map { it.url }).containsExactly("https://wikipedia.org", "https://arte.tv").inOrder()
+                awaitComplete()
+            }
+        }
+
+    @Test
+    fun `Given both spellings stored When the user removes the site Then both are deleted`() = runTest {
+        coEvery { dao.getAll() } returns listOf(
+            BookmarkEntity("https://wikipedia.org", "Wikipedia", now),
+            BookmarkEntity("https://www.wikipedia.org", "wikipedia.org", now),
+        )
+
+        repository().remove("https://www.wikipedia.org")
+
+        coVerify { dao.delete("https://wikipedia.org") }
+        coVerify { dao.delete("https://www.wikipedia.org") }
+    }
 }

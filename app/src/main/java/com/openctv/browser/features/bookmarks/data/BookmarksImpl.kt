@@ -23,19 +23,31 @@ class BookmarksImpl(
 ) : BookmarksContract {
 
     override fun getBookmarks(): Flow<Resource<List<Bookmark>>> =
-        dao.observeAll().asResource { entities -> entities.map { it.toDomain() } }
+        dao.observeAll().asResource { entities -> entities.distinctSites().map { it.toDomain() } }
 
-    override fun isBookmarked(url: String): Flow<Resource<Boolean>> =
-        dao.observeExists(BookmarkUrl.normalize(url)).asResource { it }
+    override fun isBookmarked(url: String): Flow<Resource<Boolean>> {
+        val key = BookmarkUrl.key(url)
+        return dao.observeAll().asResource { entities -> entities.any { BookmarkUrl.key(it.url) == key } }
+    }
 
     override suspend fun add(url: String, title: String): Resource<Unit> = write {
-        val normalized = BookmarkUrl.normalize(url)
-        dao.insert(BookmarkEntity(normalized, title.ifBlank { normalized }, Instant.now(clock)))
+        val key = BookmarkUrl.key(url)
+        val isAlreadyBookmarked = dao.getAll().any { BookmarkUrl.key(it.url) == key }
+        if (!isAlreadyBookmarked) {
+            val normalized = BookmarkUrl.normalize(url)
+            dao.insert(BookmarkEntity(normalized, title.ifBlank { normalized }, Instant.now(clock)))
+        }
     }
 
     override suspend fun remove(url: String): Resource<Unit> = write {
-        dao.delete(BookmarkUrl.normalize(url))
+        val key = BookmarkUrl.key(url)
+        // Toutes les écritures d'un même site (www., http/https) partent ensemble : plus de favori fantôme.
+        val stored = dao.getAll().filter { BookmarkUrl.key(it.url) == key }.map { it.url }
+        (stored + BookmarkUrl.normalize(url)).distinct().forEach { dao.delete(it) }
     }
+
+    /** Un seul favori par site, le plus ancien : couvre les doublons enregistrés avant la comparaison tolérante. */
+    private fun List<BookmarkEntity>.distinctSites(): List<BookmarkEntity> = distinctBy { BookmarkUrl.key(it.url) }
 
     private suspend fun write(block: suspend () -> Unit): Resource<Unit> =
         withContext(dispatchers.io) {

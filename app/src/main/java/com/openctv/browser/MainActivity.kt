@@ -13,6 +13,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openctv.browser.core.designsystem.OpenCtvTheme
+import com.openctv.browser.core.designsystem.StartupScreen
 import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.core.navigation.ScopedViewModels
@@ -52,6 +53,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Charge le moteur WebView en tâche de fond pendant l'écran de démarrage (sans effet s'il ne le gère pas).
+        webViewFactory.warmUp(this)
         setContent {
             OpenCtvTheme {
                 // Destination hissée ici : l'accueil ouvre un site, le navigateur revient à l'accueil.
@@ -75,7 +78,11 @@ class MainActivity : ComponentActivity() {
                 // L'accueil est la racine de la navigation : son ViewModel vit avec l'activité (et non
                 // avec la destination) pour rendre le focus à l'élément quitté quand on y revient.
                 val home = viewModel { HomeViewModel(bookmarks, settings) }
-                val resolved = destination ?: return@OpenCtvTheme
+                // Écran OpenCTV tout de suite : la page de démarrage est lue (et la WebView prête) pendant ce temps.
+                val resolved = destination ?: run {
+                    StartupScreen()
+                    return@OpenCtvTheme
+                }
                 // Autres ViewModels : créés dans la portée de la destination (cf. DestinationHost).
                 DestinationHost(resolved) { current ->
                     when (current) {

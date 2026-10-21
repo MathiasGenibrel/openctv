@@ -38,7 +38,7 @@ sealed interface HomeEvent {
  * l'élément focalisé quand l'utilisateur y revient.
  */
 class HomeViewModel(
-    bookmarks: BookmarksContract,
+    private val bookmarks: BookmarksContract,
     settings: SettingsContract,
     private val doubleBackPress: DoubleBackPress = DoubleBackPress(),
 ) : ViewModel() {
@@ -73,6 +73,11 @@ class HomeViewModel(
     /** Saisie ouverte en surcouche de l'accueil (`null` = fermée) ; l'accueil reste vivant dessous. */
     val searchInput: StateFlow<SearchRequest?> = _searchInput.asStateFlow()
 
+    private val _favoriteMenu = MutableStateFlow<HomeFavorite?>(null)
+
+    /** Favori dont le petit menu « Ouvrir / Retirer » est ouvert (`null` = fermé) ; l'accueil reste vivant dessous. */
+    val favoriteMenu: StateFlow<HomeFavorite?> = _favoriteMenu.asStateFlow()
+
     private var lastFocused: HomeFocus? = null
 
     /** L'utilisateur a placé le focus sur [focus] : c'est là qu'il reviendra. */
@@ -84,6 +89,41 @@ class HomeViewModel(
     fun focusToRestore(): HomeFocus = HomeFocus.restore(lastFocused, favorites.value)
 
     fun onOpenFavorite(favorite: HomeFavorite) = navigate(Destination.Browser(favorite.url))
+
+    /** Appui long sur OK (ou Menu) sur une tuile : ouvre ses actions ; Retour ([onFavoriteMenuClosed]) les annule. */
+    fun onFavoriteMenuRequested(favorite: HomeFavorite) {
+        lastFocused = HomeFocus.Favorite(favorite.url)
+        _favoriteMenu.value = favorite
+    }
+
+    fun onFavoriteMenuClosed() {
+        _favoriteMenu.value = null
+    }
+
+    /** « Ouvrir » du petit menu. */
+    fun onOpenFromMenu() {
+        val favorite = _favoriteMenu.value ?: return
+        _favoriteMenu.value = null
+        onOpenFavorite(favorite)
+    }
+
+    /**
+     * « Retirer » du petit menu : le focus passe à la tuile voisine (suivante, sinon précédente, sinon la tuile
+     * « Ajouter ») avant même la mise à jour de la grille, pour ne jamais rester sans élément focalisé.
+     */
+    fun onRemoveFromMenu() {
+        val favorite = _favoriteMenu.value ?: return
+        lastFocused = neighbourFocusOf(favorite)
+        _favoriteMenu.value = null
+        viewModelScope.launch { bookmarks.remove(favorite.url) }
+    }
+
+    private fun neighbourFocusOf(removed: HomeFavorite): HomeFocus {
+        val shown = (favorites.value as? Resource.Success)?.data.orEmpty()
+        val index = shown.indexOfFirst { it.url == removed.url }
+        val neighbour = shown.getOrNull(index + 1) ?: shown.getOrNull(index - 1)
+        return neighbour?.let { HomeFocus.Favorite(it.url) } ?: HomeFocus.Add
+    }
 
     fun onOpenSettings() = navigate(Destination.Settings)
 
