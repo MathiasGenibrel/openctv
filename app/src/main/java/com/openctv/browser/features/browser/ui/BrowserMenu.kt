@@ -1,9 +1,7 @@
 package com.openctv.browser.features.browser.ui
 
 import androidx.annotation.StringRes
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.fillMaxSize
@@ -16,7 +14,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -38,9 +35,7 @@ import com.openctv.browser.core.designsystem.ListSwitchRow
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvTheme
-import com.openctv.browser.core.designsystem.OverscanSafeArea
-import com.openctv.browser.core.designsystem.SidePanel
-import com.openctv.browser.core.designsystem.focusTrap
+import com.openctv.browser.core.designsystem.SidePanelOverlay
 import com.openctv.browser.features.browser.domain.AdBlockStatus
 import com.openctv.browser.features.browser.domain.BrowserMenuPanel
 import com.openctv.browser.features.browser.domain.BrowserMenuState
@@ -95,17 +90,10 @@ internal fun BrowserMenuContent(
 ) {
     // Hissé ici : survit au remplacement de la liste par un sous-panneau, pour rendre le focus à la bonne ligne.
     val rowFocus = remember { MenuFocus() }
-    Box(modifier.fillMaxSize().focusTrap()) {
-        Box(Modifier.fillMaxSize().background(OpenCtvColors.Scrim.copy(alpha = 0.5f)))
-        OverscanSafeArea {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-                SidePanel(onDismiss = onBack) {
-                    Column(Modifier.fillMaxSize()) {
-                        val panel = state.openPanel
-                        if (panel == null) MenuList(state, actions, rowFocus) else MenuPanel(panel, state, actions)
-                    }
-                }
-            }
+    SidePanelOverlay(onDismiss = onBack, modifier = modifier) {
+        Column(Modifier.fillMaxSize()) {
+            val panel = state.openPanel
+            if (panel == null) MenuList(state, actions, rowFocus) else MenuPanel(panel, state, actions)
         }
     }
 }

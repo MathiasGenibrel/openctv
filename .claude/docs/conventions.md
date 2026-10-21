@@ -38,6 +38,14 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - Composants focalisables : **Compose for TV** (`androidx.tv:tv-material`), état focalisé toujours visible.
 - Chaque écran déclare son focus initial (`FocusRequester`) : à l'ouverture, un élément est focalisé.
 - La touche Retour est gérée explicitement (`BackHandler`) selon la sémantique du brief produit.
+- **Jamais `focusProperties { canFocus = true }`** (ni `canFocus = <booléen>` qui peut valoir `true`) sur un
+  conteneur : ces propriétés s'appliquent au premier `focusTarget` en dessous, y compris ceux, non focalisables
+  par défaut, de `verticalScroll`, `Lazy*` et `focusGroup()`, qui deviennent alors focalisables. Or Compose
+  traduit Retour en `FocusDirection.Exit` *avant* l'`OnBackPressedDispatcher` : le focus monte vers ce
+  conteneur invisible, la touche est consommée, le `BackHandler` n'est pas appelé et plus rien n'est focalisé
+  à l'écran. Pour retirer le focus : `if (désactivé) canFocus = false`. Pour une surcouche modale (panneau,
+  menu, saisie) : `Modifier.focusTrap()` sur la surcouche (`SidePanelOverlay` pour un panneau latéral),
+  plutôt que de désactiver l'écran dessous.
 - Pas de dépendance au tactile (`android.hardware.touchscreen` non requis dans le manifest).
 
 ## WebView

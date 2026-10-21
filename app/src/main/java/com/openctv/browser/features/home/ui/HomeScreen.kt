@@ -224,13 +224,17 @@ internal fun HomeContent(
                 )
                 Spacer(Modifier.height(16.dp))
                 // Bas depuis la recherche : toujours la première tuile (sinon le moteur de focus choisit la plus
-                // proche géométriquement, parfois une autre colonne).
+                // proche géométriquement, parfois une autre colonne). Grille défilée : la 1re tuile n'est plus
+                // composée et ne prendrait pas le focus (Bas sans effet) ; le déplacement par défaut s'applique.
                 val belowSearch = HomeFocus.belowSearch(favorites)?.let { focusTargets.requester(it) }
                 SearchBar(
                     placeholder = searchPlaceholder,
                     onClick = onOpenSearch,
                     modifier = Modifier
-                        .focusProperties { down = belowSearch ?: FocusRequester.Default }
+                        .focusProperties {
+                            val isFirstTileShown = gridState.firstVisibleItemIndex == 0
+                            down = belowSearch?.takeIf { isFirstTileShown } ?: FocusRequester.Default
+                        }
                         .then(focusTargets.modifier(HomeFocus.Search)),
                 )
                 Spacer(Modifier.height(16.dp))

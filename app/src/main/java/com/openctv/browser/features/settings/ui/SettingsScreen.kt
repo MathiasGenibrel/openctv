@@ -26,13 +26,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -59,7 +56,7 @@ import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
-import com.openctv.browser.core.designsystem.SidePanel
+import com.openctv.browser.core.designsystem.SidePanelOverlay
 import com.openctv.browser.core.designsystem.focusRing
 import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.features.bookmarks.domain.Bookmark
@@ -81,8 +78,6 @@ fun SettingsScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    // Seul gestionnaire de Retour de l'écran (le SidePanel n'en installe pas : cf. handlesBack) : un sous-panneau
-    // ouvert se ferme d'abord, sinon retour direct à l'accueil.
     BackHandler { if (!viewModel.onBack()) onClose() }
 
     SettingsContent(
@@ -124,28 +119,16 @@ private fun SettingsContent(
     // Focus initial sur la première ligne ; à la fermeture d'un panneau, retour sur la ligne qui l'a ouvert.
     var lastOpenedPanel by remember { mutableStateOf(SettingsPanel.StartPage) }
     state.openPanel?.let { lastOpenedPanel = it }
-
-    // Filet « le focus ne se perd jamais » : tant qu'aucun panneau n'est ouvert et que rien dans l'écran n'est
-    // focalisé (ouverture, panneau qui vient de disparaître avec son focus), on le rend à la ligne d'origine.
-    // Après une frame : les propriétés de focus (canFocus de la liste) sont alors à jour.
-    var hasFocus by remember { mutableStateOf(false) }
-    LaunchedEffect(isPanelOpen, hasFocus) {
-        if (!isPanelOpen && !hasFocus) {
-            withFrameNanos { }
-            rowFocus.getValue(lastOpenedPanel).requestFocus()
-        }
+    LaunchedEffect(isPanelOpen) {
+        if (!isPanelOpen) rowFocus.getValue(lastOpenedPanel).requestFocus()
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(OpenCtvColors.Surface)
-            .onFocusChanged { hasFocus = it.hasFocus },
-    ) {
+    Box(modifier = modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
         OverscanSafeArea {
+            // Pas de `focusProperties { canFocus = … }` ici : à `true`, il rendrait focalisable le conteneur défilant
+            // de la liste, qui prendrait alors le focus au premier Retour (cf. conventions, « Spécifique TV »).
             Row(
-                // Panneau ouvert : la liste derrière ne reçoit plus le focus.
-                modifier = Modifier.fillMaxSize().focusProperties { canFocus = !isPanelOpen },
+                modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.spacedBy(48.dp),
             ) {
                 IntroColumn(isSaveFailed = state.isSaveFailed, onClose = onClose, modifier = Modifier.weight(0.4f))
@@ -160,22 +143,18 @@ private fun SettingsContent(
                 )
             }
         }
+        // Panneau ouvert : surcouche modale, le D-pad ne peut pas en sortir vers la liste restée dessous.
         state.openPanel?.let { panel ->
-            Box(Modifier.fillMaxSize().background(OpenCtvColors.Scrim.copy(alpha = 0.5f)))
-            OverscanSafeArea {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-                    SidePanel(onDismiss = onClosePanel, handlesBack = false) {
-                        PanelContent(
-                            panel = panel,
-                            state = state,
-                            onSelectStartPage = onSelectStartPage,
-                            onSelectStartSite = onSelectStartSite,
-                            onSelectSearchEngine = onSelectSearchEngine,
-                            onSelectHudHideDelay = onSelectHudHideDelay,
-                            onSelectCursorSpeed = onSelectCursorSpeed,
-                        )
-                    }
-                }
+            SidePanelOverlay(onDismiss = onClosePanel) {
+                PanelContent(
+                    panel = panel,
+                    state = state,
+                    onSelectStartPage = onSelectStartPage,
+                    onSelectStartSite = onSelectStartSite,
+                    onSelectSearchEngine = onSelectSearchEngine,
+                    onSelectHudHideDelay = onSelectHudHideDelay,
+                    onSelectCursorSpeed = onSelectCursorSpeed,
+                )
             }
         }
     }
