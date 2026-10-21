@@ -52,6 +52,11 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.ListGroup
+import com.openctv.browser.core.designsystem.OpenCtvButton
+import com.openctv.browser.core.security.CertificateFingerprint
+import com.openctv.browser.core.security.SiteException
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.tv.material3.Icon
 import com.openctv.browser.core.designsystem.ListNavigationRow
 import com.openctv.browser.core.designsystem.ListRadioOptions
 import com.openctv.browser.core.designsystem.ListRadioRow
@@ -100,6 +105,7 @@ fun SettingsScreen(
         onAdBlockChange = viewModel::setAdBlockEnabled,
         filterLists = filterLists,
         onRefreshFilterLists = onRefreshFilterLists,
+        onRemoveSecurityException = viewModel::removeSecurityException,
         modifier = modifier,
     )
 }
@@ -119,6 +125,7 @@ private fun SettingsContent(
     modifier: Modifier = Modifier,
     filterLists: FilterListsStatus = FilterListsStatus(),
     onRefreshFilterLists: () -> Unit = {},
+    onRemoveSecurityException: (SiteException) -> Unit = {},
 ) {
     val rowFocus = remember { SettingsPanel.entries.associateWith { FocusRequester() } }
     val isPanelOpen = state.openPanel != null
@@ -141,6 +148,7 @@ private fun SettingsContent(
                 IntroColumn(isSaveFailed = state.isSaveFailed, onClose = onClose, modifier = Modifier.weight(0.4f))
                 SettingsList(
                     settings = state.settings,
+                    securityExceptionCount = state.securityExceptions.size,
                     rowFocus = rowFocus,
                     onOpenPanel = onOpenPanel,
                     onAdBlockChange = onAdBlockChange,
@@ -161,6 +169,8 @@ private fun SettingsContent(
                     onSelectSearchEngine = onSelectSearchEngine,
                     onSelectHudHideDelay = onSelectHudHideDelay,
                     onSelectCursorSpeed = onSelectCursorSpeed,
+                    onRemoveSecurityException = onRemoveSecurityException,
+                    onClosePanel = onClosePanel,
                 )
             }
         }
@@ -201,6 +211,7 @@ private fun IntroColumn(isSaveFailed: Boolean, onClose: () -> Unit, modifier: Mo
 @Composable
 private fun SettingsList(
     settings: Settings,
+    securityExceptionCount: Int,
     rowFocus: Map<SettingsPanel, FocusRequester>,
     onOpenPanel: (SettingsPanel) -> Unit,
     onAdBlockChange: (Boolean) -> Unit,
@@ -261,6 +272,15 @@ private fun SettingsList(
                 onClick = { if (!filterLists.isUpdating) onRefreshFilterLists() },
             )
         }
+        ListGroup {
+            ListNavigationRow(
+                icon = OpenCtvIcons.Lock,
+                label = stringResource(R.string.settings_security_exceptions),
+                value = securityExceptionsSummary(securityExceptionCount),
+                onClick = { onOpenPanel(SettingsPanel.SecurityExceptions) },
+                modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.SecurityExceptions)),
+            )
+        }
     }
 }
 
@@ -273,6 +293,14 @@ private fun filterListsSummary(status: FilterListsStatus): String = when (val su
     is FilterListsSummary.DaysAgo ->
         pluralStringResource(R.plurals.settings_filter_lists_days_ago, summary.days, summary.days)
 }
+
+@Composable
+private fun securityExceptionsSummary(count: Int): String =
+    if (count == 0) {
+        stringResource(R.string.settings_security_exceptions_none)
+    } else {
+        pluralStringResource(R.plurals.settings_security_exceptions_count, count, count)
+    }
 
 @Composable
 private fun startPageSummary(page: StartPage): String = when (page) {
@@ -289,6 +317,8 @@ private fun PanelContent(
     onSelectSearchEngine: (SearchEngine) -> Unit,
     onSelectHudHideDelay: (HudHideDelay) -> Unit,
     onSelectCursorSpeed: (CursorSpeed) -> Unit,
+    onRemoveSecurityException: (SiteException) -> Unit,
+    onClosePanel: () -> Unit,
 ) {
     val settings = state.settings
     val default = stringResource(R.string.settings_default_badge)
@@ -315,6 +345,11 @@ private fun PanelContent(
             supporting = { option -> default.takeIf { option == HudHideDelay.Default } },
             onSelect = onSelectHudHideDelay,
         )
+        SettingsPanel.SecurityExceptions -> SecurityExceptionsPanel(
+            exceptions = state.securityExceptions,
+            onRemove = onRemoveSecurityException,
+            onClose = onClosePanel,
+        )
         SettingsPanel.CursorSpeed -> PanelOptions(
             title = stringResource(R.string.settings_cursor_speed),
             options = CursorSpeed.entries,
@@ -324,6 +359,71 @@ private fun PanelContent(
             onSelect = onSelectCursorSpeed,
         )
     }
+}
+
+/**
+ * Exceptions de sécurité mémorisées : OK sur une ligne la retire. Le focus ne se perd jamais : après un retrait
+ * il passe à la ligne qui prend sa place (ou la précédente) ; sans plus aucune exception, au bouton Fermer.
+ */
+@Composable
+private fun SecurityExceptionsPanel(
+    exceptions: List<SiteException>,
+    onRemove: (SiteException) -> Unit,
+    onClose: () -> Unit,
+) {
+    val rowFocus = remember { mutableMapOf<SiteException, FocusRequester>() }
+    val closeFocus = remember { FocusRequester() }
+    var focusIndex by remember { mutableIntStateOf(0) }
+    LaunchedEffect(exceptions) {
+        val target = exceptions.getOrNull(focusIndex.coerceAtMost(exceptions.lastIndex))
+            ?.let { rowFocus.getOrPut(it) { FocusRequester() } }
+            ?: closeFocus
+        runCatching { target.requestFocus() }
+    }
+
+    Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(8.dp)) {
+        PanelTitle(stringResource(R.string.settings_security_exceptions))
+        if (exceptions.isEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_security_exceptions_empty),
+                style = MaterialTheme.typography.bodyMedium,
+                color = OpenCtvColors.OnSurfaceVariant,
+            )
+            Spacer(Modifier.height(16.dp))
+            OpenCtvButton(onClick = onClose, modifier = Modifier.focusRequester(closeFocus)) {
+                Text(stringResource(R.string.settings_security_exceptions_close))
+            }
+        } else {
+            Text(
+                text = stringResource(R.string.settings_security_exceptions_hint),
+                style = MaterialTheme.typography.bodyMedium,
+                color = OpenCtvColors.OnSurfaceVariant,
+                modifier = Modifier.padding(bottom = 12.dp),
+            )
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                exceptions.forEachIndexed { index, exception ->
+                    ListRow(
+                        icon = OpenCtvIcons.Lock,
+                        label = exception.host,
+                        supporting = securityExceptionKind(exception),
+                        onClick = {
+                            focusIndex = index
+                            onRemove(exception)
+                        },
+                        modifier = Modifier.focusRequester(rowFocus.getOrPut(exception) { FocusRequester() }),
+                        trailing = { Icon(OpenCtvIcons.Delete, contentDescription = null) },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun securityExceptionKind(exception: SiteException): String = when (exception) {
+    is SiteException.Http -> stringResource(R.string.settings_security_exception_http)
+    is SiteException.Certificate ->
+        stringResource(R.string.settings_security_exception_certificate, CertificateFingerprint.abbreviated(exception.fingerprint))
 }
 
 /** Liste de radios : le focus initial est sur l'option sélectionnée. */

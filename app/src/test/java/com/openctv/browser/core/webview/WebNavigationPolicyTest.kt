@@ -1,6 +1,7 @@
 package com.openctv.browser.core.webview
 
 import com.google.common.truth.Truth.assertThat
+import com.openctv.browser.core.security.SiteException
 import org.junit.Test
 
 class WebNavigationPolicyTest {
@@ -31,9 +32,107 @@ class WebNavigationPolicyTest {
     }
 
     @Test
-    fun `Given an invalid HTTPS certificate When WebView asks what to do Then the load is never allowed to proceed`() {
-        val errors = listOf(0, 1, 2, 3, 4, 5)
-        errors.forEach { assertThat(SslErrorPolicy.shouldProceed(it)).isFalse() }
+    fun `Given an invalid HTTPS certificate and no exception When WebView asks what to do Then the load never proceeds`() {
+        val noException: (SiteException) -> Boolean = { false }
+
+        assertThat(SslErrorPolicy.shouldProceed(true, "https://nas.maison/", "ab12", noException)).isFalse()
+    }
+
+    @Test
+    fun `Given the user trusted this exact certificate for the host When the main page fails its check Then the load proceeds`() {
+        val trusted = setOf(SiteException.Certificate("nas.maison", "ab12"))
+
+        assertThat(SslErrorPolicy.shouldProceed(true, "https://NAS.maison:8443/x", "ab12", trusted::contains)).isTrue()
+    }
+
+    @Test
+    fun `Given a trusted certificate When the host presents another certificate Then the load does not proceed`() {
+        val trusted = setOf(SiteException.Certificate("nas.maison", "ab12"))
+
+        assertThat(SslErrorPolicy.shouldProceed(true, "https://nas.maison/", "ff99", trusted::contains)).isFalse()
+    }
+
+    @Test
+    fun `Given a trusted certificate for a host When another host or www of it fails Then the load does not proceed`() {
+        val trusted = setOf(SiteException.Certificate("nas.maison", "ab12"))
+
+        assertThat(SslErrorPolicy.shouldProceed(true, "https://www.nas.maison/", "ab12", trusted::contains)).isFalse()
+        assertThat(SslErrorPolicy.shouldProceed(true, "https://evil.example/", "ab12", trusted::contains)).isFalse()
+    }
+
+    @Test
+    fun `Given a trusted certificate When a subresource of the page fails Then it is never allowed to proceed`() {
+        val trusted = setOf(SiteException.Certificate("nas.maison", "ab12"))
+
+        assertThat(SslErrorPolicy.shouldProceed(false, "https://nas.maison/app.js", "ab12", trusted::contains)).isFalse()
+    }
+
+    @Test
+    fun `Given a certificate that could not be read When an exception exists for the host Then the load does not proceed`() {
+        val trusted = setOf(SiteException.Certificate("nas.maison", "ab12"))
+
+        assertThat(SslErrorPolicy.shouldProceed(true, "https://nas.maison/", null, trusted::contains)).isFalse()
+        assertThat(SslErrorPolicy.shouldProceed(true, null, "ab12", trusted::contains)).isFalse()
+    }
+
+    @Test
+    fun `Given the SSL error codes of Android When the cause is shown Then each maps to a distinct reason`() {
+        assertThat(certificateProblemOf(0)).isEqualTo(CertificateProblem.NotYetValid)
+        assertThat(certificateProblemOf(1)).isEqualTo(CertificateProblem.Expired)
+        assertThat(certificateProblemOf(2)).isEqualTo(CertificateProblem.NameMismatch)
+        assertThat(certificateProblemOf(3)).isEqualTo(CertificateProblem.Untrusted)
+        assertThat(certificateProblemOf(4)).isEqualTo(CertificateProblem.Invalid)
+        assertThat(certificateProblemOf(5)).isEqualTo(CertificateProblem.Invalid)
+    }
+
+    @Test
+    fun `Given a main page over http without exception When the page navigates Then a warning replaces it`() {
+        val decision = WebNavigationPolicy.navigationOf("http://192.168.1.10/", isMainFrame = true) { false }
+
+        assertThat(decision).isEqualTo(NavigationDecision.WarnHttp("192.168.1.10"))
+    }
+
+    @Test
+    fun `Given an http host allowed by the user When the main page navigates Then it is allowed`() {
+        val decision = WebNavigationPolicy.navigationOf("http://192.168.1.10:8080/a", isMainFrame = true) { it == "192.168.1.10" }
+
+        assertThat(decision).isEqualTo(NavigationDecision.Allow)
+    }
+
+    @Test
+    fun `Given an http host allowed by the user When a redirect leads to another http host Then the warning comes back`() {
+        val decision = WebNavigationPolicy.navigationOf("http://other.example/", isMainFrame = true) { it == "192.168.1.10" }
+
+        assertThat(decision).isEqualTo(NavigationDecision.WarnHttp("other.example"))
+    }
+
+    @Test
+    fun `Given an https page or a subframe When it navigates Then no http warning applies`() {
+        assertThat(WebNavigationPolicy.navigationOf("https://arte.tv/", isMainFrame = true) { false })
+            .isEqualTo(NavigationDecision.Allow)
+        assertThat(WebNavigationPolicy.navigationOf("http://ads.example/frame", isMainFrame = false) { false })
+            .isEqualTo(NavigationDecision.Allow)
+    }
+
+    @Test
+    fun `Given a non web address When it navigates Then it is refused even with exceptions`() {
+        assertThat(WebNavigationPolicy.navigationOf("intent://x", isMainFrame = true) { true })
+            .isEqualTo(NavigationDecision.Refuse)
+    }
+
+    @Test
+    fun `Given an http address whose host cannot be read When it navigates Then it warns and nothing can allow it`() {
+        val decision = WebNavigationPolicy.navigationOf("http://exa%6Dple.com/", isMainFrame = true) { true }
+
+        assertThat(decision).isEqualTo(NavigationDecision.WarnHttp(null))
+    }
+
+    @Test
+    fun `Given hosts of the local network and public sites When the warning is built Then local ones are recognised`() {
+        listOf("localhost", "nas", "192.168.1.10", "10.0.0.5", "172.16.3.4", "box.local", "tv.lan", "[::1]", "[fd12::1]")
+            .forEach { assertThat(isLocalNetworkHost(it)).isTrue() }
+        listOf("expired.badssl.com", "8.8.8.8", "172.32.0.1", "example.org", null)
+            .forEach { assertThat(isLocalNetworkHost(it)).isFalse() }
     }
 
     @Test

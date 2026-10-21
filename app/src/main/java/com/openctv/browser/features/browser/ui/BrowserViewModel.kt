@@ -3,7 +3,11 @@ package com.openctv.browser.features.browser.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.security.NoSecurityExceptions
+import com.openctv.browser.core.security.SecurityExceptionsContract
+import com.openctv.browser.core.security.SiteHost
 import com.openctv.browser.core.webview.LoadErrorCause
+import com.openctv.browser.core.webview.NavigationDecision
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.WebNavigationPolicy
 import com.openctv.browser.core.webview.WebPageListener
@@ -68,6 +72,8 @@ class BrowserViewModel(
     private val onPageVisited: (String) -> Unit = {},
     /** Délai d'inactivité avant masquage de l'interface, lu à chaque activité (`null` = jamais). */
     hudHideDelay: () -> Duration? = { null },
+    /** Exceptions de sécurité accordées (HTTP, certificat) : décident d'avertir ou d'afficher la page. */
+    private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
 ) : ViewModel(), WebPageListener {
     private val _pageUrl = MutableStateFlow(initialUrl)
 
@@ -76,6 +82,12 @@ class BrowserViewModel(
 
     private val _canGoBack = MutableStateFlow(false)
     private val _canGoForward = MutableStateFlow(false)
+
+    /** Hôte dont la page principale est affichée malgré un certificat invalide (exception accordée), sinon `null`. */
+    private val _unverifiedCertificateHost = MutableStateFlow<String?>(null)
+
+    /** Dernier hôte pour lequel un message « page non sécurisée » a été montré : un seul message par site visité. */
+    private var announcedInsecureHost: String? = null
 
     /** Dernière adresse entrée dans l'historique de la WebView ([onUrlChanged]) : la page qu'elle affiche vraiment. */
     private var committedUrl: String? = null
@@ -156,8 +168,11 @@ class BrowserViewModel(
 
     /** Contenu de la barre d'outils (boutons actifs, Actualiser/Arrêter, adresse, favori). */
     val toolbar: StateFlow<ToolbarState> = combine(
-        _pageState, _pageUrl, _canGoBack, _canGoForward, isBookmarked, ::toolbarStateOf,
-    ).stateIn(
+        combine(_pageState, _pageUrl, _unverifiedCertificateHost, ::Triple),
+        combine(_canGoBack, _canGoForward, isBookmarked, ::Triple),
+    ) { (pageState, pageUrl, unverifiedHost), (canGoBack, canGoForward, isBookmarked) ->
+        toolbarStateOf(pageState, pageUrl, canGoBack, canGoForward, isBookmarked, unverifiedHost)
+    }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
         toolbarStateOf(_pageState.value, initialUrl, false, false, false),
@@ -188,6 +203,7 @@ class BrowserViewModel(
             BackAction.CloseAddressInput -> closeAddressInput()
             BackAction.CloseMenu -> closeMenu()
             BackAction.ExitInterface -> exitInterfaceMode()
+            BackAction.CollapseWarningOptions -> setWarningOptionsOpen(false)
             BackAction.GoBackInHistory -> _commands.trySend(BrowserCommand.GoBack)
             BackAction.LeaveBrowser -> _commands.trySend(BrowserCommand.Close)
         }
@@ -195,8 +211,44 @@ class BrowserViewModel(
 
     /** L'écran d'erreur se retire : la page que la WebView n'a jamais quittée redevient visible, sans rechargement. */
     private fun showPreviousPage(url: String) {
+        setWarningOptionsOpen(false)
         _pageUrl.value = url
         _pageState.value = PageState.Loaded(siteLabelOf(url))
+    }
+
+    /** « Options avancées » d'un avertissement de sécurité : déplie ou replie le panneau. */
+    fun toggleWarningOptions() {
+        val isWarningShown = (_pageState.value as? PageState.Error)?.warning != null
+        if (isWarningShown) setWarningOptionsOpen(!_layers.value.isWarningOptionsOpen)
+    }
+
+    private fun setWarningOptionsOpen(isOpen: Boolean) {
+        _layers.update { it.copy(isWarningOptionsOpen = isOpen) }
+    }
+
+    /** « Retour en sécurité » : quitte l'avertissement comme Retour (page précédente, sinon accueil). */
+    fun returnToSafety(canGoBack: Boolean) {
+        setWarningOptionsOpen(false)
+        onBack(canGoBack)
+    }
+
+    /**
+     * « Afficher la page » / « Continuer malgré tout » : accorde l'exception de l'avertissement affiché (hôte, et
+     * empreinte du certificat pour un certificat) pour la session, ou sur la TV si [isRemembered], puis recharge la
+     * page. Sans exception descriptible (hôte ou certificat illisible), rien n'est accordé.
+     */
+    fun continueDespiteWarning(isRemembered: Boolean) {
+        val warning = (_pageState.value as? PageState.Error)?.warning ?: return
+        val exception = warning.exception ?: return
+        viewModelScope.launch {
+            val result = securityExceptions.allow(exception, isRemembered)
+            if (result is Resource.Error) {
+                // Le message d'échec ne doit pas être remplacé par « page non sécurisée » : le site est déjà annoncé.
+                announcedInsecureHost = exception.host
+                showNotice(BrowserNotice.SecurityExceptionNotSaved)
+            }
+            load(warning.url)
+        }
     }
 
     /** Le D-pad pilote désormais la barre d'outils (aussi appelé par « maintenir Haut », #8). */
@@ -360,6 +412,10 @@ class BrowserViewModel(
 
     override fun onPageStarted(url: String) {
         _pageUrl.value = url
+        val host = SiteHost.of(url)
+        if (host != _unverifiedCertificateHost.value) _unverifiedCertificateHost.value = null
+        if (host != announcedInsecureHost) announcedInsecureHost = null
+        announceInsecureHttp(url, host)
         val isPageShown = when (val state = _pageState.value) {
             is PageState.Loaded -> true
             is PageState.Loading -> state.isPageShown
@@ -394,13 +450,33 @@ class BrowserViewModel(
 
     override fun onLoadError(error: WebLoadError) {
         failedUrl = error.url ?: _pageUrl.value
-        _pageState.value = PageState.Error(siteLabelOf(failedUrl), error.cause)
+        setWarningOptionsOpen(false)
+        _pageState.value = PageState.Error(siteLabelOf(failedUrl), error.cause, error.warning)
+    }
+
+    override fun onUnverifiedCertificateAccepted(url: String) {
+        val host = SiteHost.of(url)
+        _unverifiedCertificateHost.value = host
+        if (host != null && host != announcedInsecureHost) {
+            announcedInsecureHost = host
+            showNotice(BrowserNotice.UnverifiedCertificateShown)
+        }
+    }
+
+    /** Un seul message « non sécurisé » par site : une page HTTP affichée par exception le dit à l'ouverture. */
+    private fun announceInsecureHttp(url: String, host: String?) {
+        val isInsecure = url.trim().startsWith("http://", ignoreCase = true)
+        if (!isInsecure) return
+        if (host == null || host == announcedInsecureHost) return
+        announcedInsecureHost = host
+        showNotice(BrowserNotice.InsecureHttpShown)
     }
 
     /** Seul chemin vers `loadUrl` : `loadUrl` contourne `shouldOverrideUrlLoading`, la politique est appliquée ici. */
     private fun load(url: String) {
         _pageUrl.value = url
         failedUrl = url
+        setWarningOptionsOpen(false)
         val state = freshStateFor(url)
         _pageState.value = state
         val isAllowed = state is PageState.Loading
@@ -409,8 +485,11 @@ class BrowserViewModel(
 
     private fun freshStateFor(url: String): PageState {
         val site = siteLabelOf(url)
-        val isAllowed = WebNavigationPolicy.isUrlAllowed(url)
-        return if (isAllowed) PageState.Loading(site, progress = 0f) else PageState.Error(site, LoadErrorCause.Unknown)
+        return when (val decision = WebNavigationPolicy.navigationOf(url, isMainFrame = true, securityExceptions)) {
+            NavigationDecision.Allow -> PageState.Loading(site, progress = 0f)
+            NavigationDecision.Refuse -> PageState.Error(site, LoadErrorCause.Unknown)
+            is NavigationDecision.WarnHttp -> PageState.Error(site, LoadErrorCause.Unknown, decision.warningFor(url))
+        }
     }
 
     companion object {

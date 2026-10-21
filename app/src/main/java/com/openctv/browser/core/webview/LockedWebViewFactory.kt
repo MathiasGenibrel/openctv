@@ -3,6 +3,8 @@ package com.openctv.browser.core.webview
 import android.annotation.SuppressLint
 import android.content.Context
 import android.webkit.WebSettings
+import com.openctv.browser.core.security.NoSecurityExceptions
+import com.openctv.browser.core.security.SecurityExceptionsContract
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewCompat
 import androidx.webkit.WebViewFeature
@@ -15,10 +17,12 @@ import java.util.concurrent.Executors
 /**
  * Seul endroit qui crée et configure une `WebView`. Aucune feature ne touche `WebSettings`.
  * Réglages verrouillés : pas d'accès fichier/contenu, contenu mixte interdit, Safe Browsing si
- * disponible, aucune interface JavaScript exposée aux pages.
+ * disponible, aucune interface JavaScript exposée aux pages. Erreurs SSL annulées, sauf exception explicite de
+ * l'utilisateur (hôte + empreinte) pour la page principale : voir [SecureWebViewClient].
  */
 class LockedWebViewFactory(
     private val requestInterceptor: RequestInterceptor = RequestInterceptor.PassThrough,
+    private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
 ) {
     /**
      * Pré-chauffe le moteur (chargement du fournisseur WebView) hors du thread principal, pour que la création
@@ -61,7 +65,11 @@ class LockedWebViewFactory(
                     WebSettingsCompat.setSafeBrowsingEnabled(this, true)
                 }
             }
-            webViewClient = SecureWebViewClient(listener, requestInterceptor)
+            // Un proceed() SSL est retenu par le moteur au-delà de la WebView qui l'a décidé : on repart de zéro pour
+            // que toute page affichée malgré un certificat invalide repasse par le garde de cette WebView (badge,
+            // exception retirée entre-temps). Cf. PageSecurityGuard.
+            clearSslPreferences()
+            webViewClient = SecureWebViewClient(listener, requestInterceptor, securityExceptions)
             webChromeClient = SecureWebChromeClient(listener, fullscreenHost)
         }
 }

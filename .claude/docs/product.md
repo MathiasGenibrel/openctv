@@ -81,7 +81,17 @@ fermer une popup ou faire défiler une page, **le produit a échoué**, quel que
 Une WebView mal configurée est une faille. Par défaut :
 - `allowFileAccess = false`, `allowContentAccess = false`, pas d'accès fichier depuis les URL `file://`.
 - **Aucun `addJavascriptInterface`** exposé aux pages web.
-- Erreurs SSL (`onReceivedSslError`) : **toujours `cancel()`**, jamais `proceed()`.
+- Erreurs SSL (`onReceivedSslError`) : **`cancel()` par défaut**. `proceed()` est autorisé **uniquement** pour
+  la page principale (jamais une sous-ressource), si l'utilisateur a explicitement accordé, sur un écran
+  d'avertissement, une exception pour **cet hôte exact et l'empreinte SHA-256 de ce certificat** : un autre
+  certificat pour le même hôte redéclenche l'avertissement. Exception de session (en mémoire) ou mémorisée sur
+  la TV (jamais envoyée ailleurs), retirable dans Réglages › Exceptions de sécurité.
+- Pages **HTTP** (non chiffrées) : jamais affichées sans avertissement. Une page principale en `http://` (saisie,
+  lien, redirection, page de démarrage, favori) affiche un écran d'avertissement ; elle ne s'affiche qu'après
+  « Afficher la page » (session) ou une exception HTTP mémorisée pour l'hôte exact. Le trafic en clair est
+  autorisé au niveau de l'app (`usesCleartextTraffic`) **uniquement** parce que cet avertissement le garde ; le
+  client HTTP de l'app (listes de filtres) reste en HTTPS seulement.
+- Une page affichée par exception est signalée dans la barre d'outils (« Non sécurisé », « Certificat non vérifié »).
 - Contenu mixte bloqué (`MIXED_CONTENT_NEVER_ALLOW`), Safe Browsing activé si disponible.
 - Permissions demandées par les pages (caméra, micro, localisation) : refusées par défaut.
 - Seuls les schémas `http`/`https` sont chargés ; les autres (`intent:`, `market:`…) sont filtrés.

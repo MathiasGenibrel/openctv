@@ -98,12 +98,22 @@ internal fun BrowserContent(
     modifier: Modifier = Modifier,
     retryFocus: FocusRequester = remember { FocusRequester() },
     toolbar: @Composable () -> Unit = {},
+    warningActions: SecurityWarningActions? = null,
+    isWarningOptionsOpen: Boolean = false,
 ) {
     Box(modifier = modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
         pageView()
         when (pageState) {
             is PageState.Loading -> if (!pageState.isPageShown) LoadingContent(pageState.site)
-            is PageState.Error -> ErrorContent(pageState, onRetry, onHome, retryFocus)
+            is PageState.Error -> {
+                val warning = pageState.warning
+                if (warning != null && warningActions != null) {
+                    // « Retour en sécurité » reprend le focus initial de l'écran d'erreur (retryFocus).
+                    SecurityWarningContent(warning, isWarningOptionsOpen, warningActions, primaryFocus = retryFocus)
+                } else {
+                    ErrorContent(pageState, onRetry, onHome, retryFocus)
+                }
+            }
             is PageState.Loaded -> Unit
         }
         OverscanSafeArea {

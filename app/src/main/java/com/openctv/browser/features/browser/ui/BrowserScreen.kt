@@ -122,6 +122,14 @@ fun BrowserScreen(
         )
     }
 
+    val warningActions = remember(viewModel, webView) {
+        SecurityWarningActions(
+            onReturnToSafety = { viewModel.returnToSafety(canGoBack = webView.canGoBack()) },
+            onToggleOptions = viewModel::toggleWarningOptions,
+            onContinue = viewModel::continueDespiteWarning,
+        )
+    }
+
     val hudAlpha = rememberHudAlpha(isHidden = hud.isHidden)
 
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
@@ -134,6 +142,8 @@ fun BrowserScreen(
             onRetry = viewModel::retry,
             onHome = onClose,
             retryFocus = focus.retry,
+            warningActions = warningActions,
+            isWarningOptionsOpen = layers.isWarningOptionsOpen,
             toolbar = {
                 if (hud.isToolbarShown) {
                     // Masquée par fondu mais toujours composée : le focus reste sur son élément.
@@ -197,4 +207,7 @@ private fun noticeTextRes(notice: BrowserNotice): Int = when (notice) {
     BrowserNotice.BookmarkFailed -> R.string.browser_notice_bookmark_failed
     BrowserNotice.AdBlockFailed -> R.string.browser_notice_adblock_failed
     BrowserNotice.SettingFailed -> R.string.browser_notice_setting_failed
+    BrowserNotice.InsecureHttpShown -> R.string.security_notice_http_shown
+    BrowserNotice.UnverifiedCertificateShown -> R.string.security_notice_certificate_shown
+    BrowserNotice.SecurityExceptionNotSaved -> R.string.security_notice_not_saved
 }

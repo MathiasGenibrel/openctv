@@ -3,6 +3,9 @@ package com.openctv.browser.features.settings.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.security.NoSecurityExceptions
+import com.openctv.browser.core.security.SecurityExceptionsContract
+import com.openctv.browser.core.security.SiteException
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.settings.domain.CursorSpeed
@@ -21,12 +24,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Sous-panneau latéral ouvert depuis la liste des réglages. */
-enum class SettingsPanel { StartPage, SearchEngine, HudHideDelay, CursorSpeed }
+enum class SettingsPanel { StartPage, SearchEngine, HudHideDelay, CursorSpeed, SecurityExceptions }
 
 data class SettingsUiState(
     val settings: Settings = Settings(),
     /** Favoris proposés comme sites de démarrage. */
     val bookmarks: List<Bookmark> = emptyList(),
+    /** Exceptions de sécurité mémorisées (hôtes HTTP autorisés, certificats de confiance), triées par hôte. */
+    val securityExceptions: List<SiteException> = emptyList(),
     val openPanel: SettingsPanel? = null,
     /** Le dernier enregistrement a échoué : le réglage affiché est resté l'ancien. */
     val isSaveFailed: Boolean = false,
@@ -37,6 +42,7 @@ data class SettingsUiState(
 class SettingsViewModel(
     private val settings: SettingsContract,
     bookmarks: BookmarksContract,
+    private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<SettingsPanel?>(null)
@@ -45,12 +51,14 @@ class SettingsViewModel(
     val uiState: StateFlow<SettingsUiState> = combine(
         settings.settings,
         bookmarks.getBookmarks(),
+        securityExceptions.persisted,
         openPanel,
         feedback,
-    ) { storedSettings, storedBookmarks, panel, feedback ->
+    ) { storedSettings, storedBookmarks, storedExceptions, panel, feedback ->
         SettingsUiState(
             settings = storedSettings.orDefaults(),
             bookmarks = (storedBookmarks as? Resource.Success)?.data.orEmpty(),
+            securityExceptions = (storedExceptions as? Resource.Success)?.data.orEmpty(),
             openPanel = panel,
             isSaveFailed = feedback.isSaveFailed,
             isSiteInputInvalid = feedback.isSiteInputInvalid,
@@ -92,6 +100,9 @@ class SettingsViewModel(
     fun selectCursorSpeed(speed: CursorSpeed) = save { settings.setCursorSpeed(speed) }
 
     fun setAdBlockEnabled(isEnabled: Boolean) = save { settings.setAdBlockEnabled(isEnabled) }
+
+    /** Retire une exception de sécurité : la prochaine visite du site affiche de nouveau l'avertissement. */
+    fun removeSecurityException(exception: SiteException) = save { securityExceptions.remove(exception) }
 
     private fun save(write: suspend () -> Resource<Unit>) {
         viewModelScope.launch {
