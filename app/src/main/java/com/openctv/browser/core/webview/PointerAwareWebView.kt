@@ -43,7 +43,7 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     var onPointerKindChanged: ((PointerKind) -> Unit)? = null
 
     /**
-     * Envoie [command] à la vidéo plein écran de la page. À n'appeler qu'en plein écran vidéo. Script ponctuel et
+     * Envoie [command] à la vidéo de la page (plein écran ou non). Script ponctuel et
      * constant ([MediaCommand]), résultat ignoré, sans état ni interface exposée à la page.
      */
     fun runMediaCommand(command: MediaCommand) {
@@ -77,6 +77,12 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     /** Défile de ([dx], [dy]) pixels de l'écran : la vue, agrandie par le zoom de la page, défile d'autant de fois plus. */
     fun scrollByOnScreen(dx: Int, dy: Int) {
         scrollBy((dx / pageScale).roundToInt(), (dy / pageScale).roundToInt())
+    }
+
+    /** Défile d'un écran vers [direction] : un écran = la hauteur affichée (la vue est plus haute que l'écran sous zoom). */
+    fun scrollOneScreen(direction: ScrollDirection) {
+        val visibleHeightOnScreen = (height * pageScale).roundToInt()
+        scrollByOnScreen(0, pageScrollPixels(visibleHeightOnScreen, direction))
     }
 
     override fun setPointerIcon(pointerIcon: PointerIcon?) {

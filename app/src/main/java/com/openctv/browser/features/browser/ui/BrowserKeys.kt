@@ -6,6 +6,8 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import com.openctv.browser.core.remote.dispatchRemoteAction
+import com.openctv.browser.core.webview.isTextFieldFocused
 import com.openctv.browser.features.browser.domain.KeyPhase
 import com.openctv.browser.features.browser.domain.RemoteKey
 
@@ -28,7 +30,7 @@ fun interface PageKeyHandler {
  * poursuit vers l'élément focalisé (WebView, barre d'outils, surcouche).
  *
  * Les décisions reviennent au ViewModel ; ce fichier ne fait que traduire la touche et fournir l'état
- * de la WebView dont il a besoin (défilement possible).
+ * de la WebView dont il a besoin (défilement possible, champ de saisie de la page focalisé).
  */
 internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pageKeys: PageKeyHandler): Boolean {
     // Interface masquée : la touche qui la réaffiche ne fait que ça jusqu'à son relâchement (ni déplacement ni clic
@@ -42,6 +44,11 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
     if (isPageMode && pageKeys.onPageKey(event)) return true
     val isKeyDown = event.type == KeyEventType.KeyDown
     if (!isKeyDown) return false
+    // Touches de la table (Chaîne, média, Recherche, chiffres…) : la WebView dit seulement si un champ de la page a le focus.
+    val isRemoteActionConsumed = event.dispatchRemoteAction { action, isRepeat ->
+        onRemoteAction(action, isRepeat, isPageTextFieldFocused = webView.isTextFieldFocused)
+    }
+    if (isRemoteActionConsumed) return true
     return when (event.key) {
         Key.DirectionUp -> onDpadUp(canScrollUp = webView.canScrollVertically(-1))
         Key.DirectionDown -> onDpadDown()

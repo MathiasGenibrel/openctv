@@ -109,6 +109,8 @@ fun BrowserScreen(
                 BrowserCommand.ExitFullscreen -> fullscreen.exit()
                 BrowserCommand.Close -> currentOnClose()
                 BrowserCommand.GoHome -> currentOnHome()
+                is BrowserCommand.ScrollPage -> webView.scrollOneScreen(command.direction)
+                is BrowserCommand.Media -> webView.runMediaCommand(command.command)
             }
         }
     }

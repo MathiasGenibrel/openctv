@@ -3,6 +3,7 @@ package com.openctv.browser.features.home.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.remote.RemoteAction
 import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.home.domain.BackPressOutcome
@@ -151,6 +152,32 @@ class HomeViewModel(
     fun onOpenSettings() = navigate(Destination.Settings)
 
     fun onOpenHistory() = navigate(Destination.History())
+
+    /**
+     * Touche « confort » de la télécommande ([RemoteKeyMap]) sur l'accueil : Recherche ouvre la saisie, un chiffre
+     * ouvre le favori de ce rang (rien sans favori à ce rang). Renvoie `true` si consommée ; saisie ou menu de
+     * favori ouverts, rien n'est pris (le chiffre tapé reste un chiffre). Les autres actions n'ont pas de sens ici.
+     */
+    fun onRemoteAction(action: RemoteAction, isRepeat: Boolean): Boolean {
+        val isOverlayOpen = _searchInput.value != null || _favoriteMenu.value != null
+        if (isOverlayOpen) return false
+        return when (action) {
+            RemoteAction.OpenSearch -> {
+                if (!isRepeat) onOpenSearch()
+                true
+            }
+            is RemoteAction.OpenFavorite -> {
+                if (!isRepeat) openFavoriteAt(action.position)
+                true
+            }
+            is RemoteAction.ScrollPage, is RemoteAction.Media, RemoteAction.OpenMenu -> false
+        }
+    }
+
+    private fun openFavoriteAt(position: Int) {
+        val shown = (favorites.value as? Resource.Success)?.data.orEmpty()
+        shown.getOrNull(position - 1)?.let(::onOpenFavorite)
+    }
 
     fun onOpenSearch() = openSearch(SearchMode.Browse)
 

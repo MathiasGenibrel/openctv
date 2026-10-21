@@ -81,6 +81,7 @@ import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.core.designsystem.morphBackground
 import com.openctv.browser.core.designsystem.morphToCircle
 import com.openctv.browser.core.navigation.Destination
+import com.openctv.browser.core.remote.dispatchRemoteAction
 import com.openctv.browser.features.home.domain.HomeFavorite
 import com.openctv.browser.features.home.domain.HomeFocus
 import com.openctv.browser.features.search.domain.SearchRequest
@@ -123,7 +124,9 @@ fun HomeScreen(
     // Petit menu d'un favori ouvert : son propre BackHandler le ferme (Retour annule).
     BackHandler(enabled = !isSearchOpen && favoriteMenu == null) { viewModel.onBack() }
 
-    Box(modifier.fillMaxSize()) {
+    Box(
+        modifier.fillMaxSize().onPreviewKeyEvent { event -> event.dispatchRemoteAction(viewModel::onRemoteAction) },
+    ) {
         HomeContent(
             favorites = favorites,
             isExitHintVisible = isExitHintVisible,
