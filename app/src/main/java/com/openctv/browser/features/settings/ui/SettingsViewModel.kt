@@ -6,6 +6,10 @@ import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.security.SiteException
+import com.openctv.browser.core.zoom.NoPageZoom
+import com.openctv.browser.core.zoom.PageZoom
+import com.openctv.browser.core.zoom.PageZoomContract
+import com.openctv.browser.core.zoom.SiteZoom
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.settings.domain.CursorSpeed
@@ -24,7 +28,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /** Sous-panneau latéral ouvert depuis la liste des réglages. */
-enum class SettingsPanel { StartPage, SearchEngine, HudHideDelay, CursorSpeed, SecurityExceptions }
+enum class SettingsPanel { StartPage, SearchEngine, HudHideDelay, CursorSpeed, PageZoom, SecurityExceptions }
 
 data class SettingsUiState(
     val settings: Settings = Settings(),
@@ -32,6 +36,8 @@ data class SettingsUiState(
     val bookmarks: List<Bookmark> = emptyList(),
     /** Exceptions de sécurité mémorisées (hôtes HTTP autorisés, certificats de confiance), triées par hôte. */
     val securityExceptions: List<SiteException> = emptyList(),
+    /** Sites qui ont leur propre zoom (les autres suivent `settings.pageZoom`), triés par hôte. */
+    val siteZooms: List<SiteZoom> = emptyList(),
     val openPanel: SettingsPanel? = null,
     /** Le dernier enregistrement a échoué : le réglage affiché est resté l'ancien. */
     val isSaveFailed: Boolean = false,
@@ -43,22 +49,22 @@ class SettingsViewModel(
     private val settings: SettingsContract,
     bookmarks: BookmarksContract,
     private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+    private val siteZooms: PageZoomContract = NoPageZoom,
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<SettingsPanel?>(null)
     private val feedback = MutableStateFlow(Feedback())
 
     val uiState: StateFlow<SettingsUiState> = combine(
-        settings.settings,
-        bookmarks.getBookmarks(),
-        securityExceptions.persisted,
+        combine(settings.settings, bookmarks.getBookmarks(), securityExceptions.persisted, siteZooms.sites, ::StoredData),
         openPanel,
         feedback,
-    ) { storedSettings, storedBookmarks, storedExceptions, panel, feedback ->
+    ) { stored, panel, feedback ->
         SettingsUiState(
-            settings = storedSettings.orDefaults(),
-            bookmarks = (storedBookmarks as? Resource.Success)?.data.orEmpty(),
-            securityExceptions = (storedExceptions as? Resource.Success)?.data.orEmpty(),
+            settings = stored.settings.orDefaults(),
+            bookmarks = (stored.bookmarks as? Resource.Success)?.data.orEmpty(),
+            securityExceptions = (stored.securityExceptions as? Resource.Success)?.data.orEmpty(),
+            siteZooms = (stored.siteZooms as? Resource.Success)?.data.orEmpty(),
             openPanel = panel,
             isSaveFailed = feedback.isSaveFailed,
             isSiteInputInvalid = feedback.isSiteInputInvalid,
@@ -99,6 +105,12 @@ class SettingsViewModel(
 
     fun selectCursorSpeed(speed: CursorSpeed) = save { settings.setCursorSpeed(speed) }
 
+    /** Niveau de zoom des sites qui n'ont pas le leur. */
+    fun selectPageZoom(zoom: PageZoom) = save { settings.setPageZoom(zoom) }
+
+    /** Retire le zoom propre d'un site : il revient au niveau par défaut. */
+    fun removeSiteZoom(host: String) = save { siteZooms.remove(host) }
+
     fun setAdBlockEnabled(isEnabled: Boolean) = save { settings.setAdBlockEnabled(isEnabled) }
 
     /** Retire une exception de sécurité : la prochaine visite du site affiche de nouveau l'avertissement. */
@@ -110,6 +122,13 @@ class SettingsViewModel(
             feedback.update { it.copy(isSaveFailed = isFailure) }
         }
     }
+
+    private class StoredData(
+        val settings: Resource<Settings>,
+        val bookmarks: Resource<List<Bookmark>>,
+        val securityExceptions: Resource<List<SiteException>>,
+        val siteZooms: Resource<List<SiteZoom>>,
+    )
 
     private data class Feedback(val isSaveFailed: Boolean = false, val isSiteInputInvalid: Boolean = false)
 

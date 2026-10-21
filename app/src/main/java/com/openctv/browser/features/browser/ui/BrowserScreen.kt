@@ -68,6 +68,7 @@ fun BrowserScreen(
     val hud by viewModel.hud.collectAsStateWithLifecycle()
     val toolbarState by viewModel.toolbar.collectAsStateWithLifecycle()
     val notice by viewModel.notice.collectAsStateWithLifecycle()
+    val pageZoom by viewModel.pageZoom.collectAsStateWithLifecycle()
 
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
@@ -138,7 +139,7 @@ fun BrowserScreen(
     Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
         BrowserContent(
             pageState = pageState,
-            pageView = { PageView(webView, isVisible = pageState !is PageState.Error) },
+            pageView = { PageView(webView, pageZoom, isVisible = pageState !is PageState.Error) },
             onRetry = viewModel::retry,
             onHome = onClose,
             retryFocus = focus.retry,
@@ -161,7 +162,7 @@ fun BrowserScreen(
         cursor(webView, hud.isCursorVisible, hud.isCursorShown)
         val shownNotice = notice
         val bottomMessage = when {
-            shownNotice != null -> stringResource(noticeTextRes(shownNotice))
+            shownNotice != null -> noticeText(shownNotice)
             hud.isInterfaceHelpShown -> stringResource(R.string.browser_interface_help)
             hud.isCursorHelpShown -> stringResource(R.string.browser_cursor_help)
             else -> null
@@ -210,4 +211,13 @@ private fun noticeTextRes(notice: BrowserNotice): Int = when (notice) {
     BrowserNotice.InsecureHttpShown -> R.string.security_notice_http_shown
     BrowserNotice.UnverifiedCertificateShown -> R.string.security_notice_certificate_shown
     BrowserNotice.SecurityExceptionNotSaved -> R.string.security_notice_not_saved
+    is BrowserNotice.ZoomSaved -> R.string.browser_notice_zoom_saved
+    is BrowserNotice.ZoomReset -> R.string.browser_notice_zoom_reset
+}
+
+@Composable
+private fun noticeText(notice: BrowserNotice): String = when (notice) {
+    is BrowserNotice.ZoomSaved -> stringResource(noticeTextRes(notice), notice.zoom.percent, notice.host)
+    is BrowserNotice.ZoomReset -> stringResource(noticeTextRes(notice), notice.zoom.percent, notice.host)
+    else -> stringResource(noticeTextRes(notice))
 }

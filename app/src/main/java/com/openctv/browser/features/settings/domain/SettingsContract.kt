@@ -1,6 +1,7 @@
 package com.openctv.browser.features.settings.domain
 
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.zoom.PageZoom
 import kotlinx.coroutines.flow.StateFlow
 
 /**
@@ -26,6 +27,7 @@ interface SettingsContract {
     suspend fun setStartPage(page: StartPage): Resource<Unit>
     suspend fun setHudHideDelay(delay: HudHideDelay): Resource<Unit>
     suspend fun setCursorSpeed(speed: CursorSpeed): Resource<Unit>
+    suspend fun setPageZoom(zoom: PageZoom): Resource<Unit>
     suspend fun setAdBlockEnabled(isEnabled: Boolean): Resource<Unit>
 
     /**

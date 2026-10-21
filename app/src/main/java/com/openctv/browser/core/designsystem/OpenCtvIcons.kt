@@ -61,6 +61,7 @@ object OpenCtvIcons {
     val TravelExplore: Painter @Composable get() = painterResource(R.drawable.ic_travel_explore)
     val Warning: Painter @Composable get() = painterResource(R.drawable.ic_warning)
     val WifiOff: Painter @Composable get() = painterResource(R.drawable.ic_wifi_off)
+    val ZoomIn: Painter @Composable get() = painterResource(R.drawable.ic_zoom_in)
 }
 
 @Preview(device = Devices.TV_1080p)
@@ -77,7 +78,7 @@ private fun OpenCtvIconsPreview() {
                 OpenCtvIcons.Check, OpenCtvIcons.ChevronRight, OpenCtvIcons.RadioButtonChecked,
                 OpenCtvIcons.RadioButtonUnchecked, OpenCtvIcons.Gamepad, OpenCtvIcons.NoEncryption, OpenCtvIcons.GppBad,
                 OpenCtvIcons.Warning, OpenCtvIcons.CheckBox, OpenCtvIcons.CheckBoxOutlineBlank, OpenCtvIcons.ExpandMore,
-                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete,
+                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete, OpenCtvIcons.ZoomIn,
             ).chunked(13).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     row.forEach { Icon(it, contentDescription = null, tint = OpenCtvColors.OnSurface) }

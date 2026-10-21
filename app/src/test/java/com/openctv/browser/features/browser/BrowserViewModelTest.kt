@@ -667,29 +667,6 @@ class BrowserViewModelTest {
     }
 
     @Test
-    fun `Given the menu is open When the user chooses Actualiser Then the menu closes and the page reloads`() = runTest {
-        val viewModel = BrowserViewModel(url, bookmarks)
-        viewModel.onPageFinished(url)
-        viewModel.openMenu()
-
-        viewModel.reloadFromMenu()
-
-        assertThat(viewModel.layers.value.isMenuOpen).isFalse()
-        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Reload) }
-    }
-
-    @Test
-    fun `Given an error page When the user chooses Actualiser in the menu Then the address is loaded again`() = runTest {
-        val viewModel = BrowserViewModel(url, bookmarks)
-        viewModel.onLoadError(WebLoadError(url, LoadErrorCause.Unreachable))
-        viewModel.openMenu()
-
-        viewModel.reloadFromMenu()
-
-        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Load(url)) }
-    }
-
-    @Test
     fun `Given the menu is open When the user chooses Accueil Then the browser asks to close`() = runTest {
         val viewModel = BrowserViewModel(url, bookmarks)
         viewModel.openMenu()

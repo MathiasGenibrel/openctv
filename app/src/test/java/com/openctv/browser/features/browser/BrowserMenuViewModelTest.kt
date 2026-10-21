@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.common.TestDispatcherProvider
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.adblock.domain.FilterListsState
 import com.openctv.browser.features.browser.domain.AdBlockStatus
@@ -40,6 +41,8 @@ class BrowserMenuViewModelTest {
     private val bookmarks = FakeBookmarks()
     private val adBlock = FakeAdBlock()
     private val failures = mutableListOf<MenuWriteFailure>()
+    private val pageZoom = MutableStateFlow(PageZoom.Full)
+    private val chosenZooms = mutableListOf<Pair<PageZoom, PageZoom>>()
 
     @Before
     fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
@@ -53,7 +56,10 @@ class BrowserMenuViewModelTest {
             dispatchers = TestDispatcherProvider(StandardTestDispatcher(testScheduler)),
             scope = backgroundScope,
         )
-        return BrowserMenuViewModel(MutableStateFlow(url), settings, adBlock, bookmarks, onWriteFailed = { failures += it })
+        return BrowserMenuViewModel(
+            MutableStateFlow(url), settings, adBlock, bookmarks, onWriteFailed = { failures += it },
+            pageZoom = pageZoom, onZoomChosen = { zoom, default -> chosenZooms += zoom to default },
+        )
             .also { viewModel -> backgroundScope.launch { viewModel.state.collect {} } }
             .also { runCurrent() }
     }
@@ -182,6 +188,36 @@ class BrowserMenuViewModelTest {
         assertThat(firstBackHandled).isTrue()
         assertThat(viewModel.state.value.openPanel).isNull()
         assertThat(secondBackHandled).isFalse()
+    }
+
+    @Test
+    fun `Given a site zoomed to 50 percent When the menu opens Then the zoom row shows 50 for that exact host`() = runTest {
+        pageZoom.value = PageZoom.Half
+        val viewModel = viewModel()
+
+        assertThat(viewModel.state.value.pageZoom).isEqualTo(PageZoom.Half)
+        assertThat(viewModel.state.value.zoomHost).isEqualTo("www.arte.tv")
+    }
+
+    @Test
+    fun `Given the zoom sub menu When the user picks a level Then the browser is told the level and the Settings default`() = runTest {
+        val viewModel = viewModel(FakeSettingsStore(Settings(pageZoom = PageZoom.ThreeQuarters)))
+
+        viewModel.openPanel(BrowserMenuPanel.PageZoom)
+        viewModel.selectPageZoom(PageZoom.Half)
+
+        assertThat(viewModel.state.value.openPanel).isEqualTo(BrowserMenuPanel.PageZoom)
+        assertThat(chosenZooms).containsExactly(PageZoom.Half to PageZoom.ThreeQuarters)
+        assertThat(viewModel.state.value.defaultZoom).isEqualTo(PageZoom.ThreeQuarters)
+    }
+
+    @Test
+    fun `Given the zoom sub menu is open When the user presses Back Then it returns to the menu`() = runTest {
+        val viewModel = viewModel()
+        viewModel.openPanel(BrowserMenuPanel.PageZoom)
+
+        assertThat(viewModel.onBack()).isTrue()
+        assertThat(viewModel.state.value.openPanel).isNull()
     }
 }
 

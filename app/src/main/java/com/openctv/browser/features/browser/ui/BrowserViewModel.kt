@@ -11,6 +11,10 @@ import com.openctv.browser.core.webview.NavigationDecision
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.WebNavigationPolicy
 import com.openctv.browser.core.webview.WebPageListener
+import com.openctv.browser.core.zoom.NoPageZoom
+import com.openctv.browser.core.zoom.PageZoom
+import com.openctv.browser.core.zoom.PageZoomContract
+import com.openctv.browser.core.zoom.effectiveZoom
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.browser.domain.BackAction
 import com.openctv.browser.features.browser.domain.BrowserHud
@@ -74,11 +78,27 @@ class BrowserViewModel(
     hudHideDelay: () -> Duration? = { null },
     /** Exceptions de sécurité accordées (HTTP, certificat) : décident d'avertir ou d'afficher la page. */
     private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+    /** Sites avec leur propre zoom ; les autres suivent [defaultZoom]. */
+    private val siteZooms: PageZoomContract = NoPageZoom,
+    /** Zoom des Réglages pour les sites sans zoom propre. */
+    defaultZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
 ) : ViewModel(), WebPageListener {
     private val _pageUrl = MutableStateFlow(initialUrl)
 
     /** Adresse de la page affichée, suivie aussi dans les applications monopage (cf. [onUrlChanged]). */
     val pageUrl: StateFlow<String> = _pageUrl.asStateFlow()
+
+    /**
+     * Zoom de la page affichée : celui de son hôte exact, sinon celui des Réglages. Suit la page (redirection,
+     * lien vers un autre site) ; la vue l'applique à sa WebView sans la recharger.
+     */
+    val pageZoom: StateFlow<PageZoom> = combine(_pageUrl, siteZooms.sites, defaultZoom) { url, sites, default ->
+        effectiveZoom(url, (sites as? Resource.Success)?.data.orEmpty(), default)
+    }.distinctUntilChanged().stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        effectiveZoom(initialUrl, (siteZooms.sites.value as? Resource.Success)?.data.orEmpty(), defaultZoom.value),
+    )
 
     private val _canGoBack = MutableStateFlow(false)
     private val _canGoForward = MutableStateFlow(false)
@@ -345,15 +365,6 @@ class BrowserViewModel(
         }
     }
 
-    /** « Actualiser la page » du menu : recharge la page (ou réessaie après une erreur) et ferme le menu. */
-    fun reloadFromMenu() {
-        closeMenu()
-        when (_pageState.value) {
-            is PageState.Error -> retry()
-            is PageState.Loading, is PageState.Loaded -> _commands.trySend(BrowserCommand.Reload)
-        }
-    }
-
     /** « Accueil » du menu : quitte le navigateur (la WebView et son historique sont libérés avec l'écran). */
     fun goHome() {
         _commands.trySend(BrowserCommand.Close)
@@ -370,6 +381,28 @@ class BrowserViewModel(
             val isAlreadyBookmarked = current is Resource.Success && current.data
             val result = if (isAlreadyBookmarked) bookmarks.remove(url) else bookmarks.add(url, siteLabelOf(url))
             if (result is Resource.Error) showNotice(BrowserNotice.BookmarkFailed)
+        }
+    }
+
+    /**
+     * Zoom choisi dans le menu pour le site de la page : appliqué tout de suite (sans recharger), mémorisé pour
+     * l'hôte exact, sauf si c'est le niveau par défaut, qui retire l'exception du site. Le message dit ce qui a été fait.
+     */
+    fun selectPageZoom(zoom: PageZoom, default: PageZoom) {
+        val host = SiteHost.of(_pageUrl.value)
+        if (host == null) {
+            showNotice(BrowserNotice.SettingFailed)
+            return
+        }
+        val isDefault = zoom == default
+        viewModelScope.launch {
+            val result = if (isDefault) siteZooms.remove(host) else siteZooms.set(host, zoom)
+            val notice = when {
+                result is Resource.Error -> BrowserNotice.SettingFailed
+                isDefault -> BrowserNotice.ZoomReset(zoom, host)
+                else -> BrowserNotice.ZoomSaved(zoom, host)
+            }
+            showNotice(notice)
         }
     }
 

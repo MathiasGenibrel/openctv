@@ -1,5 +1,7 @@
 package com.openctv.browser.features.browser.domain
 
+import com.openctv.browser.core.zoom.PageZoom
+
 /** Interface affichée par-dessus la page (barre d'outils, aide) ; calculée hors de la vue, voir [browserHudOf]. */
 data class BrowserHud(
     /** Barre affichée : en mode interface, et pendant un chargement (elle porte la progression). */
@@ -49,15 +51,23 @@ fun browserHudOf(
 }
 
 /** Message bref affiché en bas de l'écran, sans prendre le focus (cf. `BrowserViewModel.notice`). */
-enum class BrowserNotice {
-    BookmarkFailed, AdBlockFailed, SettingFailed,
+sealed interface BrowserNotice {
+    data object BookmarkFailed : BrowserNotice
+    data object AdBlockFailed : BrowserNotice
+    data object SettingFailed : BrowserNotice
 
     /** Page HTTP affichée par exception : ne rien y saisir de sensible. */
-    InsecureHttpShown,
+    data object InsecureHttpShown : BrowserNotice
 
     /** Page affichée malgré un certificat invalide accordé par l'utilisateur. */
-    UnverifiedCertificateShown,
+    data object UnverifiedCertificateShown : BrowserNotice
 
     /** Le choix « toujours autoriser » n'a pas pu être mémorisé : il ne vaut que pour la session. */
-    SecurityExceptionNotSaved,
+    data object SecurityExceptionNotSaved : BrowserNotice
+
+    /** Zoom [zoom] mémorisé pour [host] (hôte exact). */
+    data class ZoomSaved(val zoom: PageZoom, val host: String) : BrowserNotice
+
+    /** [host] revient au zoom par défaut [zoom] : son zoom propre est retiré. */
+    data class ZoomReset(val zoom: PageZoom, val host: String) : BrowserNotice
 }

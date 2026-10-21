@@ -36,6 +36,9 @@ import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.SidePanelOverlay
+import com.openctv.browser.core.zoom.PageZoom
+import com.openctv.browser.core.zoom.percentLabel
+import com.openctv.browser.core.zoom.widthLabel
 import com.openctv.browser.features.browser.domain.AdBlockStatus
 import com.openctv.browser.features.browser.domain.BrowserMenuPanel
 import com.openctv.browser.features.browser.domain.BrowserMenuState
@@ -49,7 +52,6 @@ import com.openctv.browser.features.settings.domain.SearchEngine
 @Composable
 fun BrowserMenu(
     viewModel: BrowserMenuViewModel,
-    onReload: () -> Unit,
     onHome: () -> Unit,
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
@@ -60,9 +62,14 @@ fun BrowserMenu(
         actions = MenuActions(
             onToggleAdBlock = viewModel::toggleAdBlock,
             onToggleBookmark = viewModel::toggleBookmark,
-            onReload = onReload,
             onHome = onHome,
             onOpenPanel = viewModel::openPanel,
+            onSelectPageZoom = { zoom ->
+                // Le navigateur applique et mémorise le choix ; le menu se ferme pour laisser voir la page et le message.
+                viewModel.selectPageZoom(zoom)
+                viewModel.closePanel()
+                onClose()
+            },
             onSelectSearchEngine = viewModel::selectSearchEngine,
             onSelectCursorSpeed = viewModel::selectCursorSpeed,
         ),
@@ -74,9 +81,9 @@ fun BrowserMenu(
 internal class MenuActions(
     val onToggleAdBlock: () -> Unit,
     val onToggleBookmark: () -> Unit,
-    val onReload: () -> Unit,
     val onHome: () -> Unit,
     val onOpenPanel: (BrowserMenuPanel) -> Unit,
+    val onSelectPageZoom: (PageZoom) -> Unit,
     val onSelectSearchEngine: (SearchEngine) -> Unit,
     val onSelectCursorSpeed: (CursorSpeed) -> Unit,
 )
@@ -126,9 +133,15 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
                 supporting = state.site,
                 onClick = actions.onToggleBookmark,
             )
+            ListNavigationRow(
+                icon = OpenCtvIcons.ZoomIn,
+                label = stringResource(R.string.browser_menu_zoom),
+                value = state.pageZoom.percentLabel(),
+                onClick = { rowFocus.open(BrowserMenuPanel.PageZoom, actions.onOpenPanel) },
+                modifier = Modifier.focusRequester(rowFocus.of(BrowserMenuPanel.PageZoom)),
+            )
         }
         ListGroup(style = ListGroupStyle.Vibrant) {
-            ListRow(OpenCtvIcons.Refresh, stringResource(R.string.browser_menu_reload), onClick = actions.onReload)
             ListRow(OpenCtvIcons.Home, stringResource(R.string.browser_menu_home), onClick = actions.onHome)
         }
         ListGroup(style = ListGroupStyle.Vibrant) {
@@ -178,6 +191,18 @@ private class MenuFocus {
 private fun ColumnScope.MenuPanel(panel: BrowserMenuPanel, state: BrowserMenuState, actions: MenuActions) {
     val defaultBadge = stringResource(R.string.settings_default_badge)
     when (panel) {
+        BrowserMenuPanel.PageZoom -> MenuOptions(
+            title = stringResource(R.string.browser_menu_zoom),
+            subtitle = state.zoomHost?.let { stringResource(R.string.browser_menu_zoom_remembered_for, it) },
+            options = PageZoom.entries,
+            selected = state.pageZoom,
+            label = { it.percentLabel() },
+            supporting = { it.widthLabel() },
+            trailingText = { zoom -> defaultBadge.takeIf { zoom == state.defaultZoom } },
+            note = stringResource(R.string.browser_menu_zoom_note),
+            hint = stringResource(R.string.browser_menu_zoom_hint),
+            onSelect = actions.onSelectPageZoom,
+        )
         BrowserMenuPanel.SearchEngine -> MenuOptions(
             title = stringResource(R.string.settings_search_engine),
             options = SearchEngine.entries,
@@ -211,17 +236,24 @@ private fun <T> ColumnScope.MenuOptions(
     label: @Composable (T) -> String,
     supporting: @Composable (T) -> String?,
     onSelect: (T) -> Unit,
+    subtitle: String? = null,
+    trailingText: @Composable (T) -> String? = { null },
+    note: String? = null,
+    hint: String = stringResource(R.string.browser_menu_back_hint),
 ) {
     Text(title, style = MaterialTheme.typography.headlineSmall)
+    subtitle?.let { Text(it, style = MaterialTheme.typography.bodyLarge, color = OpenCtvColors.OnSurfaceVariant) }
     Column(
         modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp, horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ListGroup(style = ListGroupStyle.Vibrant) {
-            ListRadioOptions(options, selected, label, supporting, onSelect)
+            ListRadioOptions(options, selected, label, supporting, onSelect, trailingText)
         }
+        note?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = OpenCtvColors.OnSurfaceVariant) }
     }
     Text(
-        stringResource(R.string.browser_menu_back_hint),
+        hint,
         style = MaterialTheme.typography.bodyMedium,
         color = OpenCtvColors.OnSurfaceVariant,
     )

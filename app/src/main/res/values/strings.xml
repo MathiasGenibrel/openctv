@@ -45,8 +45,17 @@
     </plurals>
     <string name="browser_menu_ad_block_site_off">Désactivé sur ce site</string>
     <string name="browser_menu_ad_block_global_off">Désactivé pour tous les sites</string>
-    <string name="browser_menu_reload">Actualiser la page</string>
     <string name="browser_menu_home">Accueil</string>
+    <string name="browser_menu_zoom">Zoom de la page</string>
+    <string name="browser_menu_zoom_remembered_for">Mémorisé pour %1$s</string>
+    <string name="browser_menu_zoom_note">Le niveau « Par défaut » suit Réglages › Zoom des pages. Un autre niveau est mémorisé pour ce site uniquement.</string>
+    <string name="browser_menu_zoom_hint">OK pour choisir · Retour pour revenir au menu</string>
+    <string name="browser_notice_zoom_saved">Zoom %1$d %% mémorisé pour %2$s</string>
+    <string name="browser_notice_zoom_reset">Zoom %1$d %% (par défaut) pour %2$s</string>
+    <string name="zoom_percent">%1$d %%</string>
+    <string name="zoom_percent_and_width">%1$d %% · %2$d px</string>
+    <string name="zoom_page_width">%1$d px</string>
+    <string name="zoom_like_pc">comme un écran de PC</string>
     <string name="browser_menu_back_hint">Retour pour fermer le menu</string>
     <string name="browser_interface_help">Mode interface : OK pour ouvrir · Bas ou Retour pour revenir à la page</string>
     <string name="settings_title">Réglages</string>
@@ -86,6 +95,11 @@
     <string name="settings_cursor_slow">Lente</string>
     <string name="settings_cursor_normal">Normale</string>
     <string name="settings_cursor_fast">Rapide</string>
+    <string name="settings_page_zoom">Zoom des pages</string>
+    <string name="settings_page_zoom_default_title">Taille des sites web par défaut</string>
+    <string name="settings_page_zoom_sites">Sites avec leur propre zoom · OK pour le retirer</string>
+    <string name="settings_page_zoom_sites_none">Aucun site n\'a son propre zoom : choisissez-en un depuis le menu d\'une page.</string>
+    <string name="settings_page_zoom_site_chip">%1$s · %2$d %%</string>
     <!-- Avertissements de sécurité (page HTTP, certificat invalide) -->
     <string name="security_return_to_safety">Retour en sécurité</string>
     <string name="security_advanced_options">Options avancées</string>

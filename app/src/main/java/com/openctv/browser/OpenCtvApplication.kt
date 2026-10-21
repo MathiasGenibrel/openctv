@@ -3,6 +3,7 @@ package com.openctv.browser
 import android.app.Application
 import com.openctv.browser.core.di.appModules
 import com.openctv.browser.core.security.SecurityExceptionsContract
+import com.openctv.browser.core.zoom.PageZoomContract
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.settings.domain.SettingsContract
 import org.koin.android.ext.koin.androidContext
@@ -22,6 +23,7 @@ class OpenCtvApplication : Application() {
         // listes de filtres et mise à jour.
         get<SettingsContract>()
         get<SecurityExceptionsContract>()
+        get<PageZoomContract>()
         get<AdBlockContract>().start()
     }
 }

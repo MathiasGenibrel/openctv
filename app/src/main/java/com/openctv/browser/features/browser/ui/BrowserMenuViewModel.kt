@@ -3,6 +3,8 @@ package com.openctv.browser.features.browser.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.security.SiteHost
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.browser.domain.AdBlockStatus
@@ -27,7 +29,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori, moteur de recherche et vitesse
+ * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori, zoom de la page, moteur de recherche et vitesse
  * du curseur. Actualiser et Accueil sont des ordres du navigateur (`BrowserViewModel`), pas d'ici.
  * Un échec d'écriture est remonté par [onWriteFailed] ; l'affichage reste sur la valeur réellement stockée.
  */
@@ -37,6 +39,10 @@ class BrowserMenuViewModel(
     private val adBlock: AdBlockContract,
     private val bookmarks: BookmarksContract,
     private val onWriteFailed: (MenuWriteFailure) -> Unit,
+    /** Zoom appliqué à la page (porté par le navigateur, qui le mémorise et l'applique à la WebView). */
+    private val pageZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
+    /** Niveau choisi pour le site, et niveau par défaut des Réglages au moment du choix. */
+    private val onZoomChosen: (zoom: PageZoom, default: PageZoom) -> Unit = { _, _ -> },
 ) : ViewModel() {
 
     private val openPanel = MutableStateFlow<BrowserMenuPanel?>(null)
@@ -50,12 +56,17 @@ class BrowserMenuViewModel(
         }
     }
 
-    val state: StateFlow<BrowserMenuState> = combine(pageSettings, settings.settings, openPanel) { page, stored, panel ->
+    val state: StateFlow<BrowserMenuState> = combine(
+        pageSettings, settings.settings, openPanel, pageZoom,
+    ) { page, stored, panel, zoom ->
         val current = stored.orDefaults()
         BrowserMenuState(
             site = siteLabelOf(page.url),
             adBlock = adBlockStatusOf(current.isAdBlockEnabled, page.isEnabledForSite, page.blockedCount),
             isBookmarked = page.isBookmarked,
+            pageZoom = zoom,
+            defaultZoom = current.pageZoom,
+            zoomHost = SiteHost.of(page.url),
             searchEngine = current.searchEngine,
             cursorSpeed = current.cursorSpeed,
             openPanel = panel,
@@ -63,7 +74,12 @@ class BrowserMenuViewModel(
     }.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(STOP_TIMEOUT_MS),
-        BrowserMenuState(site = siteLabelOf(pageUrl.value)),
+        BrowserMenuState(
+            site = siteLabelOf(pageUrl.value),
+            pageZoom = pageZoom.value,
+            defaultZoom = settings.current.pageZoom,
+            zoomHost = SiteHost.of(pageUrl.value),
+        ),
     )
 
     /**
@@ -103,6 +119,9 @@ class BrowserMenuViewModel(
         if (isPanelOpen) closePanel()
         return isPanelOpen
     }
+
+    /** Niveau choisi dans « Zoom de la page » : le navigateur l'applique, le mémorise (ou retire le zoom du site si c'est le niveau par défaut). */
+    fun selectPageZoom(zoom: PageZoom) = onZoomChosen(zoom, state.value.defaultZoom)
 
     fun selectSearchEngine(engine: SearchEngine) = save { settings.setSearchEngine(engine) }
 

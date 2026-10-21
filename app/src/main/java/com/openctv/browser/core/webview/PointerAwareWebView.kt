@@ -26,6 +26,14 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     private val textIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_TEXT)
     private val verticalTextIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_VERTICAL_TEXT)
 
+    /**
+     * Échelle à laquelle la page est affichée par rapport à sa mise en page (`1` à 100 %, `0,5` à 50 % : la vue est
+     * deux fois plus grande que ce qu'on voit, cf. [applyPageZoom]). Les coordonnées de l'écran sont divisées par
+     * cette échelle pour devenir celles de la vue : survol, clic et défilement du curseur.
+     */
+    var pageScale: Float = 1f
+        internal set
+
     /** Dernier type demandé par la page. */
     var pointerKind: PointerKind = PointerKind.Default
         private set

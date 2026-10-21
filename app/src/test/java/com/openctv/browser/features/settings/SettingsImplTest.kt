@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.preferencesOf
 import androidx.datastore.preferences.core.stringPreferencesKey
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.core.common.TestDispatcherProvider
 import com.openctv.browser.features.settings.data.SettingsImpl
 import com.openctv.browser.features.settings.data.SettingsPreferencesCodec
@@ -52,6 +53,7 @@ class SettingsImplTest {
         repository.setSearchEngine(SearchEngine.Qwant)
         repository.setHudHideDelay(HudHideDelay.Never)
         repository.setCursorSpeed(CursorSpeed.Fast)
+        repository.setPageZoom(PageZoom.ThreeQuarters)
         repository.setAdBlockEnabled(false)
         repository.setStartPage(StartPage.LastPage)
         runCurrent()
@@ -63,6 +65,7 @@ class SettingsImplTest {
                     startPage = StartPage.LastPage,
                     hudHideDelay = HudHideDelay.Never,
                     cursorSpeed = CursorSpeed.Fast,
+                    pageZoom = PageZoom.ThreeQuarters,
                     isAdBlockEnabled = false,
                 ),
             ),
@@ -129,6 +132,7 @@ class SettingsImplTest {
             startPage = StartPage.Site("https://arte.tv"),
             hudHideDelay = HudHideDelay.Seconds10,
             cursorSpeed = CursorSpeed.Slow,
+            pageZoom = PageZoom.Half,
             isAdBlockEnabled = false,
             lastPage = "https://wikipedia.org/wiki/Kotlin",
         )
@@ -145,6 +149,7 @@ class SettingsImplTest {
             stringPreferencesKey("search_engine") to "altavista",
             stringPreferencesKey("start_page") to "site:javascript://alert(1)",
             stringPreferencesKey("cursor_speed") to "warp",
+            stringPreferencesKey("page_zoom") to "10",
         )
 
         assertThat(SettingsPreferencesCodec.decode(preferences)).isEqualTo(Settings())

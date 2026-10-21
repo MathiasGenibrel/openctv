@@ -21,6 +21,7 @@ import com.openctv.browser.core.webview.PointerAwareWebView
 import com.openctv.browser.core.webview.PointerKind
 import com.openctv.browser.features.cursor.domain.CursorConfig
 import com.openctv.browser.features.cursor.domain.HoverTarget
+import kotlin.math.roundToInt
 
 /** Session du curseur pour cet écran, avec les distances du design converties en pixels de la TV. */
 @Composable
@@ -125,7 +126,8 @@ private fun stepFrame(
     val canScrollUp = webView.canScrollVertically(-1)
     val moved = controller.step(now, canScrollUp)
     val hasScrolled = controller.scrollDx != 0 || controller.scrollDy != 0
-    if (hasScrolled) webView.scrollBy(controller.scrollDx, controller.scrollDy)
+    // Défilement en pixels de l'écran : la vue, agrandie par le zoom de la page, défile d'autant de fois plus.
+    if (hasScrolled) webView.scrollBy((controller.scrollDx / webView.pageScale).roundToInt(), (controller.scrollDy / webView.pageScale).roundToInt())
     // La page a bougé sous le pointeur, ou le pointeur sous la page : dans les deux cas elle doit le savoir.
     if (moved || hasScrolled) session.injectHover()
     visuals.update(controller, session.hoverTarget, dt, now)
