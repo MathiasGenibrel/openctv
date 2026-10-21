@@ -76,8 +76,10 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
 - `evaluateJavascript` autorisé pour **deux usages seulement**, tous deux dans `core/webview/`, à résultat ignoré et
   échec silencieux, jamais de JavaScript persistant ni d'`addJavascriptInterface` :
-  1. commandes média constantes en plein écran vidéo (`MediaCommand` : lecture/pause, saut ±10 s) : ensemble fermé de
-     scripts constants, aucune donnée de la page ou de l'utilisateur concaténée ;
+  1. commandes média constantes sur la vidéo de la page, en plein écran **comme hors plein écran** (`MediaCommand` :
+     lecture/pause, lecture, pause, saut ±10 s ; déclenchées par les touches média de la télécommande,
+     `core/remote/RemoteKeyMap`) : ensemble fermé de scripts constants, aucune donnée de la page ou de l'utilisateur
+     concaténée ;
   2. **masquage des bandeaux de cookies** (`CosmeticStyleScript`, liste « EasyList Cookie », réglage « Bandeaux de
      cookies ») : un **modèle de script constant** qui n'ajoute qu'un élément `<style>` et y insère, par
      `CSSStyleSheet.insertRule` (une règle par appel, donc rien ne « sort » de sa règle ; non bloqué par une CSP
@@ -108,6 +110,20 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   (attributs, combinateurs, pseudo-classes, plus coûteux pour le moteur CSS). Par page, seules les règles du site sont
   encodées : l'encodage des génériques est mis en cache, la préparation dans `shouldInterceptRequest` reste de l'ordre
   de la dizaine de microsecondes.
+
+## Touches de la télécommande
+- Table unique : `core/remote/RemoteKeyMap` (Kotlin pur, testée). Ajuster une touche = changer cette table. Toute touche
+  absente (Accueil, Retour, Volume, Muet, Alimentation, source, Réglages, Guide, touches d'applis, croix) n'est jamais
+  interceptée : **ne jamais y ajouter une touche système**.
+- Traduction unique d'une touche Compose : `KeyEvent.dispatchRemoteAction` (`core/remote`), appelée par l'accueil et par
+  `BrowserKeys` ; `onPreviewKeyEvent` ne fait que déléguer. Le plein écran (vue Android hors Compose) lit la même table
+  via `FullscreenKeys`.
+- Aiguillage : `BrowserViewModel.onRemoteAction` / `HomeViewModel.onRemoteAction`. Sous une surcouche (saisie, menu,
+  historique, plein écran) rien n'est consommé ; le premier appui d'un HUD masqué ne fait que le réafficher
+  (`onRemoteKey`, avant l'aiguillage).
+- **Champ de saisie de la page** : `onPreviewKeyEvent` passe avant la WebView. Quand un champ éditable de la page a le
+  focus (`WebView.isTextFieldFocused`, `core/webview` : état d'IME du moteur, sans JavaScript), chiffres, Recherche et
+  Chaîne/Page ± lui reviennent (`RemoteAction.yieldsToPageTextField`) ; média et Info gardent leur rôle.
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :
