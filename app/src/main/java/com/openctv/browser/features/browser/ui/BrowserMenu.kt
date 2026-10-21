@@ -285,3 +285,20 @@ private fun BrowserMenuPreview() {
         )
     }
 }
+
+@Preview(device = Devices.TV_1080p)
+@Composable
+private fun BrowserMenuZoomPreview() {
+    OpenCtvTheme {
+        BrowserMenuContent(
+            state = BrowserMenuState(
+                site = "gitlab-dashboard.tools.internal",
+                pageZoom = PageZoom.Half,
+                zoomHost = "gitlab-dashboard.tools.internal",
+                openPanel = BrowserMenuPanel.PageZoom,
+            ),
+            actions = MenuActions({}, {}, {}, {}, {}, {}, {}),
+            onBack = {},
+        )
+    }
+}

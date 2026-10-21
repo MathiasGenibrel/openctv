@@ -50,6 +50,7 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | `core/designsystem/` | Thème TV (couleurs, typo lisible à 3 m, marges d'overscan ≈ 5 %), composants focalisables réutilisables (Compose for TV) |
 | `core/webview/` | Fabrique de la `WebView` **verrouillée** (réglages de sécurité centralisés), `WebViewClient`/`WebChromeClient` de base, gestion du plein écran vidéo. Un seul endroit configure la WebView. Décisions de sécurité de la page principale (HTTP, SSL, page affichée) dans `PageSecurityGuard`, Kotlin pur. |
 | `core/security/` | Exceptions de sécurité accordées par l'utilisateur (`SecurityExceptionsContract` : HTTP par hôte, certificat par hôte + empreinte SHA-256), session en mémoire + DataStore local ; `SiteHost` (hôte exact, parseur strict) |
+| `core/zoom/` | Zoom des pages : niveaux (`PageZoom` : 100 % = 960 px, 75 %, 67 %, 50 % = 1920 px), zoom propre à un site (`PageZoomContract` : DataStore local, hôte exact `SiteHost`) et niveau effectif d'une page (`effectiveZoom` : zoom du site, sinon niveau par défaut de `Settings.pageZoom`). La mise en page zoomée de la WebView (`PageZoomLayout`) est dans `core/webview/`. |
 | `core/common/` | `Resource<T>`, dispatchers, utilitaires |
 | `core/database/` | Base Room de l'app |
 | `core/network/` | Client OkHttp (listes de filtres uniquement), HTTPS seulement |
