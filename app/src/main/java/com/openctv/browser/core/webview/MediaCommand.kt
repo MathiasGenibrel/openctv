@@ -4,9 +4,10 @@ package com.openctv.browser.core.webview
  * Commandes de la vidéo de la page (plein écran ou non), envoyées par [PointerAwareWebView.runMediaCommand]. Les sites vidéo mobiles
  * (YouTube) n'ont aucun raccourci clavier : un script ponctuel est le seul moyen qu'a la télécommande de les piloter.
  *
- * **Seul usage autorisé d'`evaluateJavascript`** (voir `conventions.md`, section WebView) : un ensemble fermé de
- * scripts **constants**, sans aucune donnée de la page ni de l'utilisateur, dont le résultat est ignoré, déclenchés
- * par les touches média de la télécommande, en plein écran comme hors plein écran. Rien n'est exposé à la page (pas d'`addJavascriptInterface`), rien ne reste injecté.
+ * **Premier des deux usages autorisés d'`evaluateJavascript`** (le second : [CosmeticStyleScript] ; voir `conventions.md`,
+ * section WebView) : un ensemble fermé de scripts **constants**, sans aucune donnée de la page ni de l'utilisateur, dont
+ * le résultat est ignoré, déclenchés par les touches média de la télécommande, en plein écran comme hors plein écran.
+ * Rien n'est exposé à la page (pas d'`addJavascriptInterface`), rien ne reste injecté.
  *
  * Cible : la vidéo de l'élément plein écran du document ; sans élément plein écran, la première vidéo de la page.
  * Un élément plein écran sans vidéo accessible (lecteur dans une iframe d'un autre site) ne fait rien, plutôt que

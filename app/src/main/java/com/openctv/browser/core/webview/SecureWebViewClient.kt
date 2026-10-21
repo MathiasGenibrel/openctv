@@ -20,12 +20,18 @@ import com.openctv.browser.core.security.SiteHost
  * - SSL : `cancel()` par défaut ; `proceed()` seulement pour la page principale, avec une exception de
  *   l'utilisateur pour cet hôte et cette empreinte de certificat ([SslErrorPolicy.shouldProceed]) ;
  * - page affichée par un `proceed()` retenu par le moteur : badge maintenu, ou rechargement si l'exception a été retirée.
+ *
+ * Masquage des bandeaux de cookies (seconde exception à l'interdiction d'`evaluateJavascript`, cf. [CosmeticStyleScript]) :
+ * décidé par [CosmeticStyleGate], évalué au premier rendu de la page (`onPageCommitVisible`, sinon `onPageFinished`).
  */
 class SecureWebViewClient(
     private val listener: WebPageListener,
     private val requestInterceptor: RequestInterceptor = RequestInterceptor.PassThrough,
     securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+    cosmetics: CosmeticSelectionSource = CosmeticSelectionSource.None,
 ) : WebViewClient() {
+
+    private val cosmeticStyle = CosmeticStyleGate(cosmetics)
 
     /** Écrite sur le thread principal, lue depuis le thread de `shouldInterceptRequest`. */
     @Volatile
@@ -47,6 +53,7 @@ class SecureWebViewClient(
         val requestUrl = request.url.toString()
         // `loadUrl` ne passe pas par shouldOverrideUrlLoading : c'est ici qu'on voit la page principale demandée.
         guard.onMainFrameRequest(requestUrl, request.isForMainFrame)
+        if (request.isForMainFrame) cosmeticStyle.onMainFrameRequest(requestUrl)
         return requestInterceptor.intercept(requestUrl, currentPageUrl, request.isForMainFrame)
     }
 
@@ -54,24 +61,33 @@ class SecureWebViewClient(
         val check = guard.checkShownPage(url) { CertificateDetails.of(view.certificate).fingerprint }
         if (check is ShownPageCheck.HttpNotAllowed) {
             // Arrivée sans décision (historique, POST…) : la page ne va pas plus loin, l'avertissement la remplace.
+            cosmeticStyle.onMainFrameBlocked(url)
             view.stopLoading()
             warnInsecureHttp(check.warning)
             return
         }
         currentPageUrl = url
+        cosmeticStyle.onPageStarted(url)
         listener.onPageStarted(url)
         onCertificateCheck(view, url, check)
     }
 
     override fun onPageCommitVisible(view: WebView, url: String) {
         listener.onPageCommitVisible(url)
+        applyStyle(view, url)
     }
 
     override fun onPageFinished(view: WebView, url: String) {
         listener.onPageFinished(url)
+        applyStyle(view, url)
         // Le certificat de la page n'est pas forcément connu dès onPageStarted : seconde vérification.
         val check = guard.checkShownPage(url) { CertificateDetails.of(view.certificate).fingerprint }
         onCertificateCheck(view, url, check)
+    }
+
+    private fun applyStyle(view: WebView, url: String) {
+        val script = cosmeticStyle.scriptToApply(url) ?: return
+        view.evaluateJavascript(script, null)
     }
 
     private fun onCertificateCheck(view: WebView, url: String, check: ShownPageCheck) {
@@ -79,6 +95,7 @@ class SecureWebViewClient(
             ShownPageCheck.UnverifiedCertificate -> listener.onUnverifiedCertificateAccepted(url)
             ShownPageCheck.CertificateRevoked -> {
                 // L'exception a été retirée : le moteur oublie son proceed() et la page repasse par onReceivedSslError.
+                cosmeticStyle.onMainFrameBlocked(url)
                 view.stopLoading()
                 view.clearSslPreferences()
                 view.reload()
@@ -97,6 +114,7 @@ class SecureWebViewClient(
 
     override fun onReceivedError(view: WebView, request: WebResourceRequest, error: WebResourceError) {
         if (request.isForMainFrame) {
+            cosmeticStyle.onMainFrameBlocked(request.url.toString())
             listener.onLoadError(WebLoadError(request.url.toString(), loadErrorCauseOf(error.errorCode)))
         }
     }
@@ -113,6 +131,7 @@ class SecureWebViewClient(
             return
         }
         handler.cancel()
+        cosmeticStyle.onMainFrameBlocked(error.url)
         val warning = SecurityWarning.InvalidCertificate(
             url = error.url,
             host = SiteHost.of(error.url),

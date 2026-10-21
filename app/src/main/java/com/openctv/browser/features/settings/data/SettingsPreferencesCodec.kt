@@ -19,6 +19,7 @@ internal object SettingsPreferencesCodec {
     private val CursorSpeedKey = stringPreferencesKey("cursor_speed")
     private val PageZoomKey = stringPreferencesKey("page_zoom")
     private val AdBlockKey = booleanPreferencesKey("ad_block_enabled")
+    private val CookieBannerKey = booleanPreferencesKey("cookie_banner_block_enabled")
     private val LastPageKey = stringPreferencesKey("last_page")
 
     private const val HomeToken = "home"
@@ -34,6 +35,7 @@ internal object SettingsPreferencesCodec {
             cursorSpeed = CursorSpeed.fromId(preferences[CursorSpeedKey]),
             pageZoom = PageZoom.fromId(preferences[PageZoomKey]) ?: defaults.pageZoom,
             isAdBlockEnabled = preferences[AdBlockKey] ?: defaults.isAdBlockEnabled,
+            isCookieBannerBlockEnabled = preferences[CookieBannerKey] ?: defaults.isCookieBannerBlockEnabled,
             lastPage = preferences[LastPageKey],
         )
     }
@@ -45,6 +47,7 @@ internal object SettingsPreferencesCodec {
         into[CursorSpeedKey] = settings.cursorSpeed.id
         into[PageZoomKey] = settings.pageZoom.id
         into[AdBlockKey] = settings.isAdBlockEnabled
+        into[CookieBannerKey] = settings.isCookieBannerBlockEnabled
         val lastPage = settings.lastPage
         if (lastPage == null) into.remove(LastPageKey) else into[LastPageKey] = lastPage
     }

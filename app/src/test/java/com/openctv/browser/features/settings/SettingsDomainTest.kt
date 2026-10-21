@@ -21,6 +21,7 @@ class SettingsDomainTest {
         assertThat(settings.cursorSpeed).isEqualTo(CursorSpeed.Normal)
         assertThat(settings.pageZoom).isEqualTo(PageZoom.Full)
         assertThat(settings.isAdBlockEnabled).isTrue()
+        assertThat(settings.isCookieBannerBlockEnabled).isTrue()
         assertThat(settings.lastPage).isNull()
     }
 
