@@ -5,6 +5,12 @@ interface WebPageListener {
     fun onPageStarted(url: String)
     fun onProgressChanged(progress: Int)
     fun onPageFinished(url: String)
+
+    /**
+     * La page principale [url] est déjà visible (premier rendu, avant la fin du chargement de ses
+     * sous-ressources) : le voile de chargement peut disparaître, la barre de progression continue.
+     */
+    fun onPageCommitVisible(url: String)
     fun onLoadError(error: WebLoadError)
 
     /**

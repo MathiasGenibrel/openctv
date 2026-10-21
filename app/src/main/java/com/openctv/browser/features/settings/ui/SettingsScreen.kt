@@ -408,6 +408,7 @@ private fun SecurityExceptionsPanel(
                         icon = mark.icon,
                         iconTint = mark.color,
                         label = exception.host,
+                        isLabelSingleLine = true,
                         supporting = securityExceptionKind(exception),
                         onClick = {
                             focusIndex = index

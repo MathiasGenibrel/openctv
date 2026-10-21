@@ -47,7 +47,8 @@ enum class BackAction {
  *
  * [isUnrecordedErrorShown] : un écran d'erreur recouvre la page, alors que la page en échec n'a pas été ajoutée à
  * l'historique de la WebView (ex. certificat refusé) : la page courante de la WebView est celle d'avant, que
- * Retour doit simplement ré-afficher. Reculer d'un cran sauterait cette page.
+ * Retour doit simplement ré-afficher, que l'historique ait ou non une page avant elle (c'est souvent la première).
+ * Reculer d'un cran sauterait cette page.
  */
 fun BrowserLayers.backAction(canGoBack: Boolean, isUnrecordedErrorShown: Boolean = false): BackAction = when {
     isFullscreen -> BackAction.ExitFullscreen
@@ -55,7 +56,7 @@ fun BrowserLayers.backAction(canGoBack: Boolean, isUnrecordedErrorShown: Boolean
     isMenuOpen -> BackAction.CloseMenu
     isInterfaceMode -> BackAction.ExitInterface
     isWarningOptionsOpen -> BackAction.CollapseWarningOptions
-    isUnrecordedErrorShown && canGoBack -> BackAction.DismissError
+    isUnrecordedErrorShown -> BackAction.DismissError
     canGoBack -> BackAction.GoBackInHistory
     else -> BackAction.LeaveBrowser
 }

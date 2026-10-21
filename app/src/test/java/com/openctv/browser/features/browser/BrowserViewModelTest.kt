@@ -133,6 +133,28 @@ class BrowserViewModelTest {
     }
 
     @Test
+    fun `Given a first load When the page becomes visible before it finishes Then the loading screen goes away and the progress continues`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+
+        viewModel.onPageCommitVisible(url)
+        viewModel.onProgressChanged(60)
+
+        assertThat(viewModel.pageState.value).isEqualTo(PageState.Loading("arte.tv", 0.6f, isPageShown = true))
+    }
+
+    @Test
+    fun `Given a warning replacing the page When a stale first render arrives Then the warning stays and nothing is revealed`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+        viewModel.onLoadError(WebLoadError(url, LoadErrorCause.Unreachable))
+
+        viewModel.onPageCommitVisible(url)
+
+        assertThat(viewModel.pageState.value).isInstanceOf(PageState.Error::class.java)
+    }
+
+    @Test
     fun `Given nothing displayed yet or an error When a page starts loading Then the full loading screen is shown`() {
         val viewModel = BrowserViewModel(url, bookmarks)
 

@@ -12,11 +12,12 @@ import java.time.Instant
 internal data class CertificateDetails(
     val issuedTo: String?,
     val validUntil: Instant?,
+    val validFrom: Instant?,
     /** SHA-256 du certificat (cf. [CertificateFingerprint]) ; `null` si le certificat n'a pas pu être lu : aucune exception possible. */
     val fingerprint: String?,
 ) {
     companion object {
-        val Unreadable = CertificateDetails(issuedTo = null, validUntil = null, fingerprint = null)
+        val Unreadable = CertificateDetails(issuedTo = null, validUntil = null, validFrom = null, fingerprint = null)
 
         fun of(certificate: SslCertificate?): CertificateDetails {
             certificate ?: return Unreadable
@@ -24,6 +25,7 @@ internal data class CertificateDetails(
             return CertificateDetails(
                 issuedTo = certificate.issuedTo?.cName?.takeIf { it.isNotBlank() },
                 validUntil = x509?.notAfter?.toInstant(),
+                validFrom = x509?.notBefore?.toInstant(),
                 fingerprint = x509?.let { runCatching { CertificateFingerprint.sha256(it.encoded) }.getOrNull() },
             )
         }

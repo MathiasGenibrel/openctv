@@ -194,9 +194,13 @@ class BrowserViewModel(
         autoHide.onUserActivity()
         val isErrorShown = _pageState.value is PageState.Error
         val shownPageUrl = committedUrl
+        val isWarningShown = (_pageState.value as? PageState.Error)?.warning != null
         // La dernière page entrée dans l'historique n'est pas celle en échec (ex. certificat refusé, schéma
-        // interdit) : la WebView l'affiche toujours sous l'écran d'erreur.
-        val isUnrecordedErrorShown = isErrorShown && shownPageUrl != null && shownPageUrl != failedUrl
+        // interdit) : la WebView l'affiche toujours sous l'écran d'erreur. Un avertissement de sécurité la
+        // ré-affiche même si elle est la première de l'historique ; une erreur réseau garde la règle d'avant
+        // (il faut une page à laquelle revenir dans l'historique).
+        val isPreviousPageBehind = isErrorShown && shownPageUrl != null && shownPageUrl != failedUrl
+        val isUnrecordedErrorShown = isPreviousPageBehind && (isWarningShown || canGoBack)
         when (_layers.value.backAction(canGoBack, isUnrecordedErrorShown)) {
             BackAction.DismissError -> shownPageUrl?.let(::showPreviousPage)
             BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
@@ -435,6 +439,18 @@ class BrowserViewModel(
         val state = _pageState.value
         if (state is PageState.Loading) {
             _pageState.value = state.copy(progress = progress.coerceIn(0, 100) / 100f)
+        }
+    }
+
+    /**
+     * Premier rendu visible : le voile de chargement se retire, la progression continue jusqu'à [onPageFinished].
+     * Seul un chargement en cours est concerné : un avertissement ou une erreur (page HTTP / certificat refusés)
+     * n'a rien de visible à révéler, et le voile n'est jamais retiré sous eux.
+     */
+    override fun onPageCommitVisible(url: String) {
+        val state = _pageState.value
+        if (state is PageState.Loading && !state.isPageShown) {
+            _pageState.value = state.copy(isPageShown = true)
         }
     }
 

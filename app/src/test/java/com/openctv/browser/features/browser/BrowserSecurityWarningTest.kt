@@ -295,4 +295,46 @@ class BrowserSecurityWarningTest {
         }
         assertThat((viewModel.pageState.value as PageState.Error).warning).isNotNull()
     }
+
+    @Test
+    fun `Given a first page of the history When an http address is typed and the user presses Back Then the first page is shown again`() = runTest {
+        val viewModel = viewModel("https://example.org/")
+        viewModel.onWebViewReady()
+        viewModel.onUrlChanged("https://example.org/", canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished("https://example.org/")
+        viewModel.onAddressChosen("http://neverssl.com/")
+        assertThat((viewModel.pageState.value as PageState.Error).warning).isNotNull()
+
+        viewModel.onBack(canGoBack = false)
+
+        assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("example.org"))
+        viewModel.commands.test {
+            assertThat(awaitItem()).isEqualTo(BrowserCommand.Load("https://example.org/"))
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `Given a first page of the history When a link leads to an http page and the user chooses Return to safety Then the first page is shown again`() = runTest {
+        val results = "https://duckduckgo.com/?q=neverssl"
+        val viewModel = viewModel(results)
+        viewModel.onUrlChanged(results, canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished(results)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "192.168.1.10")))
+
+        viewModel.returnToSafety(canGoBack = false)
+
+        assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("duckduckgo.com"))
+    }
+
+    @Test
+    fun `Given a network error over the first page When the user presses Back Then the browser still returns home`() = runTest {
+        val viewModel = viewModel("https://example.org/")
+        viewModel.onUrlChanged("https://example.org/", canGoBack = false, canGoForward = false)
+        viewModel.onLoadError(WebLoadError("https://other.example/", LoadErrorCause.Unreachable))
+
+        viewModel.onBack(canGoBack = false)
+
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Close) }
+    }
 }

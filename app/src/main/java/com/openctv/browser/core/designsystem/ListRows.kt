@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.tv.material3.ClickableSurfaceDefaults
@@ -118,6 +119,8 @@ fun ListRow(
     modifier: Modifier = Modifier,
     supporting: String? = null,
     iconTint: Color = Color.Unspecified,
+    /** Libellé sur une seule ligne, terminé par une ellipse (nom d'hôte long) ; sinon il passe à la ligne. */
+    isLabelSingleLine: Boolean = false,
     trailing: @Composable () -> Unit = {},
 ) {
     val style = LocalListGroupStyle.current
@@ -128,6 +131,7 @@ fun ListRow(
         horizontalPadding = style.rowHorizontalPadding,
         leading = { Icon(icon, contentDescription = null, tint = iconTint.takeOrElse { LocalContentColor.current }) },
         label = label,
+        isLabelSingleLine = isLabelSingleLine,
         supporting = supporting,
         supportingStyle = MaterialTheme.typography.bodyMedium,
         trailing = trailing,
@@ -231,6 +235,7 @@ private fun ListRowLayout(
     supporting: String?,
     supportingStyle: TextStyle,
     trailing: @Composable () -> Unit = {},
+    isLabelSingleLine: Boolean = false,
 ) {
     val style = LocalListGroupStyle.current
     val shape = OpenCtvShapes.Medium
@@ -249,7 +254,12 @@ private fun ListRowLayout(
         ) {
             leading()
             Column(modifier = Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = if (isLabelSingleLine) 1 else Int.MAX_VALUE,
+                    overflow = if (isLabelSingleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
+                )
                 if (supporting != null) {
                     Text(supporting, style = supportingStyle, color = style.secondaryContent)
                 }

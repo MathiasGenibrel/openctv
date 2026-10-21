@@ -45,6 +45,7 @@ import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
+import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.CertificateProblem
 import com.openctv.browser.core.webview.SecurityWarning
@@ -90,12 +91,15 @@ internal fun SecurityWarningContent(
     }
 
     val style = warning.style()
-    Box(modifier.fillMaxSize().background(OpenCtvColors.Surface), contentAlignment = Alignment.Center) {
+    // La zone sûre (overscan) borde le défilement : la colonne se centre si elle tient, sinon elle défile à
+    // l'intérieur, sans jamais atteindre les bords de l'écran. Le focus garde l'élément visible (bringIntoView).
+    Box(modifier.fillMaxSize().background(OpenCtvColors.Surface)) {
+      OverscanSafeArea {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         Column(
             modifier = Modifier
                 .widthIn(max = ContentWidth)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 48.dp, vertical = 24.dp),
+                .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Les options dépliées gardent la page dans 540 dp : l'illustration s'efface.
@@ -111,13 +115,16 @@ internal fun SecurityWarningContent(
                 color = OpenCtvColors.OnSurface,
                 textAlign = TextAlign.Center,
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = stringResource(style.bodyRes, warning.host ?: warning.url),
-                style = MaterialTheme.typography.bodyLarge,
-                color = OpenCtvColors.OnSurfaceVariant,
-                textAlign = TextAlign.Center,
-            )
+            // Les options dépliées répètent l'explication et l'hôte : le texte d'introduction cède la place.
+            if (!isOptionsOpen) {
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = stringResource(style.bodyRes, warning.host ?: warning.url),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = OpenCtvColors.OnSurfaceVariant,
+                    textAlign = TextAlign.Center,
+                )
+            }
             if (warning is SecurityWarning.InvalidCertificate) {
                 Spacer(Modifier.height(16.dp))
                 CertificateCard(warning)
@@ -154,6 +161,8 @@ internal fun SecurityWarningContent(
                 )
             }
         }
+        }
+      }
     }
 }
 
@@ -269,6 +278,7 @@ private fun OptionsPanel(
 }
 
 private val ContentWidth = 720.dp
+
 
 /** Couleurs, icône et textes d'un avertissement : HTTP = modéré (`tertiary`), certificat = grave (`error`). */
 private class WarningStyle(

@@ -9,13 +9,33 @@ enum class CertificateProblem { Expired, NameMismatch, Untrusted, NotYetValid, I
 /**
  * Traduit `SslError.getPrimaryError()` (valeurs constantes de l'API Android) : `SSL_NOTYETVALID` 0,
  * `SSL_EXPIRED` 1, `SSL_IDMISMATCH` 2, `SSL_UNTRUSTED` 3, `SSL_DATE_INVALID` 4, `SSL_INVALID` 5.
+ * `SSL_DATE_INVALID` est départagé par les dates du certificat ([validNotBefore], [validNotAfter]) et l'heure [now].
  */
-internal fun certificateProblemOf(primaryError: Int): CertificateProblem = when (primaryError) {
+internal fun certificateProblemOf(
+    primaryError: Int,
+    validNotBefore: Instant? = null,
+    validNotAfter: Instant? = null,
+    now: Instant = Instant.now(),
+): CertificateProblem = when (primaryError) {
+    SSL_DATE_INVALID -> dateProblemOf(validNotBefore, validNotAfter, now)
     0 -> CertificateProblem.NotYetValid
     1 -> CertificateProblem.Expired
     2 -> CertificateProblem.NameMismatch
     3 -> CertificateProblem.Untrusted
     else -> CertificateProblem.Invalid
+}
+
+private const val SSL_DATE_INVALID = 4
+
+/** `SSL_DATE_INVALID` ne dit pas de quel côté : les dates du certificat départagent expiré / pas encore valide. */
+private fun dateProblemOf(validNotBefore: Instant?, validNotAfter: Instant?, now: Instant): CertificateProblem {
+    val isExpired = validNotAfter != null && validNotAfter.isBefore(now)
+    val isNotYetValid = validNotBefore != null && validNotBefore.isAfter(now)
+    return when {
+        isExpired -> CertificateProblem.Expired
+        isNotYetValid -> CertificateProblem.NotYetValid
+        else -> CertificateProblem.Invalid
+    }
 }
 
 /**
