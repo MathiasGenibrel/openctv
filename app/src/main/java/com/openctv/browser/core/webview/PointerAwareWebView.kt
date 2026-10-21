@@ -3,6 +3,8 @@ package com.openctv.browser.core.webview
 import android.content.Context
 import android.view.PointerIcon
 import android.webkit.WebView
+import com.openctv.browser.core.zoom.PageZoom
+import kotlin.math.roundToInt
 
 /** Ce que la page affiche sous le pointeur, d'après l'icône de curseur qu'elle demande (`cursor: pointer`, `text`…). */
 enum class PointerKind { Default, Clickable, Text }
@@ -26,6 +28,13 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     private val textIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_TEXT)
     private val verticalTextIcon: PointerIcon? = PointerIcon.getSystemIcon(context, PointerIcon.TYPE_VERTICAL_TEXT)
 
+    /**
+     * Échelle à laquelle la page est affichée par rapport à sa mise en page (`1` à 100 %, `0,5` à 50 % : la vue est
+     * deux fois plus grande que ce qu'on voit, cf. [pageZoomLayout]). Seul [applyPageZoom] la change, en même temps
+     * que l'échelle de la vue ; [toViewCoordinate] et [scrollByOnScreen] sont les seules conversions écran → vue.
+     */
+    private var pageScale: Float = 1f
+
     /** Dernier type demandé par la page. */
     var pointerKind: PointerKind = PointerKind.Default
         private set
@@ -39,6 +48,35 @@ class PointerAwareWebView(context: Context) : WebView(context) {
      */
     fun runMediaCommand(command: MediaCommand) {
         evaluateJavascript(command.script, null)
+    }
+
+    /**
+     * Réduit la vue au facteur de [zoom] (pivot en haut à gauche), à placer avec le même [zoom] que
+     * [pageZoomLayout]. Les transformations d'une vue sont connues de son parent (rectangle visible, entrées) : la
+     * page n'est rastérisée que là où elle est vue. À 100 %, la vue revient à son état sans zoom (échelle 1, pivot
+     * par défaut). Ne recharge pas la page.
+     */
+    fun applyPageZoom(zoom: PageZoom) {
+        val factor = zoom.factor
+        pageScale = factor
+        if (zoom == PageZoom.Full) {
+            scaleX = 1f
+            scaleY = 1f
+            resetPivot()
+        } else {
+            pivotX = 0f
+            pivotY = 0f
+            scaleX = factor
+            scaleY = factor
+        }
+    }
+
+    /** Coordonnée [onScreen] (pixels de l'écran, depuis le coin haut gauche de la page) dans la vue agrandie par le zoom. */
+    fun toViewCoordinate(onScreen: Float): Float = onScreen / pageScale
+
+    /** Défile de ([dx], [dy]) pixels de l'écran : la vue, agrandie par le zoom de la page, défile d'autant de fois plus. */
+    fun scrollByOnScreen(dx: Int, dy: Int) {
+        scrollBy((dx / pageScale).roundToInt(), (dy / pageScale).roundToInt())
     }
 
     override fun setPointerIcon(pointerIcon: PointerIcon?) {

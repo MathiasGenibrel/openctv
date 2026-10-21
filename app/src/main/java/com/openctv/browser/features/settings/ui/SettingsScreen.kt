@@ -56,6 +56,11 @@ import com.openctv.browser.core.designsystem.ListGroup
 import com.openctv.browser.core.designsystem.OpenCtvButton
 import com.openctv.browser.core.security.CertificateFingerprint
 import com.openctv.browser.core.security.SiteException
+import com.openctv.browser.core.zoom.PageZoom
+import com.openctv.browser.core.zoom.SiteZoom
+import com.openctv.browser.core.zoom.percentAndWidthLabel
+import com.openctv.browser.core.zoom.percentLabel
+import com.openctv.browser.core.zoom.widthLabel
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.tv.material3.Icon
 import com.openctv.browser.core.designsystem.ListNavigationRow
@@ -107,6 +112,8 @@ fun SettingsScreen(
         filterLists = filterLists,
         onRefreshFilterLists = onRefreshFilterLists,
         onRemoveSecurityException = viewModel::removeSecurityException,
+        onSelectPageZoom = viewModel::selectPageZoom,
+        onRemoveSiteZoom = viewModel::removeSiteZoom,
         modifier = modifier,
     )
 }
@@ -127,6 +134,8 @@ private fun SettingsContent(
     filterLists: FilterListsStatus = FilterListsStatus(),
     onRefreshFilterLists: () -> Unit = {},
     onRemoveSecurityException: (SiteException) -> Unit = {},
+    onSelectPageZoom: (PageZoom) -> Unit = {},
+    onRemoveSiteZoom: (String) -> Unit = {},
 ) {
     val rowFocus = remember { SettingsPanel.entries.associateWith { FocusRequester() } }
     val isPanelOpen = state.openPanel != null
@@ -171,6 +180,8 @@ private fun SettingsContent(
                     onSelectHudHideDelay = onSelectHudHideDelay,
                     onSelectCursorSpeed = onSelectCursorSpeed,
                     onRemoveSecurityException = onRemoveSecurityException,
+                    onSelectPageZoom = onSelectPageZoom,
+                    onRemoveSiteZoom = onRemoveSiteZoom,
                     onClosePanel = onClosePanel,
                 )
             }
@@ -255,6 +266,13 @@ private fun SettingsList(
                 onClick = { onOpenPanel(SettingsPanel.CursorSpeed) },
                 modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.CursorSpeed)),
             )
+            ListNavigationRow(
+                icon = OpenCtvIcons.ZoomIn,
+                label = stringResource(R.string.settings_page_zoom),
+                value = settings.pageZoom.percentAndWidthLabel(),
+                onClick = { onOpenPanel(SettingsPanel.PageZoom) },
+                modifier = Modifier.focusRequester(rowFocus.getValue(SettingsPanel.PageZoom)),
+            )
         }
         ListGroup {
             val adBlockValue = if (settings.isAdBlockEnabled) R.string.settings_ad_block_on else R.string.settings_ad_block_off
@@ -319,6 +337,8 @@ private fun PanelContent(
     onSelectHudHideDelay: (HudHideDelay) -> Unit,
     onSelectCursorSpeed: (CursorSpeed) -> Unit,
     onRemoveSecurityException: (SiteException) -> Unit,
+    onSelectPageZoom: (PageZoom) -> Unit,
+    onRemoveSiteZoom: (String) -> Unit,
     onClosePanel: () -> Unit,
 ) {
     val settings = state.settings
@@ -350,6 +370,12 @@ private fun PanelContent(
             exceptions = state.securityExceptions,
             onRemove = onRemoveSecurityException,
             onClose = onClosePanel,
+        )
+        SettingsPanel.PageZoom -> PageZoomPanel(
+            selected = settings.pageZoom,
+            siteZooms = state.siteZooms,
+            onSelect = onSelectPageZoom,
+            onRemoveSite = onRemoveSiteZoom,
         )
         SettingsPanel.CursorSpeed -> PanelOptions(
             title = stringResource(R.string.settings_cursor_speed),
@@ -448,6 +474,104 @@ private fun <T> PanelOptions(
     PanelTitle(title)
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         ListRadioOptions(options, selected, label, supporting, onSelect)
+    }
+}
+
+/**
+ * Zoom des pages : niveau par défaut (radios, focus initial sur le niveau choisi) puis une puce par site qui a
+ * son propre zoom, dont OK retire le zoom. Le focus ne se perd jamais : après un retrait il passe à la puce qui
+ * prend la place de la puce retirée (ou la précédente), sans plus aucune puce au niveau choisi.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PageZoomPanel(
+    selected: PageZoom,
+    siteZooms: List<SiteZoom>,
+    onSelect: (PageZoom) -> Unit,
+    onRemoveSite: (String) -> Unit,
+) {
+    val levelFocus = remember { PageZoom.entries.associateWith { FocusRequester() } }
+    val chipFocus = remember { mutableMapOf<String, FocusRequester>() }
+    var removedIndex by remember { mutableStateOf<Int?>(null) }
+
+    LaunchedEffect(Unit) { levelFocus.getValue(selected).requestFocus() }
+    LaunchedEffect(siteZooms) {
+        val index = removedIndex ?: return@LaunchedEffect
+        removedIndex = null
+        val next = siteZooms.getOrNull(index.coerceAtMost(siteZooms.lastIndex))
+            ?.let { chipFocus.getOrPut(it.host) { FocusRequester() } }
+            ?: levelFocus.getValue(selected)
+        runCatching { next.requestFocus() }
+    }
+
+    val defaultBadge = stringResource(R.string.settings_default_badge)
+    // padding après verticalScroll : l'anneau de focus et l'agrandissement des lignes ne sont jamais rognés.
+    Column(modifier = Modifier.verticalScroll(rememberScrollState()).padding(8.dp)) {
+        PanelTitle(stringResource(R.string.settings_page_zoom))
+        Text(
+            text = stringResource(R.string.settings_page_zoom_default_title),
+            style = MaterialTheme.typography.labelLarge,
+            color = OpenCtvColors.OnSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            PageZoom.entries.forEach { zoom ->
+                ListRadioRow(
+                    label = zoom.percentLabel(),
+                    isSelected = zoom == selected,
+                    onClick = { onSelect(zoom) },
+                    supporting = zoom.widthLabel(),
+                    trailingText = defaultBadge.takeIf { zoom == PageZoom.Default },
+                    modifier = Modifier.focusRequester(levelFocus.getValue(zoom)),
+                )
+            }
+        }
+        SectionLabel(stringResource(R.string.settings_page_zoom_sites))
+        if (siteZooms.isEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_page_zoom_sites_none),
+                style = MaterialTheme.typography.bodyMedium,
+                color = OpenCtvColors.OnSurfaceVariant,
+            )
+        } else {
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                siteZooms.forEachIndexed { index, site ->
+                    SiteZoomChip(
+                        site = site,
+                        onClick = {
+                            removedIndex = index
+                            onRemoveSite(site.host)
+                        },
+                        modifier = Modifier.focusRequester(chipFocus.getOrPut(site.host) { FocusRequester() }),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SiteZoomChip(site: SiteZoom, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        shape = ClickableSurfaceDefaults.shape(shape = CircleShape, focusedShape = CircleShape),
+        border = ClickableSurfaceDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = OpenCtvColors.SurfaceContainerHighest,
+            contentColor = OpenCtvColors.OnSurface,
+            focusedContainerColor = OpenCtvColors.PrimaryContainer,
+            focusedContentColor = OpenCtvColors.OnPrimaryContainer,
+        ),
+    ) {
+        Text(
+            text = stringResource(R.string.settings_page_zoom_site_chip, site.host, site.zoom.percent),
+            style = MaterialTheme.typography.labelLarge,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        )
     }
 }
 
@@ -647,6 +771,22 @@ private fun SettingsPreview() {
     OpenCtvTheme {
         SettingsContent(
             state = SettingsUiState(bookmarks = PreviewBookmarks),
+            onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
+            onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},
+        )
+    }
+}
+
+@Preview(device = Devices.TV_1080p)
+@Composable
+private fun SettingsPageZoomPanelPreview() {
+    OpenCtvTheme {
+        SettingsContent(
+            state = SettingsUiState(
+                settings = Settings(pageZoom = PageZoom.ThreeQuarters),
+                siteZooms = listOf(SiteZoom("gitlab-dashboard.tools.internal", PageZoom.Half), SiteZoom("arte.tv", PageZoom.TwoThirds)),
+                openPanel = SettingsPanel.PageZoom,
+            ),
             onClose = {}, onOpenPanel = {}, onClosePanel = {}, onSelectStartPage = {}, onSelectStartSite = {},
             onSelectSearchEngine = {}, onSelectHudHideDelay = {}, onSelectCursorSpeed = {}, onAdBlockChange = {},
         )

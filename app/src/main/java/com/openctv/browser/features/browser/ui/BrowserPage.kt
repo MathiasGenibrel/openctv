@@ -44,6 +44,9 @@ import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.LoadErrorCause
+import com.openctv.browser.core.webview.PointerAwareWebView
+import com.openctv.browser.core.webview.pageZoomLayout
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.browser.domain.PageState
 
 /*
@@ -53,12 +56,16 @@ import com.openctv.browser.features.browser.domain.PageState
  */
 
 @Composable
-internal fun PageView(webView: WebView, isVisible: Boolean) {
+internal fun PageView(webView: PointerAwareWebView, zoom: PageZoom, isVisible: Boolean) {
     AndroidView(
         factory = { webView },
-        modifier = Modifier.fillMaxSize(),
-        // Invisible = non focalisable : l'écran d'erreur garde le focus.
-        update = { it.visibility = if (isVisible) View.VISIBLE else View.INVISIBLE },
+        modifier = Modifier.fillMaxSize().pageZoomLayout(zoom),
+        update = {
+            // Invisible = non focalisable : l'écran d'erreur garde le focus.
+            it.visibility = if (isVisible) View.VISIBLE else View.INVISIBLE
+            // Une seule WebView : le zoom la remet en page, sans recharger la page (historique et état conservés).
+            webView.applyPageZoom(zoom)
+        },
     )
 }
 

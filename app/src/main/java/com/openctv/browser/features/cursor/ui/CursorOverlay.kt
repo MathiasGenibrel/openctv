@@ -125,7 +125,8 @@ private fun stepFrame(
     val canScrollUp = webView.canScrollVertically(-1)
     val moved = controller.step(now, canScrollUp)
     val hasScrolled = controller.scrollDx != 0 || controller.scrollDy != 0
-    if (hasScrolled) webView.scrollBy(controller.scrollDx, controller.scrollDy)
+    // Défilement en pixels de l'écran, ramené par la vue au zoom de la page.
+    if (hasScrolled) webView.scrollByOnScreen(controller.scrollDx, controller.scrollDy)
     // La page a bougé sous le pointeur, ou le pointeur sous la page : dans les deux cas elle doit le savoir.
     if (moved || hasScrolled) session.injectHover()
     visuals.update(controller, session.hoverTarget, dt, now)

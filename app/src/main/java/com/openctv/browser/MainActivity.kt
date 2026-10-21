@@ -21,6 +21,8 @@ import com.openctv.browser.core.navigation.ScopedViewModels
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.webview.LockedWebViewFactory
+import com.openctv.browser.core.zoom.PageZoom
+import com.openctv.browser.core.zoom.PageZoomContract
 import com.openctv.browser.features.adblock.domain.AdBlockContract
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
 import com.openctv.browser.features.browser.ui.BrowserMenu
@@ -37,10 +39,16 @@ import com.openctv.browser.features.search.domain.SearchRequest
 import com.openctv.browser.features.search.ui.SearchScreen
 import com.openctv.browser.features.search.ui.SearchViewModel
 import com.openctv.browser.features.settings.domain.SettingsContract
+import com.openctv.browser.features.settings.domain.orDefaults
 import com.openctv.browser.features.settings.ui.FilterListsStatus
 import com.openctv.browser.features.settings.ui.SettingsScreen
 import com.openctv.browser.features.settings.ui.SettingsViewModel
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.koin.android.ext.android.inject
 
@@ -55,6 +63,13 @@ class MainActivity : ComponentActivity() {
     private val webViewFactory: LockedWebViewFactory by inject()
     private val recentSearches: RecentSearchesContract by inject()
     private val securityExceptions: SecurityExceptionsContract by inject()
+    private val pageZoom: PageZoomContract by inject()
+
+    /** Zoom des Réglages pour les sites sans zoom propre : suit les Réglages, lisible tout de suite. */
+    private val defaultPageZoom: StateFlow<PageZoom> by lazy {
+        settings.settings.map { it.orDefaults().pageZoom }.distinctUntilChanged()
+            .stateIn(lifecycleScope, SharingStarted.Eagerly, settings.current.pageZoom)
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Fenêtre de démarrage OpenCTV (thème Theme.OpenCTV.Starting) ; avant super.onCreate, elle bascule sur le thème normal.
@@ -76,6 +91,8 @@ class MainActivity : ComponentActivity() {
                         // Exceptions mémorisées lues avant la page de démarrage (une page HTTP autorisée s'ouvre sans
                         // avertissement) ; lecture lancée dès l'Application, en parallèle de celle des préférences.
                         securityExceptions.persisted.first { it !is Resource.Loading }
+                        // Idem pour les zooms par site : la page s'ouvre directement à son niveau, sans se remettre en page.
+                        pageZoom.sites.first { it !is Resource.Loading }
                         destination = launchUrl?.let(Destination::Browser) ?: Destination.Home
                     }
                 }
@@ -105,7 +122,7 @@ class MainActivity : ComponentActivity() {
                             },
                         )
                         Destination.Settings -> SettingsScreen(
-                            viewModel = viewModel { SettingsViewModel(settings, bookmarks, securityExceptions) },
+                            viewModel = viewModel { SettingsViewModel(settings, bookmarks, securityExceptions, pageZoom) },
                             filterLists = filterListsStatus,
                             // lifecycleScope : la mise à jour continue si l'utilisateur quitte les Réglages.
                             onRefreshFilterLists = { lifecycleScope.launch { adBlock.refreshNow() } },
@@ -119,6 +136,8 @@ class MainActivity : ComponentActivity() {
                                     onPageVisited = settings::recordLastPage,
                                     hudHideDelay = { settings.current.hudHideDelay.delay },
                                     securityExceptions = securityExceptions,
+                                    siteZooms = pageZoom,
+                                    defaultZoom = defaultPageZoom,
                                 )
                             }
                             // Curseur virtuel : la racine relie les features (le navigateur n'importe pas le curseur).
@@ -145,11 +164,12 @@ class MainActivity : ComponentActivity() {
                                             adBlock = adBlock,
                                             bookmarks = bookmarks,
                                             onWriteFailed = browser::onMenuWriteFailed,
+                                            pageZoom = browser.pageZoom,
+                                            onZoomChosen = browser::selectPageZoom,
                                         )
                                     }
                                     BrowserMenu(
                                         viewModel = menu,
-                                        onReload = browser::reloadFromMenu,
                                         onHome = browser::goHome,
                                         onClose = browser::closeMenu,
                                     )

@@ -4,6 +4,7 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.SearchEngine
@@ -16,6 +17,7 @@ internal object SettingsPreferencesCodec {
     private val StartPageKey = stringPreferencesKey("start_page")
     private val HudHideDelayKey = stringPreferencesKey("hud_hide_delay")
     private val CursorSpeedKey = stringPreferencesKey("cursor_speed")
+    private val PageZoomKey = stringPreferencesKey("page_zoom")
     private val AdBlockKey = booleanPreferencesKey("ad_block_enabled")
     private val LastPageKey = stringPreferencesKey("last_page")
 
@@ -30,6 +32,7 @@ internal object SettingsPreferencesCodec {
             startPage = decodeStartPage(preferences[StartPageKey]),
             hudHideDelay = HudHideDelay.fromId(preferences[HudHideDelayKey]),
             cursorSpeed = CursorSpeed.fromId(preferences[CursorSpeedKey]),
+            pageZoom = PageZoom.fromId(preferences[PageZoomKey]) ?: defaults.pageZoom,
             isAdBlockEnabled = preferences[AdBlockKey] ?: defaults.isAdBlockEnabled,
             lastPage = preferences[LastPageKey],
         )
@@ -40,6 +43,7 @@ internal object SettingsPreferencesCodec {
         into[StartPageKey] = encodeStartPage(settings.startPage)
         into[HudHideDelayKey] = settings.hudHideDelay.id
         into[CursorSpeedKey] = settings.cursorSpeed.id
+        into[PageZoomKey] = settings.pageZoom.id
         into[AdBlockKey] = settings.isAdBlockEnabled
         val lastPage = settings.lastPage
         if (lastPage == null) into.remove(LastPageKey) else into[LastPageKey] = lastPage

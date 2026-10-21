@@ -178,7 +178,10 @@ fun ListNavigationRow(
     )
 }
 
-/** Option exclusive d'un sous-panneau (radio) ; [supporting] précise « Par défaut », « Sans pistage »… */
+/**
+ * Option exclusive d'un sous-panneau (radio) ; [supporting] précise « Par défaut », « Sans pistage »…
+ * [trailingText] est un texte de fin de ligne (« Par défaut » d'un niveau de zoom).
+ */
 @Composable
 fun ListRadioRow(
     label: String,
@@ -186,6 +189,7 @@ fun ListRadioRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     supporting: String? = null,
+    trailingText: String? = null,
 ) {
     val style = LocalListGroupStyle.current
     ListRowLayout(
@@ -197,6 +201,9 @@ fun ListRadioRow(
         label = label,
         supporting = supporting,
         supportingStyle = style.radioSupportingStyle(),
+        trailing = {
+            if (trailingText != null) Text(trailingText, style = MaterialTheme.typography.labelLarge, color = style.secondaryContent)
+        },
     )
 }
 
@@ -208,6 +215,7 @@ fun <T> ListRadioOptions(
     label: @Composable (T) -> String,
     supporting: @Composable (T) -> String?,
     onSelect: (T) -> Unit,
+    trailingText: @Composable (T) -> String? = { null },
 ) {
     val selectedFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) { selectedFocus.requestFocus() }
@@ -219,6 +227,7 @@ fun <T> ListRadioOptions(
             isSelected = isSelected,
             onClick = { onSelect(option) },
             supporting = supporting(option),
+            trailingText = trailingText(option),
             modifier = if (isSelected) Modifier.focusRequester(selectedFocus) else Modifier,
         )
     }

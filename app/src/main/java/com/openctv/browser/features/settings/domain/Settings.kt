@@ -1,6 +1,7 @@
 package com.openctv.browser.features.settings.domain
 
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.zoom.PageZoom
 
 /** Préférences de l'utilisateur, stockées uniquement sur la TV. Les valeurs par défaut sont celles du premier lancement. */
 data class Settings(
@@ -8,6 +9,8 @@ data class Settings(
     val startPage: StartPage = StartPage.Default,
     val hudHideDelay: HudHideDelay = HudHideDelay.Default,
     val cursorSpeed: CursorSpeed = CursorSpeed.Default,
+    /** Zoom des sites qui n'ont pas leur propre niveau (`PageZoomContract`). */
+    val pageZoom: PageZoom = PageZoom.Default,
     /** Interrupteur global du bloqueur de pubs. */
     val isAdBlockEnabled: Boolean = true,
     /** Dernière page visitée (http/https), `null` si aucune. */

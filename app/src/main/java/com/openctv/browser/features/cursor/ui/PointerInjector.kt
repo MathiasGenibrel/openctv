@@ -3,12 +3,13 @@ package com.openctv.browser.features.cursor.ui
 import android.os.SystemClock
 import android.view.InputDevice
 import android.view.MotionEvent
-import android.webkit.WebView
+import com.openctv.browser.core.webview.PointerAwareWebView
 import com.openctv.browser.features.cursor.domain.PointerAction
 import com.openctv.browser.features.cursor.domain.PointerEvent
 
 /**
- * Injecte le clic et le survol du curseur dans la [WebView].
+ * Injecte le clic et le survol du curseur dans la [PointerAwareWebView]. Les coordonnées reçues sont celles de
+ * l'écran (zone de la page) : la vue les ramène aux siennes quand la page est zoomée ([PointerAwareWebView.toViewCoordinate]).
  *
  * - **Clic** (`Down` / `Up`) : événements **tactiles** (`SOURCE_TOUCHSCREEN`, doigt). Chromium en tire un vrai
  *   tap : lien, bouton, focus d'un champ texte **et ouverture du clavier TV** (un clic « souris » ne rouvre pas
@@ -19,7 +20,7 @@ import com.openctv.browser.features.cursor.domain.PointerEvent
  * Aucun JavaScript injecté, aucune interface exposée à la page. Les objets de propriétés sont réutilisés et
  * le `MotionEvent` vient du pool d'Android (recyclé aussitôt) : rien n'est alloué par frame de survol.
  */
-internal class PointerInjector(private val webView: WebView) {
+internal class PointerInjector(private val webView: PointerAwareWebView) {
     private val properties = arrayOf(MotionEvent.PointerProperties())
     private val coords = arrayOf(MotionEvent.PointerCoords())
     private var downTime = 0L
@@ -36,7 +37,7 @@ internal class PointerInjector(private val webView: WebView) {
         motion.recycle()
     }
 
-    /** Survol souris en (x, y), coordonnées de la WebView. */
+    /** Survol souris en (x, y), coordonnées de la zone de la page à l'écran. */
     fun hover(x: Float, y: Float) {
         val now = SystemClock.uptimeMillis()
         val motion = obtain(now, now, MotionEvent.ACTION_HOVER_MOVE, x, y, MotionEvent.TOOL_TYPE_MOUSE, InputDevice.SOURCE_MOUSE)
@@ -49,8 +50,9 @@ internal class PointerInjector(private val webView: WebView) {
         properties[0].id = 0
         properties[0].toolType = toolType
         coords[0].clear()
-        coords[0].x = x
-        coords[0].y = y
+        // Écran → vue : seule la WebView connaît le zoom de la page.
+        coords[0].x = webView.toViewCoordinate(x)
+        coords[0].y = webView.toViewCoordinate(y)
         coords[0].pressure = 1f
         coords[0].size = 1f
         return MotionEvent.obtain(

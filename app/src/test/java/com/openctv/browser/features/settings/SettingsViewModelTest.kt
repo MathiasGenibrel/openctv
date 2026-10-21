@@ -6,6 +6,10 @@ import com.openctv.browser.core.common.TestDispatcherProvider
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.security.SiteException
+import com.openctv.browser.core.zoom.PageZoom
+import com.openctv.browser.core.zoom.PageZoomContract
+import com.openctv.browser.core.zoom.SiteZoom
+import com.openctv.browser.features.browser.FakePageZoom
 import com.openctv.browser.features.browser.FakeSecurityExceptions
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.bookmarks.domain.BookmarksContract
@@ -51,13 +55,14 @@ class SettingsViewModelTest {
     private fun TestScope.viewModel(
         store: FakeSettingsStore = FakeSettingsStore(),
         securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+        siteZooms: PageZoomContract = FakePageZoom(),
     ): SettingsViewModel {
         val settings = SettingsImpl(
             store = store,
             dispatchers = TestDispatcherProvider(StandardTestDispatcher(testScheduler)),
             scope = backgroundScope,
         )
-        return SettingsViewModel(settings, bookmarksContract, securityExceptions)
+        return SettingsViewModel(settings, bookmarksContract, securityExceptions, siteZooms)
     }
 
     /** `uiState` n'est actif qu'abonné (WhileSubscribed) : on s'abonne pour la durée du test. */
@@ -154,5 +159,50 @@ class SettingsViewModelTest {
 
         assertThat(viewModel.uiState.value.securityExceptions).containsExactly(certificate)
         assertThat(exceptions.isAllowed(http)).isFalse()
+    }
+
+    @Test
+    fun `Given the zoom panel When the user picks 75 percent Then it becomes the default level for sites without their own`() = runTest {
+        val store = FakeSettingsStore()
+        val viewModel = viewModel(store)
+        collected(viewModel)
+        runCurrent()
+
+        viewModel.open(SettingsPanel.PageZoom)
+        viewModel.selectPageZoom(PageZoom.ThreeQuarters)
+        runCurrent()
+
+        assertThat(store.current.value.pageZoom).isEqualTo(PageZoom.ThreeQuarters)
+        assertThat(viewModel.uiState.value.settings.pageZoom).isEqualTo(PageZoom.ThreeQuarters)
+        assertThat(viewModel.uiState.value.openPanel).isEqualTo(SettingsPanel.PageZoom)
+    }
+
+    @Test
+    fun `Given sites with their own zoom When the user removes one in Settings Then it goes back to the default and the others stay`() = runTest {
+        val zooms = FakePageZoom(SiteZoom("arte.tv", PageZoom.TwoThirds), SiteZoom("gitlab-dashboard.tools.internal", PageZoom.Half))
+        val viewModel = viewModel(siteZooms = zooms)
+        collected(viewModel)
+        runCurrent()
+        assertThat(viewModel.uiState.value.siteZooms.map { it.host })
+            .containsExactly("arte.tv", "gitlab-dashboard.tools.internal").inOrder()
+
+        viewModel.removeSiteZoom("gitlab-dashboard.tools.internal")
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.siteZooms).containsExactly(SiteZoom("arte.tv", PageZoom.TwoThirds))
+    }
+
+    @Test
+    fun `Given the storage fails When the user removes a site zoom Then the screen flags the failed save and the chip stays`() = runTest {
+        val zooms = FakePageZoom(SiteZoom("arte.tv", PageZoom.TwoThirds)).apply { failure = "disk" }
+        val viewModel = viewModel(siteZooms = zooms)
+        collected(viewModel)
+        runCurrent()
+
+        viewModel.removeSiteZoom("arte.tv")
+        runCurrent()
+
+        assertThat(viewModel.uiState.value.isSaveFailed).isTrue()
+        assertThat(viewModel.uiState.value.siteZooms).hasSize(1)
     }
 }

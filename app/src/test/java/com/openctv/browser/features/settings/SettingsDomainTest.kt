@@ -1,6 +1,7 @@
 package com.openctv.browser.features.settings
 
 import com.google.common.truth.Truth.assertThat
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.SearchEngine
@@ -18,6 +19,7 @@ class SettingsDomainTest {
         assertThat(settings.startPage).isEqualTo(StartPage.Home)
         assertThat(settings.hudHideDelay).isEqualTo(HudHideDelay.Seconds5)
         assertThat(settings.cursorSpeed).isEqualTo(CursorSpeed.Normal)
+        assertThat(settings.pageZoom).isEqualTo(PageZoom.Full)
         assertThat(settings.isAdBlockEnabled).isTrue()
         assertThat(settings.lastPage).isNull()
     }

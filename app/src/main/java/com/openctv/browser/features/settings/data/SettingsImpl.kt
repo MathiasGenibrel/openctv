@@ -3,6 +3,7 @@ package com.openctv.browser.features.settings.data
 import com.openctv.browser.core.common.DispatcherProvider
 import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.webview.WebNavigationPolicy
+import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.features.settings.domain.CursorSpeed
 import com.openctv.browser.features.settings.domain.HudHideDelay
 import com.openctv.browser.features.settings.domain.SearchEngine
@@ -47,6 +48,8 @@ class SettingsImpl(
     override suspend fun setHudHideDelay(delay: HudHideDelay) = write { it.copy(hudHideDelay = delay) }
 
     override suspend fun setCursorSpeed(speed: CursorSpeed) = write { it.copy(cursorSpeed = speed) }
+
+    override suspend fun setPageZoom(zoom: PageZoom) = write { it.copy(pageZoom = zoom) }
 
     override suspend fun setAdBlockEnabled(isEnabled: Boolean) = write { it.copy(isAdBlockEnabled = isEnabled) }
 

@@ -119,11 +119,29 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
   `gpp_bad` `error` (certificat), icône de fin `delete` ; Retour : panneau → Réglages.
 - **Navigation / Plein écran** `6-6283` : page seule (HUD masqué) — note `6-6294`.
 - **Menu navigateur** `6-3518` : panneau latéral droit, scrim, groupes **Vibrant** (`tertiaryContainer`,
-  Large 16) : [Bloqueur de pubs (switch, « 12 requêtes bloquées sur ce site »), Ajouter aux favoris]
-  [Actualiser la page, Accueil] [Moteur de recherche → valeur, Vitesse du curseur → valeur] ;
-  « Retour pour fermer le menu ».
+  Large 16) : [Bloqueur de pubs (switch, « 12 requêtes bloquées sur ce site »), Ajouter aux favoris,
+  Zoom de la page → valeur « 100 % » (icône `zoom_in`)] [Accueil] [Moteur de recherche → valeur, Vitesse du
+  curseur → valeur] ; « Retour pour fermer le menu ». « Actualiser la page » n'y est plus (déjà dans la
+  barre) : le menu tient ainsi en 540 dp.
 - **Menu / Moteur de recherche** `6-5331` : radios DuckDuckGo (Par défaut), Google, Bing, Qwant (Sans
   pistage), Ecosia, Brave Search (Sans pistage).
+- **Zoom des pages** `93:1436` (menu `93:1437`, sous-menu `93:1650`, Réglages `93:1769`, rendus `93:2058` /
+  `93:2162`, confirmation, note `93:2372`). Niveaux : **100 % · 960 px (défaut)**, 75 % · 1280 px, 67 % ·
+  1440 px, 50 % · 1920 px « comme un écran de PC » : largeur vue par la page (`window.innerWidth`) = 960 / zoom
+  (la TV affiche en 1080p avec un pixel ratio de 2). Choisi **site par site** (hôte exact), mémorisé sur la TV.
+  - **Menu / Zoom de la page** : sous-menu (même panneau que « Moteur de recherche »), titre « Zoom de la page »,
+    sous-titre « Mémorisé pour <hôte> », radios (libellé + largeur, « Par défaut » en texte de fin sur le niveau
+    des Réglages), note « Le niveau « Par défaut » suit Réglages › Zoom des pages. Un autre niveau est mémorisé
+    pour ce site uniquement. », aide « OK pour choisir · Retour pour revenir au menu ». Choisir un niveau
+    l'applique tout de suite (sans recharger), ferme le menu et affiche le snackbar « Zoom 50 % mémorisé pour
+    <hôte> » ; choisir le niveau par défaut retire le zoom du site (« Zoom 100 % (par défaut) pour <hôte> »).
+  - **Réglages / Zoom des pages** : ligne dans le 2e groupe après « Vitesse du curseur » (icône `zoom_in`,
+    valeur « 100 % · 960 px »), panneau latéral 380 dp (comme « Page de démarrage ») : « Taille des sites web par
+    défaut », les 4 radios, puis « Sites avec leur propre zoom · OK pour le retirer » et une puce
+    (`hôte · niveau`) par site ; OK sur une puce retire le zoom du site (le focus passe à la puce suivante, au
+    niveau choisi s'il n'en reste plus).
+  - Seule la page change de taille : barre, menus, curseur et clavier gardent la leur ; le curseur garde sa
+    position à l'écran.
 - **Recherche / Saisie** `6-3725` : barre (retour, texte saisi, effacer) bord `primary`, liste de
   suggestions `surfaceContainer` (favori = étoile « Favori · ouvrir », recherche récente = horloge), clavier
   système en bas.
