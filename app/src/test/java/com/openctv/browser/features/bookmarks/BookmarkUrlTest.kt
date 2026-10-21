@@ -32,4 +32,22 @@ class BookmarkUrlTest {
     fun `Given a string that is not a valid url When normalized Then it is only trimmed`() {
         assertThat(BookmarkUrl.normalize("  not a url ")).isEqualTo("not a url")
     }
+
+    @Test
+    fun `Given a site and its www or http redirect When compared Then they share one key`() {
+        val keys = listOf("https://wikipedia.org", "https://www.wikipedia.org/", "http://WWW.Wikipedia.org#x")
+            .map(BookmarkUrl::key).toSet()
+
+        assertThat(keys).containsExactly("wikipedia.org")
+    }
+
+    @Test
+    fun `Given two pages of one site When compared Then their keys stay distinct`() {
+        assertThat(BookmarkUrl.key("https://www.arte.tv/fr")).isNotEqualTo(BookmarkUrl.key("https://arte.tv/de"))
+    }
+
+    @Test
+    fun `Given a url with port and credentials When naming the site Then only the host is kept`() {
+        assertThat(BookmarkUrl.siteName("https://user@www.arte.tv:8443/fr?x=1")).isEqualTo("arte.tv")
+    }
 }

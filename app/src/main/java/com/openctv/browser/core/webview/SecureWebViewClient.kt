@@ -19,13 +19,22 @@ class SecureWebViewClient(
     @Volatile
     private var currentPageUrl: String? = null
 
+    private val mainFrame = MainFrameTracker()
+
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-        val isAllowed = WebNavigationPolicy.isUrlAllowed(request.url.toString())
+        val requestUrl = request.url.toString()
+        val isAllowed = WebNavigationPolicy.isUrlAllowed(requestUrl)
+        // Seule une navigation réellement suivie (lien, redirection) devient le cadre principal attendu.
+        if (isAllowed) mainFrame.onRequest(requestUrl, request.isForMainFrame)
         return !isAllowed
     }
 
-    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? =
-        requestInterceptor.intercept(request.url.toString(), currentPageUrl, request.isForMainFrame)
+    override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
+        val requestUrl = request.url.toString()
+        // `loadUrl` ne passe pas par shouldOverrideUrlLoading : c'est ici qu'on voit la page principale demandée.
+        mainFrame.onRequest(requestUrl, request.isForMainFrame)
+        return requestInterceptor.intercept(requestUrl, currentPageUrl, request.isForMainFrame)
+    }
 
     override fun onPageStarted(view: WebView, url: String, favicon: Bitmap?) {
         currentPageUrl = url
@@ -48,7 +57,7 @@ class SecureWebViewClient(
 
     override fun onReceivedSslError(view: WebView, handler: SslErrorHandler, error: SslError) {
         handler.cancel()
-        if (SslErrorPolicy.isMainFrameError(error.url, currentPageUrl)) {
+        if (mainFrame.isMainFrameError(error.url)) {
             listener.onLoadError(WebLoadError(error.url, LoadErrorCause.InvalidCertificate))
         }
     }

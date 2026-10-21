@@ -11,8 +11,8 @@ interface BookmarkDao {
     @Query("SELECT * FROM bookmarks ORDER BY addedAt ASC, url ASC")
     fun observeAll(): Flow<List<BookmarkEntity>>
 
-    @Query("SELECT EXISTS(SELECT 1 FROM bookmarks WHERE url = :url)")
-    fun observeExists(url: String): Flow<Boolean>
+    @Query("SELECT * FROM bookmarks ORDER BY addedAt ASC, url ASC")
+    suspend fun getAll(): List<BookmarkEntity>
 
     /** Ignore l'insertion si l'URL existe déjà : la date d'ajout d'origine est conservée. */
     @Insert(onConflict = OnConflictStrategy.IGNORE)

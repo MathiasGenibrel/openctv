@@ -11,32 +11,32 @@ import kotlinx.coroutines.flow.map
 
 /** Favoris en mémoire, réactifs comme le vrai repository. */
 class FakeBookmarks : BookmarksContract {
-    private val stored = MutableStateFlow<Map<String, String>>(emptyMap())
+    private val stored = MutableStateFlow<Map<String, Pair<String, String>>>(emptyMap())
 
-    val urls: Set<String> get() = stored.value.keys
+    val urls: Set<String> get() = stored.value.values.map { it.first }.toSet()
 
     /** Non nul : ajouts et retraits échouent avec ce message, comme un stockage indisponible. */
     var failure: String? = null
 
     fun seed(url: String) {
-        stored.value += BookmarkUrl.normalize(url) to url
+        stored.value += BookmarkUrl.key(url) to (BookmarkUrl.normalize(url) to url)
     }
 
     override fun getBookmarks(): Flow<Resource<List<Bookmark>>> =
-        stored.map { map -> Resource.Success(map.map { (url, title) -> Bookmark(url, title, Instant.EPOCH) }) }
+        stored.map { map -> Resource.Success(map.values.map { (url, title) -> Bookmark(url, title, Instant.EPOCH) }) }
 
     override fun isBookmarked(url: String): Flow<Resource<Boolean>> =
-        stored.map { Resource.Success(BookmarkUrl.normalize(url) in it) }
+        stored.map { Resource.Success(BookmarkUrl.key(url) in it) }
 
     override suspend fun add(url: String, title: String): Resource<Unit> {
         failure?.let { return Resource.Error(it) }
-        stored.value += BookmarkUrl.normalize(url) to title
+        stored.value += BookmarkUrl.key(url) to (BookmarkUrl.normalize(url) to title)
         return Resource.Success(Unit)
     }
 
     override suspend fun remove(url: String): Resource<Unit> {
         failure?.let { return Resource.Error(it) }
-        stored.value -= BookmarkUrl.normalize(url)
+        stored.value -= BookmarkUrl.key(url)
         return Resource.Success(Unit)
     }
 }

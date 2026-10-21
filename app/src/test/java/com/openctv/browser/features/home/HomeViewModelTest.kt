@@ -15,6 +15,8 @@ import com.openctv.browser.features.search.domain.SearchRequest
 import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
 import com.openctv.browser.features.settings.domain.SettingsContract
+import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.time.Clock
@@ -65,6 +67,75 @@ class HomeViewModelTest {
             assertThat(favorites[0].name).isEqualTo("Arte")
             assertThat(favorites[0].domain).isEqualTo("arte.tv")
             assertThat(favorites[0].monogram).isEqualTo("A")
+        }
+    }
+
+    private val wiki = Bookmark("https://wikipedia.org", "Wikipedia", Instant.EPOCH)
+    private val twitch = Bookmark("https://twitch.tv", "Twitch", Instant.EPOCH)
+
+    @Test
+    fun `Given a favorite tile When the user holds OK Then its menu opens and Back closes it keeping the focus on the tile`() =
+        runTest {
+            every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte, wiki)))
+            val viewModel = viewModel()
+            viewModel.favorites.test {
+                val favorites = (expectMostRecentItem() as Resource.Success).data
+
+                viewModel.onFavoriteMenuRequested(favorites[1])
+                assertThat(viewModel.favoriteMenu.value).isEqualTo(favorites[1])
+
+                viewModel.onFavoriteMenuClosed()
+                assertThat(viewModel.favoriteMenu.value).isNull()
+                assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Favorite("https://wikipedia.org"))
+            }
+        }
+
+    @Test
+    fun `Given a favorite menu When the user chooses Remove Then the bookmark is removed and focus moves to the next tile`() =
+        runTest {
+            every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte, wiki, twitch)))
+            coEvery { bookmarks.remove(any()) } returns Resource.Success(Unit)
+            val viewModel = viewModel()
+            viewModel.favorites.test {
+                val favorites = (expectMostRecentItem() as Resource.Success).data
+                viewModel.onFavoriteMenuRequested(favorites[1])
+
+                viewModel.onRemoveFromMenu()
+
+                coVerify { bookmarks.remove("https://wikipedia.org") }
+                assertThat(viewModel.favoriteMenu.value).isNull()
+                assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Favorite("https://twitch.tv"))
+            }
+        }
+
+    @Test
+    fun `Given the last favorite in the grid When it is removed Then focus moves to the previous tile`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte, wiki)))
+        coEvery { bookmarks.remove(any()) } returns Resource.Success(Unit)
+        val viewModel = viewModel()
+        viewModel.favorites.test {
+            val favorites = (expectMostRecentItem() as Resource.Success).data
+            viewModel.onFavoriteMenuRequested(favorites[1])
+
+            viewModel.onRemoveFromMenu()
+
+            assertThat(viewModel.focusToRestore()).isEqualTo(HomeFocus.Favorite("https://www.arte.tv/fr"))
+        }
+    }
+
+    @Test
+    fun `Given a favorite menu When the user chooses Open Then the site opens and the menu closes`() = runTest {
+        every { bookmarks.getBookmarks() } returns flowOf(Resource.Success(listOf(arte)))
+        val viewModel = viewModel()
+        viewModel.favorites.test {
+            val favorite = (expectMostRecentItem() as Resource.Success).data[0]
+            viewModel.onFavoriteMenuRequested(favorite)
+            viewModel.events.test {
+                viewModel.onOpenFromMenu()
+
+                assertThat(awaitItem()).isEqualTo(HomeEvent.Navigate(Destination.Browser("https://www.arte.tv/fr")))
+            }
+            assertThat(viewModel.favoriteMenu.value).isNull()
         }
     }
 

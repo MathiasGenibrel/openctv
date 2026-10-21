@@ -43,6 +43,35 @@ class WebNavigationPolicyTest {
     }
 
     @Test
+    fun `Given a page requested without trailing slash When the SSL error reports it with one Then it still breaks the page`() {
+        assertThat(SslErrorPolicy.isMainFrameError("https://expired.badssl.com/", "https://expired.badssl.com")).isTrue()
+        assertThat(SslErrorPolicy.isMainFrameError("https://Expired.BadSSL.com/a/", "https://expired.badssl.com/a#x")).isTrue()
+        assertThat(SslErrorPolicy.isMainFrameError("https://expired.badssl.com/", "https://other.org/")).isFalse()
+        assertThat(SslErrorPolicy.isMainFrameError("https://expired.badssl.com/", null)).isFalse()
+    }
+
+    @Test
+    fun `Given a main frame request before any page started When its certificate fails Then the error is for the page, not a subresource`() {
+        val tracker = MainFrameTracker()
+
+        tracker.onRequest("https://expired.badssl.com/", isMainFrame = true)
+        tracker.onRequest("https://cdn.example/app.js", isMainFrame = false)
+
+        assertThat(tracker.isMainFrameError("https://expired.badssl.com/")).isTrue()
+        assertThat(tracker.isMainFrameError("https://cdn.example/app.js")).isFalse()
+    }
+
+    @Test
+    fun `Given a redirect of the main frame When the redirect target has a bad certificate Then the error is for the page`() {
+        val tracker = MainFrameTracker()
+
+        tracker.onRequest("http://bad.example/", isMainFrame = true)
+        tracker.onRequest("https://bad.example/login", isMainFrame = true)
+
+        assertThat(tracker.isMainFrameError("https://bad.example/login")).isTrue()
+    }
+
+    @Test
     fun `Given a page asking for camera microphone or location When permissions are requested Then none is granted`() {
         val resources = listOf(
             "android.webkit.resource.VIDEO_CAPTURE",

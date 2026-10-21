@@ -23,19 +23,36 @@ class BookmarksImpl(
 ) : BookmarksContract {
 
     override fun getBookmarks(): Flow<Resource<List<Bookmark>>> =
-        dao.observeAll().asResource { entities -> entities.map { it.toDomain() } }
+        dao.observeAll().asResource { entities -> entities.distinctSites().map { it.toDomain() } }
 
     override fun isBookmarked(url: String): Flow<Resource<Boolean>> =
-        dao.observeExists(BookmarkUrl.normalize(url)).asResource { it }
+        dao.observeAll().asResource { entities -> entities.ofSite(url).isNotEmpty() }
 
     override suspend fun add(url: String, title: String): Resource<Unit> = write {
-        val normalized = BookmarkUrl.normalize(url)
-        dao.insert(BookmarkEntity(normalized, title.ifBlank { normalized }, Instant.now(clock)))
+        val isAlreadyBookmarked = dao.getAll().ofSite(url).isNotEmpty()
+        if (!isAlreadyBookmarked) {
+            val normalized = BookmarkUrl.normalize(url)
+            dao.insert(BookmarkEntity(normalized, title.ifBlank { normalized }, Instant.now(clock)))
+        }
     }
 
     override suspend fun remove(url: String): Resource<Unit> = write {
-        dao.delete(BookmarkUrl.normalize(url))
+        // Toutes les écritures d'un même site (www., http/https) partent ensemble : plus de favori fantôme.
+        val stored = dao.getAll().ofSite(url).map { it.url }
+        (stored + BookmarkUrl.normalize(url)).distinct().forEach { dao.delete(it) }
     }
+
+    /**
+     * Favoris enregistrés qui désignent le même site que [url] ([BookmarkUrl.key]). Lecture de toute la table :
+     * quelques dizaines de favoris, et aucune migration pour indexer la clé.
+     */
+    private fun List<BookmarkEntity>.ofSite(url: String): List<BookmarkEntity> {
+        val key = BookmarkUrl.key(url)
+        return filter { BookmarkUrl.key(it.url) == key }
+    }
+
+    /** Un seul favori par site, le plus ancien : couvre les doublons enregistrés avant la comparaison tolérante. */
+    private fun List<BookmarkEntity>.distinctSites(): List<BookmarkEntity> = distinctBy { BookmarkUrl.key(it.url) }
 
     private suspend fun write(block: suspend () -> Unit): Resource<Unit> =
         withContext(dispatchers.io) {

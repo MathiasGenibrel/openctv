@@ -20,18 +20,20 @@ import androidx.tv.material3.Text
 /**
  * Tuile focalisable (favori, entrée de liste) : fond `surfaceContainer`, `primaryContainer` au focus,
  * anneau de focus extérieur qui suit l'agrandissement de la tuile. Le contenu reçoit la couleur de texte
- * adaptée à l'état. [interactionSource] permet à l'appelant d'observer le focus (animations internes).
+ * adaptée à l'état. [onLongClick] : appui long sur OK. [interactionSource] permet à l'appelant d'observer le focus (animations internes).
  */
 @Composable
 fun FocusableTile(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     interactionSource: MutableInteractionSource? = null,
+    onLongClick: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     val shape = OpenCtvShapes.ExtraLarge
     Surface(
         onClick = onClick,
+        onLongClick = onLongClick,
         modifier = modifier,
         interactionSource = interactionSource,
         shape = ClickableSurfaceDefaults.shape(shape = shape, focusedShape = shape),
