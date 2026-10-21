@@ -107,7 +107,8 @@ fun ListGroup(
 
 /**
  * Ligne focalisable : [icon], [label], [supporting] optionnel (deuxième ligne) et [trailing]
- * (valeur, interrupteur, chevron). [iconTint] colore l'icône de tête (couleur du contenu par défaut). La ligne grandit avec son contenu : rien n'est découpé.
+ * (valeur, interrupteur, chevron). [iconTint] colore l'icône de tête (couleur du contenu par défaut).
+ * La ligne grandit avec son contenu : rien n'est découpé.
  */
 @Composable
 fun ListRow(

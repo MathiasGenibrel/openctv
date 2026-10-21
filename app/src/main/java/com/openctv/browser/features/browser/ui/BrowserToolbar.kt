@@ -33,6 +33,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.InsecurityMark
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIconButton
 import com.openctv.browser.core.designsystem.OpenCtvIcons
@@ -172,9 +173,10 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             val insecurity = state.insecurity
-            if (insecurity != null) {
+            val mark = insecurity?.mark()
+            if (mark != null) {
                 // L'icône d'état remplace le cadenas ; son libellé remplace « OK pour modifier » (à droite).
-                Icon(insecurity.icon(), contentDescription = null, tint = insecurity.color(), modifier = Modifier.size(20.dp))
+                Icon(mark.icon, contentDescription = null, tint = mark.color, modifier = Modifier.size(20.dp))
             } else if (state.isSecure) {
                 Icon(OpenCtvIcons.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
             }
@@ -188,20 +190,21 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
             Text(
                 text = stringResource(insecurity?.labelRes() ?: R.string.browser_toolbar_address_hint),
                 style = MaterialTheme.typography.labelLarge,
-                color = insecurity?.color() ?: OpenCtvColors.OnSurfaceVariant,
+                color = mark?.color ?: OpenCtvColors.OnSurfaceVariant,
             )
         }
     }
 }
 
-/** HTTP affiché par exception : `tertiary` ; certificat accepté : `error` (plus grave). */
-private fun PageInsecurity.color() = if (this == PageInsecurity.Http) OpenCtvColors.Tertiary else OpenCtvColors.Error
+private fun PageInsecurity.mark() = when (this) {
+    PageInsecurity.Http -> InsecurityMark.Http
+    PageInsecurity.UnverifiedCertificate -> InsecurityMark.Certificate
+}
 
-@Composable
-private fun PageInsecurity.icon() = if (this == PageInsecurity.Http) OpenCtvIcons.NoEncryption else OpenCtvIcons.GppBad
-
-private fun PageInsecurity.labelRes() =
-    if (this == PageInsecurity.Http) R.string.security_toolbar_insecure else R.string.security_toolbar_unverified
+private fun PageInsecurity.labelRes() = when (this) {
+    PageInsecurity.Http -> R.string.security_toolbar_insecure
+    PageInsecurity.UnverifiedCertificate -> R.string.security_toolbar_unverified
+}
 
 @Preview(device = Devices.TV_1080p)
 @Composable

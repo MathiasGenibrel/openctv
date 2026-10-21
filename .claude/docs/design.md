@@ -110,6 +110,9 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
 - **Sécurité / Barre** `89-1887` (HTTP autorisé : « Non sécurisé », `tertiary`, icône `no_encryption`) et
   `89-1950` (certificat de confiance : « Certificat non vérifié », `error`, icône `gpp_bad`) **remplace** le
   cadenas (icône seule, à gauche du domaine) et le libellé coloré remplace « OK pour modifier » (à droite), + snackbar d'information à l'ouverture.
+  Code : la paire icône + couleur d'accent (HTTP : `no_encryption` `tertiary` ; certificat : `gpp_bad` `error`) vient
+  d'une source unique, `core/designsystem/InsecurityMark`, partagée par la barre, l'illustration d'avertissement et
+  Réglages › Exceptions de sécurité.
 - **Réglages / Exceptions de sécurité** `89-2013` : ligne « Exceptions de sécurité » (nombre) → panneau latéral
   380 dp listant hôte, type (HTTP / certificat + empreinte abrégée) ; OK retire l'exception (le focus passe à la
   ligne suivante, au bouton Fermer s'il n'en reste plus) ; icône de tête `no_encryption` `tertiary` (HTTP) ou

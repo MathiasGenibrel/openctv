@@ -36,6 +36,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.ExpressiveShape
+import com.openctv.browser.core.designsystem.InsecurityMark
 import com.openctv.browser.core.designsystem.ListGroup
 import com.openctv.browser.core.designsystem.ListRow
 import com.openctv.browser.core.designsystem.OpenCtvButton
@@ -288,7 +289,7 @@ private fun SecurityWarning.style(): WarningStyle = when (this) {
     is SecurityWarning.InsecureHttp -> WarningStyle(
         container = OpenCtvColors.TertiaryContainer,
         onContainer = OpenCtvColors.OnTertiaryContainer,
-        illustrationIcon = { OpenCtvIcons.NoEncryption },
+        illustrationIcon = { InsecurityMark.Http.icon },
         badgeIcon = { OpenCtvIcons.Warning },
         badgeRes = R.string.security_http_badge,
         titleRes = R.string.security_http_title,
@@ -297,7 +298,7 @@ private fun SecurityWarning.style(): WarningStyle = when (this) {
     is SecurityWarning.InvalidCertificate -> WarningStyle(
         container = OpenCtvColors.Error,
         onContainer = OpenCtvColors.OnError,
-        illustrationIcon = { OpenCtvIcons.GppBad },
+        illustrationIcon = { InsecurityMark.Certificate.icon },
         badgeIcon = { OpenCtvIcons.GppBad },
         badgeRes = R.string.security_cert_badge,
         titleRes = R.string.security_cert_title,
