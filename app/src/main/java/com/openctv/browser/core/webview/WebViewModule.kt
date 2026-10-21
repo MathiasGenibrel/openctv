@@ -4,8 +4,8 @@ import org.koin.dsl.module
 
 /**
  * Fabrique unique de la WebView verrouillée. Le [RequestInterceptor] branché sur
- * `shouldInterceptRequest` est fourni par une feature (le bloqueur de pubs).
+ * `shouldInterceptRequest` et la [CosmeticSelectionSource] (règles de masquage) sont fournis par une feature (le bloqueur de pubs).
  */
 val webViewModule = module {
-    single { LockedWebViewFactory(requestInterceptor = get(), securityExceptions = get()) }
+    single { LockedWebViewFactory(requestInterceptor = get(), securityExceptions = get(), cosmetics = get()) }
 }

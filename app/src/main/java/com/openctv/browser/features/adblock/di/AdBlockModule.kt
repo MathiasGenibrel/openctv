@@ -3,9 +3,11 @@ package com.openctv.browser.features.adblock.di
 import android.content.Context
 import androidx.datastore.preferences.preferencesDataStore
 import com.openctv.browser.core.common.DispatcherProvider
+import com.openctv.browser.core.webview.CosmeticSelectionSource
 import com.openctv.browser.core.webview.RequestInterceptor
 import com.openctv.browser.features.adblock.data.AdBlockImpl
 import com.openctv.browser.features.adblock.data.AdBlockInterceptor
+import com.openctv.browser.features.adblock.data.CookieBannerSelectionSource
 import com.openctv.browser.features.adblock.data.DataStoreDisabledSitesStore
 import com.openctv.browser.features.adblock.data.DisabledSitesStore
 import com.openctv.browser.features.adblock.data.FileFilterListCache
@@ -44,5 +46,6 @@ val adBlockModule = module {
             clock = Clock.systemUTC(),
         )
     }
+    single<CosmeticSelectionSource> { CookieBannerSelectionSource(engine = get(), settings = get()) }
     single<RequestInterceptor> { AdBlockInterceptor(engine = get(), settings = get(), counter = get()) }
 }

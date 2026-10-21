@@ -13,6 +13,8 @@ data class Settings(
     val pageZoom: PageZoom = PageZoom.Default,
     /** Interrupteur global du bloqueur de pubs. */
     val isAdBlockEnabled: Boolean = true,
+    /** Liste « EasyList Cookie » (requêtes bloquées + bandeaux masqués) ; sans effet si le bloqueur est coupé. */
+    val isCookieBannerBlockEnabled: Boolean = true,
     /** Dernière page visitée (http/https), `null` si aucune. */
     val lastPage: String? = null,
 ) {

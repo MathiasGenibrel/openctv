@@ -1,6 +1,7 @@
 package com.openctv.browser.features.adblock
 
 import com.google.common.truth.Truth.assertThat
+import com.openctv.browser.features.adblock.data.CookieListParser
 import com.openctv.browser.features.adblock.data.FilterListParser
 import com.openctv.browser.features.adblock.domain.AdBlockEngine
 import com.openctv.browser.features.adblock.domain.CompiledFilters
@@ -135,5 +136,67 @@ class AdBlockEngineTest {
 
         assertThat(blocked).isGreaterThan(0)
         assertThat(elapsedMs).isLessThan(2_000) // seuil très large (20 µs/décision) : anti-régression, non flaky
+    }
+}
+
+class CookieBannerEngineTest {
+
+    private val cookieList = CookieListParser.parse(
+        """
+        ||cmp.example.net^
+        ##.cookie-banner
+        news.example.org##.cmp-wall
+        """.trimIndent().lineSequence(),
+    )
+
+    private val engine: AdBlockEngine = DefaultAdBlockEngine().apply {
+        updateFilters(FilterListParser.parse("||ads.example.com^"))
+        updateCookieFilters(cookieList.network, cookieList.cosmetic)
+    }
+
+    private val page = "https://news.example.org/article"
+
+    @Test
+    fun `Given the cookie list When a page loads a consent script Then it is blocked`() {
+        assertThat(engine.shouldBlock("https://cmp.example.net/consent.js", page)).isTrue()
+        assertThat(engine.shouldBlock("https://cdn.cmp.example.net/consent.js", page)).isTrue()
+    }
+
+    @Test
+    fun `Given the cookie banners setting off When a page loads a consent script Then only the main list applies`() {
+        assertThat(engine.shouldBlock("https://cmp.example.net/consent.js", page, withCookieList = false)).isFalse()
+        assertThat(engine.shouldBlock("https://ads.example.com/a.js", page, withCookieList = false)).isTrue()
+    }
+
+    @Test
+    fun `Given a page When its cosmetic rules are read Then generic and site rules apply`() {
+        val selection = engine.cosmeticSelectionFor("https://news.example.org/article")
+
+        assertThat(selection.generic).containsExactly(".cookie-banner")
+        assertThat(selection.specific).containsExactly(".cmp-wall")
+    }
+
+    @Test
+    fun `Given a site where blocking is disabled When its cosmetic rules are read Then nothing is hidden and its requests pass`() {
+        engine.updateDisabledSites(listOf("news.example.org"))
+
+        assertThat(engine.cosmeticSelectionFor("https://news.example.org/article").isEmpty).isTrue()
+        assertThat(engine.cosmeticSelectionFor("https://www.news.example.org/").isEmpty).isTrue()
+        assertThat(engine.shouldBlock("https://cmp.example.net/consent.js", page)).isFalse()
+        assertThat(engine.cosmeticSelectionFor("https://other.org/").generic).containsExactly(".cookie-banner")
+    }
+
+    @Test
+    fun `Given a cookie list not downloaded yet When a page loads Then nothing is hidden`() {
+        val empty = DefaultAdBlockEngine()
+
+        assertThat(empty.cosmeticSelectionFor(page).isEmpty).isTrue()
+        assertThat(empty.shouldBlock("https://cmp.example.net/consent.js", page)).isFalse()
+    }
+
+    @Test
+    fun `Given a page that is not http When its cosmetic rules are read Then nothing is hidden`() {
+        assertThat(engine.cosmeticSelectionFor("file:///sdcard/a.html").isEmpty).isTrue()
+        assertThat(engine.cosmeticSelectionFor("about:blank").isEmpty).isTrue()
     }
 }

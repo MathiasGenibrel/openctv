@@ -23,6 +23,7 @@ import java.util.concurrent.Executors
 class LockedWebViewFactory(
     private val requestInterceptor: RequestInterceptor = RequestInterceptor.PassThrough,
     private val securityExceptions: SecurityExceptionsContract = NoSecurityExceptions,
+    private val cosmetics: CosmeticSelectionSource = CosmeticSelectionSource.None,
 ) {
     /**
      * Pré-chauffe le moteur (chargement du fournisseur WebView) hors du thread principal, pour que la création
@@ -69,7 +70,7 @@ class LockedWebViewFactory(
             // que toute page affichée malgré un certificat invalide repasse par le garde de cette WebView (badge,
             // exception retirée entre-temps). Cf. PageSecurityGuard.
             clearSslPreferences()
-            webViewClient = SecureWebViewClient(listener, requestInterceptor, securityExceptions)
+            webViewClient = SecureWebViewClient(listener, requestInterceptor, securityExceptions, cosmetics)
             webChromeClient = SecureWebChromeClient(listener, fullscreenHost)
         }
 }

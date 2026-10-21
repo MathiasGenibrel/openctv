@@ -23,7 +23,8 @@ class AdBlockInterceptor(
         if (isMainFrame) return null
         val isAdBlockEnabled = settings.current.isAdBlockEnabled
         if (!isAdBlockEnabled) return null
-        val isBlocked = engine.shouldBlock(requestUrl, pageUrl)
+        val isCookieListEnabled = settings.current.isCookieBannerBlockEnabled
+        val isBlocked = engine.shouldBlock(requestUrl, pageUrl, withCookieList = isCookieListEnabled)
         if (!isBlocked) return null
 
         if (pageUrl != null) counter.increment(pageUrl)
