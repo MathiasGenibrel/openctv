@@ -12,8 +12,6 @@ import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.ui.BrowserMenuViewModel
 import com.openctv.browser.features.settings.FakeSettingsStore
 import com.openctv.browser.features.settings.data.SettingsImpl
-import com.openctv.browser.features.settings.domain.CursorSpeed
-import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.Settings
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -141,46 +139,10 @@ class BrowserMenuViewModelTest {
     }
 
     @Test
-    fun `Given DuckDuckGo is the engine When the user chooses Qwant Then the setting is persisted and shown`() = runTest {
-        val store = FakeSettingsStore()
-        val viewModel = viewModel(store)
-
-        viewModel.selectSearchEngine(SearchEngine.Qwant)
-        runCurrent()
-
-        assertThat(store.current.value.searchEngine).isEqualTo(SearchEngine.Qwant)
-        assertThat(viewModel.state.value.searchEngine).isEqualTo(SearchEngine.Qwant)
-    }
-
-    @Test
-    fun `Given the normal speed When the user chooses fast Then the setting is persisted and shown`() = runTest {
-        val store = FakeSettingsStore()
-        val viewModel = viewModel(store)
-
-        viewModel.selectCursorSpeed(CursorSpeed.Fast)
-        runCurrent()
-
-        assertThat(store.current.value.cursorSpeed).isEqualTo(CursorSpeed.Fast)
-        assertThat(viewModel.state.value.cursorSpeed).isEqualTo(CursorSpeed.Fast)
-    }
-
-    @Test
-    fun `Given a settings write fails When the user chooses an engine Then a notice is raised and the engine is unchanged`() = runTest {
-        val store = FakeSettingsStore().apply { failure = RuntimeException("disk") }
-        val viewModel = viewModel(store)
-
-        viewModel.selectSearchEngine(SearchEngine.Google)
-        runCurrent()
-
-        assertThat(failures).containsExactly(MenuWriteFailure.Setting)
-        assertThat(viewModel.state.value.searchEngine).isEqualTo(SearchEngine.DuckDuckGo)
-    }
-
-    @Test
     fun `Given a sub-panel is open When the user presses Back Then the sub-panel closes first and then Back is left to the menu`() = runTest {
         val viewModel = viewModel()
-        viewModel.openPanel(BrowserMenuPanel.SearchEngine)
-        assertThat(viewModel.state.value.openPanel).isEqualTo(BrowserMenuPanel.SearchEngine)
+        viewModel.openPanel(BrowserMenuPanel.PageZoom)
+        assertThat(viewModel.state.value.openPanel).isEqualTo(BrowserMenuPanel.PageZoom)
 
         val firstBackHandled = viewModel.onBack()
         val secondBackHandled = viewModel.onBack()
@@ -209,15 +171,6 @@ class BrowserMenuViewModelTest {
         assertThat(viewModel.state.value.openPanel).isNull()
         assertThat(chosenZooms).containsExactly(PageZoom.Half)
         assertThat(viewModel.state.value.defaultZoom).isEqualTo(PageZoom.ThreeQuarters)
-    }
-
-    @Test
-    fun `Given the zoom sub menu is open When the user presses Back Then it returns to the menu`() = runTest {
-        val viewModel = viewModel()
-        viewModel.openPanel(BrowserMenuPanel.PageZoom)
-
-        assertThat(viewModel.onBack()).isTrue()
-        assertThat(viewModel.state.value.openPanel).isNull()
     }
 }
 

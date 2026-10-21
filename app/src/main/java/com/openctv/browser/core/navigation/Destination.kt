@@ -12,22 +12,26 @@ import androidx.compose.runtime.saveable.Saver
 sealed interface Destination {
     data object Home : Destination
     data object Settings : Destination
+    data object History : Destination
     data class Browser(val url: String) : Destination
 
     companion object {
         private const val HomeToken = "home"
         private const val SettingsToken = "settings"
+        private const val HistoryToken = "history"
         private const val BrowserPrefix = "browser:"
 
         internal fun encode(destination: Destination): String = when (destination) {
             Home -> HomeToken
             Settings -> SettingsToken
+            History -> HistoryToken
             is Browser -> BrowserPrefix + destination.url
         }
 
         /** Jeton inconnu (ancienne sauvegarde, dont l'ex-destination « search: ») : accueil. */
         internal fun decode(token: String): Destination = when {
             token == SettingsToken -> Settings
+            token == HistoryToken -> History
             token.startsWith(BrowserPrefix) -> Browser(token.removePrefix(BrowserPrefix))
             else -> Home
         }

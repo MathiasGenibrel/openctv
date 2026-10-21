@@ -7,6 +7,9 @@ import org.koin.dsl.module
 /** Fournit la base. Chaque feature expose elle-même son DAO dans son module DI. */
 val databaseModule = module {
     single {
-        Room.databaseBuilder(androidContext(), OpenCtvDatabase::class.java, "openctv.db").build()
+        Room.databaseBuilder(androidContext(), OpenCtvDatabase::class.java, "openctv.db")
+            // Jamais de migration destructive : elle effacerait les favoris.
+            .addMigrations(Migration1To2)
+            .build()
     }
 }

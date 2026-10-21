@@ -1,14 +1,12 @@
 package com.openctv.browser.features.browser.domain
 
 import com.openctv.browser.core.zoom.PageZoom
-import com.openctv.browser.features.settings.domain.CursorSpeed
-import com.openctv.browser.features.settings.domain.SearchEngine
 
 /** Écriture du menu qui a échoué ; le navigateur décide du message affiché (cf. `BrowserViewModel.onMenuWriteFailed`). */
-enum class MenuWriteFailure { AdBlock, Bookmark, Setting }
+enum class MenuWriteFailure { AdBlock, Bookmark }
 
-/** Sous-panneau du menu (radios), ouvert depuis « Zoom de la page », « Moteur de recherche » ou « Vitesse du curseur ». */
-enum class BrowserMenuPanel { SearchEngine, CursorSpeed, PageZoom }
+/** Sous-panneau du menu (radios), ouvert depuis « Zoom de la page ». */
+enum class BrowserMenuPanel { PageZoom }
 
 /** Ce que dit la ligne « Bloqueur de pubs » du menu. */
 sealed interface AdBlockStatus {
@@ -34,8 +32,6 @@ data class BrowserMenuState(
     val defaultZoom: PageZoom = PageZoom.Default,
     /** Hôte exact auquel se rattache le zoom mémorisé (`SiteHost`) ; `null` si l'adresse n'a pas d'hôte lisible. */
     val zoomHost: String? = null,
-    val searchEngine: SearchEngine = SearchEngine.Default,
-    val cursorSpeed: CursorSpeed = CursorSpeed.Default,
     val openPanel: BrowserMenuPanel? = null,
 ) {
     val isAdBlockActive: Boolean get() = adBlock is AdBlockStatus.Active

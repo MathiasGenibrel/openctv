@@ -24,6 +24,10 @@ class SecureWebChromeClient(
         listener.onProgressChanged(newProgress)
     }
 
+    override fun onReceivedTitle(view: WebView, title: String?) {
+        title?.let(listener::onTitleChanged)
+    }
+
     override fun onPermissionRequest(request: PermissionRequest) {
         val granted = request.resources.filter(PagePermissionPolicy::shouldGrant)
         if (granted.isEmpty()) request.deny() else request.grant(granted.toTypedArray())

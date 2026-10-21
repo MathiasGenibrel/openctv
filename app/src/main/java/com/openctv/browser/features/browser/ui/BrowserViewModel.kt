@@ -3,6 +3,8 @@ package com.openctv.browser.features.browser.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.openctv.browser.core.common.Resource
+import com.openctv.browser.core.history.NoPageVisits
+import com.openctv.browser.core.history.PageVisitsContract
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.security.SiteHost
@@ -83,6 +85,8 @@ class BrowserViewModel(
     private val siteZooms: PageZoomContract = NoPageZoom,
     /** Zoom des Réglages pour les sites sans zoom propre. */
     private val defaultZoom: StateFlow<PageZoom> = MutableStateFlow(PageZoom.Default),
+    /** Historique : reçoit chaque page principale réellement affichée (jamais un avertissement ni une erreur). */
+    private val pageVisits: PageVisitsContract = NoPageVisits,
 ) : ViewModel(), WebPageListener {
     private val _pageUrl = MutableStateFlow(initialUrl)
 
@@ -112,6 +116,12 @@ class BrowserViewModel(
 
     /** Dernière adresse entrée dans l'historique de la WebView ([onUrlChanged]) : la page qu'elle affiche vraiment. */
     private var committedUrl: String? = null
+
+    /** Titre de la page en cours de chargement ou affichée ; vide tant que la page n'en a pas donné. */
+    private var pageTitle: String = ""
+
+    /** Page affichée déjà enregistrée dans l'historique : un titre tardif la complète. `null` = rien d'enregistré. */
+    private var recordedUrl: String? = null
 
     /** Adresse de la page en échec affichée par l'écran d'erreur (significative en [PageState.Error] seulement). */
     private var failedUrl: String = initialUrl
@@ -220,6 +230,7 @@ class BrowserViewModel(
         when (_layers.value.backAction(canGoBack, pageUnderError(shownPageUrl))) {
             BackAction.DismissError -> shownPageUrl?.let(::showPreviousPage)
             BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
+            BackAction.CloseHistory -> closeHistory()
             BackAction.CloseAddressInput -> closeAddressInput()
             BackAction.CloseMenu -> closeMenu()
             BackAction.ExitInterface -> exitInterfaceMode()
@@ -354,6 +365,28 @@ class BrowserViewModel(
         _layers.update { it.copy(isMenuOpen = false) }
     }
 
+    /** « Historique » du menu : l'écran Historique remplace le menu, au-dessus de la page restée vivante dessous. */
+    fun openHistory() {
+        val isPageInFullscreen = _layers.value.isFullscreen
+        if (isPageInFullscreen) return
+        _layers.update { it.copy(isMenuOpen = false, isHistoryOpen = true) }
+    }
+
+    /** Retour ou bouton retour de l'Historique : la page est intacte, l'écran rend le focus (cf. BrowserFocus). */
+    fun closeHistory() {
+        _layers.update { it.copy(isHistoryOpen = false) }
+    }
+
+    /**
+     * Page choisie dans l'Historique : chargée dans la même WebView, par le même chemin que toute adresse
+     * ([load]) — donc avec les règles de sécurité habituelles (avertissement HTTP sans exception…).
+     */
+    fun onHistoryEntryChosen(url: String) {
+        _layers.update { it.copy(isHistoryOpen = false, mode = BrowserMode.Page) }
+        showCursorHelp()
+        load(url)
+    }
+
     fun goBack() {
         if (_canGoBack.value) _commands.trySend(BrowserCommand.GoBack)
     }
@@ -427,7 +460,6 @@ class BrowserViewModel(
         val notice = when (failure) {
             MenuWriteFailure.AdBlock -> BrowserNotice.AdBlockFailed
             MenuWriteFailure.Bookmark -> BrowserNotice.BookmarkFailed
-            MenuWriteFailure.Setting -> BrowserNotice.SettingFailed
         }
         showNotice(notice)
     }
@@ -460,6 +492,8 @@ class BrowserViewModel(
     }
 
     override fun onPageStarted(url: String) {
+        pageTitle = ""
+        recordedUrl = null
         _pageUrl.value = url
         val host = SiteHost.of(url)
         if (host != _unverifiedCertificateHost.value) _unverifiedCertificateHost.value = null
@@ -506,10 +540,25 @@ class BrowserViewModel(
         if (!isShowingError) {
             _pageState.value = PageState.Loaded(siteLabelOf(url))
             onPageVisited(url)
+            recordVisit(url)
         }
     }
 
+    override fun onTitleChanged(title: String) {
+        pageTitle = title
+        // Titre arrivé après la fin du chargement : il complète la visite déjà enregistrée.
+        recordedUrl?.let(::recordVisit)
+    }
+
+    /** Enregistre la page affichée (écriture hors thread principal, échec sans conséquence pour la navigation). */
+    private fun recordVisit(url: String) {
+        recordedUrl = url
+        val title = pageTitle
+        viewModelScope.launch { pageVisits.recordVisit(url, title) }
+    }
+
     override fun onLoadError(error: WebLoadError) {
+        recordedUrl = null
         failedUrl = error.url ?: _pageUrl.value
         setWarningOptionsOpen(false)
         _pageState.value = PageState.Error(siteLabelOf(failedUrl), error.cause, error.warning)

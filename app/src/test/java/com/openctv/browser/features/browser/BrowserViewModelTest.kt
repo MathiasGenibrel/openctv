@@ -724,12 +724,12 @@ class BrowserViewModelTest {
     }
 
     @Test
-    fun `Given the menu could not save a setting When it reports the failure Then a brief notice explains it`() = runTest {
+    fun `Given the menu could not save the ad blocker choice When it reports the failure Then a brief notice explains it`() = runTest {
         val viewModel = BrowserViewModel(url, bookmarks)
 
-        viewModel.onMenuWriteFailed(MenuWriteFailure.Setting)
+        viewModel.onMenuWriteFailed(MenuWriteFailure.AdBlock)
 
-        assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.SettingFailed)
+        assertThat(viewModel.notice.value).isEqualTo(BrowserNotice.AdBlockFailed)
         advanceTimeBy(BrowserViewModel.NOTICE_DURATION)
         runCurrent()
         assertThat(viewModel.notice.value).isNull()

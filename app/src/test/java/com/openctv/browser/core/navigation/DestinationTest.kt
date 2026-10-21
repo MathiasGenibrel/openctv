@@ -13,6 +13,7 @@ class DestinationTest {
 
         assertThat(roundTrip(browser)).isEqualTo(browser)
         assertThat(roundTrip(Destination.Settings)).isEqualTo(Destination.Settings)
+        assertThat(roundTrip(Destination.History)).isEqualTo(Destination.History)
     }
 
     @Test

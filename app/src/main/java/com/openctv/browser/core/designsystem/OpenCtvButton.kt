@@ -27,16 +27,17 @@ private const val DisabledContainerAlpha = 0.12f
 private const val DisabledContentAlpha = 0.38f
 
 /**
- * `Filled` (action principale), `Tonal`, `Text` (discret, sans fond), `Outline` (contour, action secondaire) et
- * `OutlineError` (contour et texte `error` : action risquée).
+ * `Filled` (action principale), `Tonal`, `Text` (discret, sans fond), `Outline` (contour, action secondaire),
+ * `OutlineError` (contour et texte `error` : action risquée) et `TextError` (texte `error` sans contour : confirmation destructive).
  */
-enum class OpenCtvButtonStyle { Filled, Tonal, Text, Outline, OutlineError }
+enum class OpenCtvButtonStyle { Filled, Tonal, Text, Outline, OutlineError, TextError }
 
 private val OpenCtvButtonStyle.container: Color
     get() = when (this) {
         OpenCtvButtonStyle.Filled -> OpenCtvColors.Primary
         OpenCtvButtonStyle.Tonal -> OpenCtvColors.SecondaryContainer
-        OpenCtvButtonStyle.Text, OpenCtvButtonStyle.Outline, OpenCtvButtonStyle.OutlineError -> Color.Transparent
+        OpenCtvButtonStyle.Text, OpenCtvButtonStyle.Outline, OpenCtvButtonStyle.OutlineError, OpenCtvButtonStyle.TextError ->
+            Color.Transparent
     }
 
 private val OpenCtvButtonStyle.onContainer: Color
@@ -44,7 +45,7 @@ private val OpenCtvButtonStyle.onContainer: Color
         OpenCtvButtonStyle.Filled -> OpenCtvColors.OnPrimary
         OpenCtvButtonStyle.Tonal -> OpenCtvColors.OnSecondaryContainer
         OpenCtvButtonStyle.Text, OpenCtvButtonStyle.Outline -> OpenCtvColors.Primary
-        OpenCtvButtonStyle.OutlineError -> OpenCtvColors.Error
+        OpenCtvButtonStyle.OutlineError, OpenCtvButtonStyle.TextError -> OpenCtvColors.Error
     }
 
 /** Sans fond au repos, un bouton `Text` / `Outline` prend un fond de surface au focus pour que l'état soit évident. */

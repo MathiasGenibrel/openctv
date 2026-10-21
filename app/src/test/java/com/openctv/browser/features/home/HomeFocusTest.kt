@@ -22,6 +22,7 @@ class HomeFocusTest {
     @Test
     fun `Given the user left from the settings button When he comes back Then the settings button is focused`() {
         assertThat(HomeFocus.restore(HomeFocus.Settings, withArte)).isEqualTo(HomeFocus.Settings)
+        assertThat(HomeFocus.restore(HomeFocus.History, withArte)).isEqualTo(HomeFocus.History)
     }
 
     @Test

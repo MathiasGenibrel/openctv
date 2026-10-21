@@ -13,8 +13,6 @@ import com.openctv.browser.features.browser.domain.BrowserMenuState
 import com.openctv.browser.features.browser.domain.MenuWriteFailure
 import com.openctv.browser.features.browser.domain.adBlockStatusOf
 import com.openctv.browser.features.browser.domain.siteLabelOf
-import com.openctv.browser.features.settings.domain.CursorSpeed
-import com.openctv.browser.features.settings.domain.SearchEngine
 import com.openctv.browser.features.settings.domain.SettingsContract
 import com.openctv.browser.features.settings.domain.orDefaults
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -29,8 +27,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 /**
- * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori, zoom de la page, moteur de recherche et vitesse
- * du curseur. Actualiser et Accueil sont des ordres du navigateur (`BrowserViewModel`), pas d'ici.
+ * Menu du navigateur pour la page [pageUrl] : bloqueur du site, favori et zoom de la page. Accueil et Historique sont des
+ * ordres du navigateur (`BrowserViewModel`), pas d'ici ; le moteur de recherche et la vitesse du curseur sont dans Réglages.
  * Un échec d'écriture est remonté par [onWriteFailed] ; l'affichage reste sur la valeur réellement stockée.
  */
 class BrowserMenuViewModel(
@@ -67,8 +65,6 @@ class BrowserMenuViewModel(
             pageZoom = zoom,
             defaultZoom = current.pageZoom,
             zoomHost = SiteHost.of(page.url),
-            searchEngine = current.searchEngine,
-            cursorSpeed = current.cursorSpeed,
             openPanel = panel,
         )
     }.stateIn(
@@ -127,16 +123,6 @@ class BrowserMenuViewModel(
     fun selectPageZoom(zoom: PageZoom) {
         closePanel()
         onZoomChosen(zoom)
-    }
-
-    fun selectSearchEngine(engine: SearchEngine) = save { settings.setSearchEngine(engine) }
-
-    fun selectCursorSpeed(speed: CursorSpeed) = save { settings.setCursorSpeed(speed) }
-
-    private fun save(write: suspend () -> Resource<Unit>) {
-        viewModelScope.launch {
-            if (write() is Resource.Error) onWriteFailed(MenuWriteFailure.Setting)
-        }
     }
 
     private data class PageSettings(

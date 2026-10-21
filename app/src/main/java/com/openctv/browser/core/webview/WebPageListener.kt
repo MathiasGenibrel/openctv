@@ -19,6 +19,9 @@ interface WebPageListener {
      */
     fun onUnverifiedCertificateAccepted(url: String)
 
+    /** Le titre de la page affichée est connu ou a changé (il peut arriver après la fin du chargement). */
+    fun onTitleChanged(title: String)
+
     /**
      * L'adresse affichée a changé, y compris sans rechargement (navigation interne d'une application
      * monopage comme YouTube : `history.pushState`), avec l'état de l'historique de la WebView à cet instant.
