@@ -17,6 +17,16 @@ qui, et les enjeux (navigation au D-pad, UI à 10 pieds, vie privée, sécurité
   (déclarée `LEANBACK_LAUNCHER`, `android.software.leanback` requis, `android.hardware.touchscreen` non requis)
 - **Test command**: `./gradlew :app:testDebugUnitTest`
 - **Install command** (utilisateur uniquement): `adb connect 10.0.0.51:5555 && ANDROID_SERIAL=10.0.0.51:5555 ./gradlew :app:installDebug`
+- **Install release optimisé** (utilisateur uniquement) : `adb connect 10.0.0.51:5555 && ANDROID_SERIAL=10.0.0.51:5555 ./gradlew :app:installRelease`
+  — R8 + ressources réduites + Baseline Profile (`app/src/release/generated/baselineProfiles/`), signé par la clé debug locale par défaut.
+  Vraie clé : `OPENCTV_RELEASE_STORE_FILE` / `_STORE_PASSWORD` / `_KEY_ALIAS` / `_KEY_PASSWORD` (environnement) ou
+  `openctv.release.store_file` / `.store_password` / `.key_alias` / `.key_password` dans `local.properties` (jamais commités).
+- **Régénérer le Baseline Profile** (utilisateur, TV branchée en ADB, après un changement important de parcours) :
+  `ANDROID_SERIAL=10.0.0.51:5555 ./gradlew :baselineprofile:connectedNonMinifiedReleaseAndroidTest` (~4 min, rejoue le parcours
+  à la télécommande ; désinstalle OpenCTV de la TV). Sur la TCL, Gradle signale « There were failing tests » alors que le test
+  passe (`OK (1 test)`) : les sorties sont bien produites, la suite se fait avec
+  `./gradlew :app:generateReleaseBaselineProfile -x :baselineprofile:connectedNonMinifiedReleaseAndroidTest`, puis commiter
+  `app/src/release/generated/baselineProfiles/`.
 - **Appareil cible** : TCL Smart TV Pro (G08), Android 14 / API 34, ADB réseau `10.0.0.51:5555`
 - **Claude ne déclenche jamais de build applicatif.** Les builds/installs sont la responsabilité
   de l'utilisateur ; les agents exécutent en revanche la suite de tests unitaires.

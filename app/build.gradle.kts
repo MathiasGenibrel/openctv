@@ -1,8 +1,22 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
+    alias(libs.plugins.androidx.baselineprofile)
 }
+
+// Clé de signature release : clé debug locale par défaut (installation facile sur la TV), surchargeable par
+// `local.properties` ou l'environnement (OPENCTV_RELEASE_STORE_FILE / _STORE_PASSWORD / _KEY_ALIAS / _KEY_PASSWORD).
+// Aucun secret n'est versionné.
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}
+
+fun releaseSigningValue(name: String): String? =
+    System.getenv("OPENCTV_RELEASE_$name") ?: localProperties.getProperty("openctv.release.${name.lowercase()}")
 
 android {
     namespace = "com.openctv.browser"
@@ -16,9 +30,24 @@ android {
         versionName = "0.1.0"
     }
 
+    signingConfigs {
+        create("release") {
+            val storeFilePath = releaseSigningValue("STORE_FILE")
+            if (storeFilePath != null) {
+                storeFile = file(storeFilePath)
+                storePassword = releaseSigningValue("STORE_PASSWORD")
+                keyAlias = releaseSigningValue("KEY_ALIAS")
+                keyPassword = releaseSigningValue("KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            val hasCustomReleaseKey = releaseSigningValue("STORE_FILE") != null
+            signingConfig = signingConfigs.getByName(if (hasCustomReleaseKey) "release" else "debug")
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -59,6 +88,8 @@ dependencies {
     ksp(libs.androidx.room.compiler)
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp)
+    implementation(libs.androidx.profileinstaller)
+    baselineProfile(project(":baselineprofile"))
 
     debugImplementation(libs.androidx.compose.ui.tooling)
 

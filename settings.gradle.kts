@@ -22,3 +22,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "openctv"
 include(":app")
+include(":baselineprofile")
