@@ -171,10 +171,13 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            if (state.isSecure) {
+            val insecurity = state.insecurity
+            if (insecurity != null) {
+                // L'icône d'état remplace le cadenas ; son libellé remplace « OK pour modifier » (à droite).
+                Icon(insecurity.icon(), contentDescription = null, tint = insecurity.color(), modifier = Modifier.size(20.dp))
+            } else if (state.isSecure) {
                 Icon(OpenCtvIcons.Lock, contentDescription = null, modifier = Modifier.size(20.dp))
             }
-            state.insecurity?.let { InsecurityBadge(it) }
             Text(
                 text = state.site,
                 style = MaterialTheme.typography.titleMedium,
@@ -183,26 +186,22 @@ private fun AddressField(state: ToolbarState, onClick: () -> Unit, modifier: Mod
                 modifier = Modifier.weight(1f),
             )
             Text(
-                text = stringResource(R.string.browser_toolbar_address_hint),
+                text = stringResource(insecurity?.labelRes() ?: R.string.browser_toolbar_address_hint),
                 style = MaterialTheme.typography.labelLarge,
-                color = OpenCtvColors.OnSurfaceVariant,
+                color = insecurity?.color() ?: OpenCtvColors.OnSurfaceVariant,
             )
         }
     }
 }
 
-/** « Non sécurisé » (HTTP, `tertiary`) ou « Certificat non vérifié » (`error`) : page affichée par exception. */
+/** HTTP affiché par exception : `tertiary` ; certificat accepté : `error` (plus grave). */
+private fun PageInsecurity.color() = if (this == PageInsecurity.Http) OpenCtvColors.Tertiary else OpenCtvColors.Error
+
 @Composable
-private fun InsecurityBadge(insecurity: PageInsecurity) {
-    val isHttp = insecurity == PageInsecurity.Http
-    val color = if (isHttp) OpenCtvColors.Tertiary else OpenCtvColors.Error
-    val icon = if (isHttp) OpenCtvIcons.NoEncryption else OpenCtvIcons.GppBad
-    val label = stringResource(if (isHttp) R.string.security_toolbar_insecure else R.string.security_toolbar_unverified)
-    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        Icon(icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-        Text(label, style = MaterialTheme.typography.labelLarge, color = color, maxLines = 1)
-    }
-}
+private fun PageInsecurity.icon() = if (this == PageInsecurity.Http) OpenCtvIcons.NoEncryption else OpenCtvIcons.GppBad
+
+private fun PageInsecurity.labelRes() =
+    if (this == PageInsecurity.Http) R.string.security_toolbar_insecure else R.string.security_toolbar_unverified
 
 @Preview(device = Devices.TV_1080p)
 @Composable

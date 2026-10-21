@@ -403,7 +403,8 @@ private fun SecurityExceptionsPanel(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 exceptions.forEachIndexed { index, exception ->
                     ListRow(
-                        icon = OpenCtvIcons.Lock,
+                        icon = if (exception is SiteException.Http) OpenCtvIcons.NoEncryption else OpenCtvIcons.GppBad,
+                        iconTint = if (exception is SiteException.Http) OpenCtvColors.Tertiary else OpenCtvColors.Error,
                         label = exception.host,
                         supporting = securityExceptionKind(exception),
                         onClick = {

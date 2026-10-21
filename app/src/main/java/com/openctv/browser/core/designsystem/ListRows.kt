@@ -107,7 +107,7 @@ fun ListGroup(
 
 /**
  * Ligne focalisable : [icon], [label], [supporting] optionnel (deuxième ligne) et [trailing]
- * (valeur, interrupteur, chevron). La ligne grandit avec son contenu : rien n'est découpé.
+ * (valeur, interrupteur, chevron). [iconTint] colore l'icône de tête (couleur du contenu par défaut). La ligne grandit avec son contenu : rien n'est découpé.
  */
 @Composable
 fun ListRow(
@@ -116,6 +116,7 @@ fun ListRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     supporting: String? = null,
+    iconTint: Color = Color.Unspecified,
     trailing: @Composable () -> Unit = {},
 ) {
     val style = LocalListGroupStyle.current
@@ -124,7 +125,7 @@ fun ListRow(
         modifier = modifier,
         minHeight = style.rowMinHeight,
         horizontalPadding = style.rowHorizontalPadding,
-        leading = { Icon(icon, contentDescription = null) },
+        leading = { Icon(icon, contentDescription = null, tint = iconTint.takeOrElse { LocalContentColor.current }) },
         label = label,
         supporting = supporting,
         supportingStyle = MaterialTheme.typography.bodyMedium,
