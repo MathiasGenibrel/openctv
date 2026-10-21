@@ -26,6 +26,7 @@ import com.openctv.browser.core.designsystem.KeyHint
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OverscanSafeArea
+import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.webview.LockedWebViewFactory
 import com.openctv.browser.core.webview.PointerAwareWebView
 import com.openctv.browser.features.browser.domain.BrowserNotice
@@ -173,9 +174,10 @@ fun BrowserScreen(
             shownNotice != null -> noticeText(shownNotice)
             hud.isInterfaceHelpShown -> stringResource(R.string.browser_interface_help)
             hud.isCursorHelpShown -> stringResource(R.string.browser_cursor_help)
+            hud.isElementsHelpShown -> stringResource(R.string.browser_elements_help)
             else -> null
         }
-        val bottomHint = if (shownNotice == null && hud.isCursorHelpShown) {
+        val bottomHint = if (shownNotice == null && (hud.isCursorHelpShown || hud.isElementsHelpShown)) {
             stringResource(R.string.browser_cursor_hold_up_hint)
         } else {
             null
@@ -223,6 +225,10 @@ private fun noticeText(notice: BrowserNotice): String = when (notice) {
     BrowserNotice.InsecureHttpShown -> stringResource(R.string.security_notice_http_shown)
     BrowserNotice.UnverifiedCertificateShown -> stringResource(R.string.security_notice_certificate_shown)
     BrowserNotice.SecurityExceptionNotSaved -> stringResource(R.string.security_notice_not_saved)
+    is BrowserNotice.NavigationModeChanged -> when (notice.mode) {
+        NavigationMode.Elements -> stringResource(R.string.browser_notice_navigation_elements, notice.host)
+        NavigationMode.Cursor -> stringResource(R.string.browser_notice_navigation_cursor, notice.host)
+    }
     is BrowserNotice.ZoomSaved -> stringResource(R.string.browser_notice_zoom_saved, notice.zoom.percent, notice.host)
     is BrowserNotice.ZoomReset -> stringResource(R.string.browser_notice_zoom_reset, notice.zoom.percent, notice.host)
 }

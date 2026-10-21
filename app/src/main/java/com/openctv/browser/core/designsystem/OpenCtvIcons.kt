@@ -48,6 +48,7 @@ object OpenCtvIcons {
     val Home: Painter @Composable get() = painterResource(R.drawable.ic_home)
     val Language: Painter @Composable get() = painterResource(R.drawable.ic_language)
     val Keyboard: Painter @Composable get() = painterResource(R.drawable.ic_keyboard)
+    val KeyboardTab: Painter @Composable get() = painterResource(R.drawable.ic_keyboard_tab)
     val Lock: Painter @Composable get() = painterResource(R.drawable.ic_lock)
     val MoreVert: Painter @Composable get() = painterResource(R.drawable.ic_more_vert)
     val NoEncryption: Painter @Composable get() = painterResource(R.drawable.ic_no_encryption)
@@ -81,7 +82,7 @@ private fun OpenCtvIconsPreview() {
                 OpenCtvIcons.Check, OpenCtvIcons.ChevronRight, OpenCtvIcons.RadioButtonChecked,
                 OpenCtvIcons.RadioButtonUnchecked, OpenCtvIcons.Gamepad, OpenCtvIcons.NoEncryption, OpenCtvIcons.GppBad,
                 OpenCtvIcons.Warning, OpenCtvIcons.CheckBox, OpenCtvIcons.CheckBoxOutlineBlank, OpenCtvIcons.ExpandMore,
-                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete, OpenCtvIcons.ZoomIn, OpenCtvIcons.DeleteSweep, OpenCtvIcons.Language, OpenCtvIcons.Cookie,
+                OpenCtvIcons.ExpandLess, OpenCtvIcons.Delete, OpenCtvIcons.ZoomIn, OpenCtvIcons.DeleteSweep, OpenCtvIcons.Language, OpenCtvIcons.Cookie, OpenCtvIcons.KeyboardTab,
             ).chunked(13).forEach { row ->
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     row.forEach { Icon(it, contentDescription = null, tint = OpenCtvColors.OnSurface) }

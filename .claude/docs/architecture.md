@@ -53,6 +53,7 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | `core/zoom/` | Zoom des pages : niveaux (`PageZoom` : 100 % = 960 px, 75 %, 67 %, 50 % = 1920 px), zoom propre à un site (`PageZoomContract` : DataStore local, hôte exact `SiteHost`) et niveau effectif d'une page (`effectiveZoom` : zoom du site, sinon niveau par défaut de `Settings.pageZoom`). La mise en page zoomée de la WebView (`pageZoomLayout`) et l'échelle de la vue (`PointerAwareWebView.applyPageZoom`) sont dans `core/webview/` ; `PointerAwareWebView` est le seul endroit qui convertit les coordonnées de l'écran en coordonnées de la vue (`toViewCoordinate`, `scrollByOnScreen`) : le curseur ne parle qu'en pixels de l'écran. |
 | `core/history/` | `PageVisitsContract` : le navigateur y enregistre les pages affichées, sans connaître `features/history` qui l'implémente |
 | `core/remote/` | Table unique des touches « confort » de la télécommande (`RemoteKeyMap` → `RemoteAction`, Kotlin pur) et leur traduction Compose (`dispatchRemoteAction`). Dépend de `core/webview` (commandes média, sens de défilement), jamais l'inverse. |
+| `core/navmode/` | Mode de navigation par site (`NavigationModeContract` : curseur par défaut, ou éléments à la Tab), hôtes exacts en mode éléments mémorisés dans DataStore ; `navigationModeOf(url, hôtes)` |
 | `core/common/` | `Resource<T>`, dispatchers, utilitaires |
 | `core/database/` | Base Room de l'app ; schémas versionnés dans `app/schemas/` (`exportSchema`), migrations dans `Migrations.kt` (`AllMigrations`, jamais destructives), vérifiées contre ces schémas par `MigrationSchemaTest` : toute nouvelle version de la base ajoute sa migration et commite son schéma |
 | `core/network/` | Client OkHttp (listes de filtres uniquement), HTTPS seulement |
@@ -67,6 +68,9 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 Points d'attention :
 - `features/browser` consomme le curseur et le bloqueur via leurs contrats exposés dans `core/` ou
   leur `domain/`, jamais en important leurs classes `ui/` ou `data/`.
+- Mode éléments : `BrowserViewModel.navigationMode` (suit la page, donc le mode mémorisé est réappliqué à chaque page de l'hôte)
+  masque le curseur (`BrowserHud.isCursorVisible`) ; `features/cursor` n'est pas modifié, sa session devient inactive et
+  rend les touches. La traduction D-pad → Tab / Maj+Tab / Entrée est `ElementKeys` (`features/browser/domain`), jamais de JavaScript.
 - Le moteur de décision du bloqueur est appelé depuis `shouldInterceptRequest` (thread de fond, une
   fois par requête) : il doit être synchrone, sans I/O, et préchargé en mémoire.
 - La logique du curseur (calcul de position, bords, accélération) est du Kotlin pur, testée en JUnit ;

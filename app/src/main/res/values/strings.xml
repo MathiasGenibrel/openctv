@@ -52,6 +52,12 @@
     <string name="browser_menu_zoom_remembered_for">Mémorisé pour %1$s</string>
     <string name="browser_menu_zoom_note">Le niveau « Par défaut » suit Réglages › Zoom des pages. Un autre niveau est mémorisé pour ce site uniquement.</string>
     <string name="browser_menu_zoom_hint">OK pour choisir · Retour pour revenir au menu</string>
+    <string name="browser_menu_navigation">Navigation</string>
+    <string name="browser_menu_navigation_cursor">Curseur</string>
+    <string name="browser_menu_navigation_elements">Éléments</string>
+    <string name="browser_notice_navigation_elements">Navigation par éléments pour %1$s</string>
+    <string name="browser_notice_navigation_cursor">Navigation au curseur pour %1$s</string>
+    <string name="browser_elements_help">Mode éléments : Haut/Bas pour changer d\'élément · OK pour activer</string>
     <string name="browser_notice_zoom_saved">Zoom %1$d %% mémorisé pour %2$s</string>
     <string name="browser_notice_zoom_reset">Zoom %1$d %% (par défaut) pour %2$s</string>
     <string name="zoom_percent">%1$d %%</string>
