@@ -82,11 +82,24 @@ class HomeViewModel(
 
     /** L'utilisateur a placé le focus sur [focus] : c'est là qu'il reviendra. */
     fun onFocused(focus: HomeFocus) {
+        if (isRestoringFocus) return
         lastFocused = focus
     }
 
+    /**
+     * Vrai entre la fermeture du petit menu d'un favori et la restitution du focus : le menu qui quitte la
+     * composition libère le focus, que le moteur donne alors à la première cible (la recherche). Ce focus
+     * de repli ne doit pas écraser l'élément à restituer.
+     */
+    private var isRestoringFocus = false
+
     /** Élément à focaliser quand l'accueil (ré)apparaît ou que la saisie se ferme. */
     fun focusToRestore(): HomeFocus = HomeFocus.restore(lastFocused, favorites.value)
+
+    /** L'accueil a rendu le focus à [focusToRestore] : les changements de focus sont de nouveau mémorisés. */
+    fun onFocusRestored() {
+        isRestoringFocus = false
+    }
 
     fun onOpenFavorite(favorite: HomeFavorite) = navigate(Destination.Browser(favorite.url))
 
@@ -97,6 +110,7 @@ class HomeViewModel(
     }
 
     fun onFavoriteMenuClosed() {
+        isRestoringFocus = true
         _favoriteMenu.value = null
     }
 
@@ -114,6 +128,7 @@ class HomeViewModel(
     fun onRemoveFromMenu() {
         val favorite = _favoriteMenu.value ?: return
         lastFocused = neighbourFocusOf(favorite)
+        isRestoringFocus = true
         _favoriteMenu.value = null
         viewModelScope.launch { bookmarks.remove(favorite.url) }
     }

@@ -94,7 +94,7 @@ fun BrowserScreen(
 
     // La décision revient au ViewModel ; la vue ne fournit que l'état d'historique de sa WebView.
     // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
-    BackHandler(enabled = !layers.isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
+    BackHandler(enabled = !layers.isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack(), shownPageUrl = webView.url) }
 
     val focus = rememberBrowserFocus(viewModel, webView, layers)
     val toolbarActions = remember(viewModel) {

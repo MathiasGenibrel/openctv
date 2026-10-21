@@ -166,9 +166,13 @@ class BrowserViewModel(
     fun retry() = load(_pageUrl.value)
 
     /** Retour retire la couche la plus haute, puis recule dans l'historique, puis revient à l'accueil ([backAction]). */
-    fun onBack(canGoBack: Boolean) {
+    fun onBack(canGoBack: Boolean, shownPageUrl: String? = null) {
         autoHide.onUserActivity()
-        when (_layers.value.backAction(canGoBack)) {
+        val isErrorShown = _pageState.value is PageState.Error
+        // La WebView affiche encore une autre page que celle en échec : celle-ci n'est pas dans son historique.
+        val isUnrecordedErrorShown = isErrorShown && shownPageUrl != null && shownPageUrl != _pageUrl.value
+        when (_layers.value.backAction(canGoBack, isUnrecordedErrorShown)) {
+            BackAction.DismissError -> shownPageUrl?.let(::showPreviousPage)
             BackAction.ExitFullscreen -> _commands.trySend(BrowserCommand.ExitFullscreen)
             BackAction.CloseAddressInput -> closeAddressInput()
             BackAction.CloseMenu -> closeMenu()
@@ -176,6 +180,12 @@ class BrowserViewModel(
             BackAction.GoBackInHistory -> _commands.trySend(BrowserCommand.GoBack)
             BackAction.LeaveBrowser -> _commands.trySend(BrowserCommand.Close)
         }
+    }
+
+    /** L'écran d'erreur se retire : la page que la WebView n'a jamais quittée redevient visible, sans rechargement. */
+    private fun showPreviousPage(url: String) {
+        _pageUrl.value = url
+        _pageState.value = PageState.Loaded(siteLabelOf(url))
     }
 
     /** Le D-pad pilote désormais la barre d'outils (aussi appelé par « maintenir Haut », #8). */

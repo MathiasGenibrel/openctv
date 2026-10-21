@@ -9,6 +9,7 @@ activityCompose = "1.13.0"     # 2026-03-11
 lifecycle = "2.11.0"           # 2026-06-17
 webkit = "1.17.1"              # 2026-09-23
 coreKtx = "1.19.1"             # 2026-09-23
+splashscreen = "1.2.0"         # 2025-11-05 (fenêtre de démarrage, API SplashScreen rétro-compatible)
 koin = "4.2.2"                 # 2026-06-15
 coroutines = "1.11.0"          # 2026-05-07
 junit = "4.13.2"               # 2021-02-13
@@ -22,6 +23,7 @@ okhttp = "5.5.0"               # 2026-08-16 (téléchargement des listes de filt
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-core-splashscreen = { module = "androidx.core:core-splashscreen", version.ref = "splashscreen" }
 androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
 androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }

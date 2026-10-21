@@ -54,6 +54,12 @@ private val ListGroupStyle.rowMinHeight: Dp
 private val ListGroupStyle.rowHorizontalPadding: Dp
     get() = if (this == ListGroupStyle.Standard) 20.dp else RadioRowHorizontalPadding
 
+/**
+ * Marge interne d'un groupe : elle absorbe l'agrandissement d'une ligne focalisée ([RowFocusedScale]) et son
+ * anneau (5 dp), qui ne doivent pas déborder de la carte.
+ */
+private val ListGroupPadding = 12.dp
+private const val RowFocusedScale = 1.02f
 private val RadioRowMinHeight = 56.dp
 private val RadioRowHorizontalPadding = 16.dp
 
@@ -93,7 +99,7 @@ fun ListGroup(
             modifier = modifier
                 .fillMaxWidth()
                 .background(style.container, OpenCtvShapes.Large)
-                .padding(8.dp),
+                .padding(ListGroupPadding),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) { content() }
     }
@@ -232,6 +238,7 @@ private fun ListRowLayout(
         shape = ClickableSurfaceDefaults.shape(shape = shape, focusedShape = shape),
         border = ClickableSurfaceDefaults.border(focusedBorder = focusRingBorder(shape)),
         colors = style.rowColors(),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = RowFocusedScale),
     ) {
         Row(
             modifier = Modifier.heightIn(min = minHeight).padding(horizontal = horizontalPadding, vertical = 8.dp),

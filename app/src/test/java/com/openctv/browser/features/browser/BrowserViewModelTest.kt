@@ -173,6 +173,46 @@ class BrowserViewModelTest {
         }
 
     @Test
+    fun `Given a certificate error over a page of the history When the user presses Back Then the previous page is shown again without going back`() =
+        runTest {
+            val results = "https://duckduckgo.com/?q=badssl"
+            val expired = "https://expired.badssl.com/"
+            val viewModel = BrowserViewModel(results, bookmarks)
+            viewModel.onPageStarted(expired)
+            viewModel.onLoadError(WebLoadError(expired, LoadErrorCause.InvalidCertificate))
+
+            // La WebView affiche toujours les résultats : la page expirée n'a jamais été ajoutée à son historique.
+            viewModel.onBack(canGoBack = true, shownPageUrl = results)
+
+            assertThat(viewModel.pageState.value).isEqualTo(PageState.Loaded("duckduckgo.com"))
+            assertThat(viewModel.pageUrl.value).isEqualTo(results)
+            viewModel.commands.test { expectNoEvents() }
+        }
+
+    @Test
+    fun `Given an error whose page is in the WebView history When the user presses Back Then the browser goes back once`() =
+        runTest {
+            val viewModel = BrowserViewModel(url, bookmarks)
+            viewModel.onPageStarted(url)
+            viewModel.onLoadError(WebLoadError(url, LoadErrorCause.Unreachable))
+
+            viewModel.onBack(canGoBack = true, shownPageUrl = url)
+
+            viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.GoBack) }
+        }
+
+    @Test
+    fun `Given a certificate error on the very first page When the user presses Back Then the browser returns home`() = runTest {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+        viewModel.onLoadError(WebLoadError(url, LoadErrorCause.InvalidCertificate))
+
+        viewModel.onBack(canGoBack = false, shownPageUrl = null)
+
+        viewModel.commands.test { assertThat(awaitItem()).isEqualTo(BrowserCommand.Close) }
+    }
+
+    @Test
     fun `Given the first page of the visit When the user presses Back Then the browser returns home`() = runTest {
         val viewModel = BrowserViewModel(url, bookmarks)
 

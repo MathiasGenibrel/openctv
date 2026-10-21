@@ -9,12 +9,18 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
@@ -33,7 +39,9 @@ import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.features.browser.domain.ReloadAction
+import com.openctv.browser.features.browser.domain.ToolbarButton
 import com.openctv.browser.features.browser.domain.ToolbarState
+import com.openctv.browser.features.browser.domain.focusFallbackOf
 
 /** Actions de la barre d'outils : la vue les transmet au ViewModel, qui décide. */
 data class ToolbarActions(
@@ -61,6 +69,22 @@ fun BrowserToolbar(
     menuFocus: FocusRequester,
     modifier: Modifier = Modifier,
 ) {
+    val backFocus = remember { FocusRequester() }
+    val forwardFocus = remember { FocusRequester() }
+    val reloadFocus = remember { FocusRequester() }
+    // Dernier bouton à avoir pris le focus : s'il devient inactif (Suivant sur la dernière page), le focus
+    // passe au voisin actif au lieu de se perdre. Les autres éléments l'effacent en prenant le focus.
+    var lastFocused by remember { mutableStateOf<ToolbarButton?>(null) }
+    fun trackFocus(button: ToolbarButton?) = Modifier.onFocusChanged { if (it.isFocused) lastFocused = button }
+    LaunchedEffect(state.canGoBack, state.canGoForward, isInteractive) {
+        val fallback = if (isInteractive) focusFallbackOf(lastFocused, state) else null
+        when (fallback) {
+            ToolbarButton.Back -> backFocus
+            ToolbarButton.Forward -> forwardFocus
+            ToolbarButton.Reload -> reloadFocus
+            null -> null
+        }?.let { runCatching { it.requestFocus() } }
+    }
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -79,12 +103,14 @@ fun BrowserToolbar(
             contentDescription = stringResource(R.string.browser_toolbar_back),
             onClick = actions.onBack,
             enabled = state.canGoBack,
+            modifier = Modifier.focusRequester(backFocus).then(trackFocus(ToolbarButton.Back)),
         )
         OpenCtvIconButton(
             icon = OpenCtvIcons.ArrowForward,
             contentDescription = stringResource(R.string.browser_toolbar_forward),
             onClick = actions.onForward,
             enabled = state.canGoForward,
+            modifier = Modifier.focusRequester(forwardFocus).then(trackFocus(ToolbarButton.Forward)),
         )
         val isStop = state.reloadAction == ReloadAction.Stop
         OpenCtvIconButton(
@@ -93,11 +119,12 @@ fun BrowserToolbar(
                 if (isStop) R.string.browser_toolbar_stop else R.string.browser_toolbar_reload,
             ),
             onClick = actions.onReloadOrStop,
+            modifier = Modifier.focusRequester(reloadFocus).then(trackFocus(ToolbarButton.Reload)),
         )
         AddressField(
             state = state,
             onClick = actions.onEditAddress,
-            modifier = Modifier.weight(1f).focusRequester(addressFocus),
+            modifier = Modifier.weight(1f).focusRequester(addressFocus).then(trackFocus(null)),
         )
         OpenCtvIconButton(
             icon = if (state.isBookmarked) OpenCtvIcons.StarFilled else OpenCtvIcons.Star,
@@ -105,12 +132,13 @@ fun BrowserToolbar(
                 if (state.isBookmarked) R.string.browser_toolbar_bookmark_remove else R.string.browser_toolbar_bookmark_add,
             ),
             onClick = actions.onToggleBookmark,
+            modifier = trackFocus(null),
         )
         OpenCtvIconButton(
             icon = OpenCtvIcons.MoreVert,
             contentDescription = stringResource(R.string.browser_toolbar_menu),
             onClick = actions.onMenu,
-            modifier = Modifier.focusRequester(menuFocus),
+            modifier = Modifier.focusRequester(menuFocus).then(trackFocus(null)),
         )
     }
 }
