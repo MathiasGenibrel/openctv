@@ -22,8 +22,10 @@ class SecureWebViewClient(
     private val mainFrame = MainFrameTracker()
 
     override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
-        mainFrame.onRequest(request.url.toString(), request.isForMainFrame)
-        val isAllowed = WebNavigationPolicy.isUrlAllowed(request.url.toString())
+        val requestUrl = request.url.toString()
+        val isAllowed = WebNavigationPolicy.isUrlAllowed(requestUrl)
+        // Seule une navigation réellement suivie (lien, redirection) devient le cadre principal attendu.
+        if (isAllowed) mainFrame.onRequest(requestUrl, request.isForMainFrame)
         return !isAllowed
     }
 

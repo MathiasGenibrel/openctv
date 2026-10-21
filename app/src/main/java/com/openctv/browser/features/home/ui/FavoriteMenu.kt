@@ -23,18 +23,21 @@ import androidx.compose.ui.unit.dp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.OpeningKeyGuard
 import com.openctv.browser.core.designsystem.OpenCtvButton
 import com.openctv.browser.core.designsystem.OpenCtvButtonStyle
 import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvShapes
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.focusTrap
+import com.openctv.browser.core.designsystem.ignoresOpeningKey
 import com.openctv.browser.features.home.domain.HomeFavorite
 
 /**
  * Actions d'un favori (« Ouvrir » / « Retirer des favoris ») en petit panneau centré sur l'accueil assombri.
  * Il piège le focus (focus initial sur « Ouvrir », l'action sans risque) ; Retour appelle [onDismiss] et
- * l'accueil rend alors le focus à la tuile.
+ * l'accueil rend alors le focus à la tuile. Le OK maintenu qui l'a ouvert ne clique pas « Ouvrir » en étant
+ * relâché ([OpeningKeyGuard]).
  */
 @Composable
 internal fun FavoriteMenu(
@@ -47,8 +50,9 @@ internal fun FavoriteMenu(
     BackHandler(onBack = onDismiss)
     val openFocus = remember { FocusRequester() }
     LaunchedEffect(favorite) { openFocus.requestFocus() }
+    val openingKeyGuard = remember(favorite) { OpeningKeyGuard() }
 
-    Box(modifier.fillMaxSize().focusTrap(), contentAlignment = Alignment.Center) {
+    Box(modifier.fillMaxSize().ignoresOpeningKey(openingKeyGuard).focusTrap(), contentAlignment = Alignment.Center) {
         Box(Modifier.fillMaxSize().background(OpenCtvColors.Scrim.copy(alpha = 0.6f)))
         Column(
             Modifier

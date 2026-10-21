@@ -1,6 +1,5 @@
 package com.openctv.browser.features.browser.ui
 
-import android.view.View
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -26,12 +25,13 @@ class BrowserFocus(
  * - Une surcouche refermée rend le focus à ce qui l'a ouverte (champ d'adresse, bouton Menu) en mode
  *   interface, à la page sinon.
  * - Un changement de mode déplace le focus entre la page et la barre.
- * - Le plein écran vidéo donne le focus au lecteur, puis le rend à la page en sortant (au menu s'il
- *   était ouvert : il le reprend lui-même en réapparaissant).
+ * - En sortie du plein écran vidéo, le focus revient à la page (au menu s'il était ouvert : il le reprend
+ *   lui-même en réapparaissant). L'entrée est gérée par `FullscreenLayer`, qui attache le lecteur hors de
+ *   Compose et lui donne le focus Android.
  * - La page = la WebView, ou le bouton Réessayer quand une erreur la remplace.
  */
 @Composable
-internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView, layers: BrowserLayers, fullscreenView: () -> View?): BrowserFocus {
+internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView, layers: BrowserLayers): BrowserFocus {
     val focus = remember { BrowserFocus() }
 
     val focusPage = {
@@ -42,14 +42,10 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
         val isInterfaceMode = viewModel.layers.value.isInterfaceMode
         if (isInterfaceMode) toolbarTarget.requestFocus() else focusPage()
     }
-    // Entrée en plein écran : focus au lecteur ; sortie : retour au menu ouvert, sinon à la page (ou à la barre).
-    OnChanged(layers.isFullscreen) { isFullscreen ->
+    // Sortie du plein écran : retour au menu ouvert, sinon à la page (ou à la barre).
+    AfterClosed(layers.isFullscreen) {
         val isMenuOpen = viewModel.layers.value.isMenuOpen
-        when {
-            isFullscreen -> fullscreenView()?.requestFocus()
-            isMenuOpen -> Unit
-            else -> focusToolbarOr(focus.address)
-        }
+        if (!isMenuOpen) focusToolbarOr(focus.address)
     }
     AfterClosed(layers.isAddressInputOpen) { focusToolbarOr(focus.address) }
     AfterClosed(layers.isMenuOpen) { focusToolbarOr(focus.menuButton) }

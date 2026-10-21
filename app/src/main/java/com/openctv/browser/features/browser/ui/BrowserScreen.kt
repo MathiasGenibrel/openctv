@@ -96,7 +96,7 @@ fun BrowserScreen(
     // Saisie ouverte : c'est elle qui traite Retour (son BackHandler ferme la surcouche).
     BackHandler(enabled = !layers.isAddressInputOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
-    val focus = rememberBrowserFocus(viewModel, webView, layers, fullscreenView = { fullscreen.view })
+    val focus = rememberBrowserFocus(viewModel, webView, layers)
     val toolbarActions = remember(viewModel) {
         ToolbarActions(
             onBack = viewModel::goBack,

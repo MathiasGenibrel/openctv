@@ -4,10 +4,13 @@ import android.app.Activity
 import android.content.Context
 import android.content.ContextWrapper
 import android.graphics.Color
+import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.widget.FrameLayout
+import androidx.activity.OnBackPressedDispatcher
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +73,9 @@ internal class BrowserFullscreen(
  * touches OK / flèches transitaient par le focus Compose (resté sur la page) au lieu d'atteindre le lecteur.
  * Attachée au decor, la vue est plein écran dès l'attachement et, avec le focus Android, reçoit les touches
  * de la télécommande directement.
+ * Seul endroit qui donne le focus au lecteur (à l'attachement) ; Retour est intercepté par le conteneur et
+ * remis à l'`OnBackPressedDispatcher` (donc au `BackHandler` de l'écran, qui quitte le plein écran) : la page
+ * ne peut ni l'avaler ni le détourner.
  * La WebView reste attachée, visible et non mise en pause dessous : la masquer mettrait la page (donc la
  * vidéo) en pause côté Chromium.
  */
@@ -77,8 +83,9 @@ internal class BrowserFullscreen(
 internal fun FullscreenLayer(video: View) {
     ImmersiveMode()
     val decor = LocalContext.current.findActivity()?.window?.decorView as? FrameLayout ?: return
-    DisposableEffect(decor, video) {
-        val container = FullscreenContainer(decor.context)
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    DisposableEffect(decor, video, backDispatcher) {
+        val container = FullscreenContainer(decor.context, backDispatcher)
         (video.parent as? ViewGroup)?.removeView(video)
         container.addView(video, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
         decor.addView(container, FrameLayout.LayoutParams(MATCH_PARENT, MATCH_PARENT))
@@ -91,14 +98,29 @@ internal fun FullscreenLayer(video: View) {
     }
 }
 
-/** Fond noir plein écran ; prend le focus s'il n'en reste aucun au lecteur, pour que Compose ne le reprenne pas. */
-private class FullscreenContainer(context: Context) : FrameLayout(context) {
+/**
+ * Fond noir plein écran ; prend le focus s'il n'en reste aucun au lecteur, pour que Compose ne le reprenne pas.
+ * Retour ne descend pas jusqu'au lecteur : son relâchement est remis à [backDispatcher].
+ */
+private class FullscreenContainer(
+    context: Context,
+    private val backDispatcher: OnBackPressedDispatcher?,
+) : FrameLayout(context) {
     init {
         setBackgroundColor(Color.BLACK)
         keepScreenOn = true
         isFocusable = true
         isFocusableInTouchMode = true
         descendantFocusability = FOCUS_AFTER_DESCENDANTS
+    }
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        val isBack = event.keyCode == KeyEvent.KEYCODE_BACK
+        val dispatcher = backDispatcher
+        if (!isBack || dispatcher == null) return super.dispatchKeyEvent(event)
+        val isRelease = event.action == KeyEvent.ACTION_UP && !event.isCanceled
+        if (isRelease) dispatcher.onBackPressed()
+        return true
     }
 }
 
