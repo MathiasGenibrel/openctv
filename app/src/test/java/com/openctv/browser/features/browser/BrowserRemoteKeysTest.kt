@@ -1,15 +1,21 @@
 package com.openctv.browser.features.browser
 
 import android.view.KeyEvent
+import android.webkit.WebView
+import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.remote.RemoteAction
-import com.openctv.browser.core.remote.ScrollDirection
 import com.openctv.browser.core.webview.MediaCommand
+import com.openctv.browser.core.webview.ScrollDirection
 import com.openctv.browser.features.browser.ui.BrowserCommand
 import com.openctv.browser.features.browser.ui.BrowserViewModel
 import com.openctv.browser.features.browser.ui.FullscreenKeys
+import com.openctv.browser.features.browser.ui.PageKeyHandler
+import com.openctv.browser.features.browser.ui.consumesKey
 import com.openctv.browser.features.search.domain.SearchMode
+import io.mockk.every
+import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -97,6 +103,55 @@ class BrowserRemoteKeysTest {
 
         assertThat(isConsumed).isFalse()
         assertThat(viewModel.layers.value.addressInput).isNotNull()
+    }
+
+    @Test
+    fun `Given a text field of the page focused When a digit, Search or Channel is pressed Then the key is left to the page`() = runTest {
+        bookmarks.seed("https://one.example/")
+        val viewModel = viewModel()
+        viewModel.commands.test {
+            skipItems(1)
+            val typed = listOf(RemoteAction.OpenFavorite(1), RemoteAction.OpenSearch, scrollDown)
+            val consumed = typed.map { viewModel.onRemoteAction(it, isRepeat = false, isPageTextFieldFocused = true) }
+
+            assertThat(consumed).containsExactly(false, false, false)
+            assertThat(viewModel.layers.value.addressInput).isNull()
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `Given a text field of the page focused When digit 1 reaches the browser screen Then it goes to the page and no favorite opens`() = runTest {
+        bookmarks.seed("https://one.example/")
+        val viewModel = viewModel()
+        val webView = mockk<WebView>(relaxed = true) {
+            every { hasFocus() } returns true
+            every { onCheckIsTextEditor() } returns true
+        }
+        val digitOne = mockk<KeyEvent> {
+            every { keyCode } returns KeyEvent.KEYCODE_1
+            every { action } returns KeyEvent.ACTION_DOWN
+            every { repeatCount } returns 0
+        }
+        viewModel.commands.test {
+            skipItems(1)
+            val isConsumed = viewModel.consumesKey(ComposeKeyEvent(digitOne), webView, PageKeyHandler.None)
+
+            assertThat(isConsumed).isFalse()
+            expectNoEvents()
+        }
+    }
+
+    @Test
+    fun `Given a text field of the page focused When Play-Pause is pressed Then the video command is still sent`() = runTest {
+        val viewModel = viewModel()
+        viewModel.commands.test {
+            skipItems(1)
+            val isConsumed = viewModel.onRemoteAction(togglePlayback, isRepeat = false, isPageTextFieldFocused = true)
+
+            assertThat(isConsumed).isTrue()
+            assertThat(awaitItem()).isEqualTo(BrowserCommand.Media(MediaCommand.TogglePlayback))
+        }
     }
 
     @Test

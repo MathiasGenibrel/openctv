@@ -151,7 +151,7 @@ class BrowserHudAutoHideTest {
 
             assertThat(isConsumed).isTrue()
             assertThat(awaitItem())
-                .isEqualTo(BrowserCommand.ScrollPage(com.openctv.browser.core.remote.ScrollDirection.Down))
+                .isEqualTo(BrowserCommand.ScrollPage(com.openctv.browser.core.webview.ScrollDirection.Down))
         }
     }
 

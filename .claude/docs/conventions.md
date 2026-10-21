@@ -79,9 +79,15 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - Table unique : `core/remote/RemoteKeyMap` (Kotlin pur, testée). Ajuster une touche = changer cette table. Toute touche
   absente (Accueil, Retour, Volume, Muet, Alimentation, source, Réglages, Guide, touches d'applis, croix) n'est jamais
   interceptée : **ne jamais y ajouter une touche système**.
+- Traduction unique d'une touche Compose : `KeyEvent.dispatchRemoteAction` (`core/remote`), appelée par l'accueil et par
+  `BrowserKeys` ; `onPreviewKeyEvent` ne fait que déléguer. Le plein écran (vue Android hors Compose) lit la même table
+  via `FullscreenKeys`.
 - Aiguillage : `BrowserViewModel.onRemoteAction` / `HomeViewModel.onRemoteAction`. Sous une surcouche (saisie, menu,
   historique, plein écran) rien n'est consommé ; le premier appui d'un HUD masqué ne fait que le réafficher
   (`onRemoteKey`, avant l'aiguillage).
+- **Champ de saisie de la page** : `onPreviewKeyEvent` passe avant la WebView. Quand un champ éditable de la page a le
+  focus (`WebView.isTextFieldFocused`, `core/webview` : état d'IME du moteur, sans JavaScript), chiffres, Recherche et
+  Chaîne/Page ± lui reviennent (`RemoteAction.yieldsToPageTextField`) ; média et Info gardent leur rôle.
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :

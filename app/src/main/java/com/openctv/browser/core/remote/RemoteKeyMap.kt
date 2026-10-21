@@ -2,9 +2,7 @@ package com.openctv.browser.core.remote
 
 import android.view.KeyEvent
 import com.openctv.browser.core.webview.MediaCommand
-
-/** Sens d'un défilement d'une page entière. */
-enum class ScrollDirection { Up, Down }
+import com.openctv.browser.core.webview.ScrollDirection
 
 /** Ce qu'une touche « confort » de la télécommande demande à l'application (hors croix, OK et Retour). */
 sealed interface RemoteAction {
@@ -29,6 +27,17 @@ sealed interface RemoteAction {
             is ScrollPage -> true
             is Media -> command == MediaCommand.SeekBack || command == MediaCommand.SeekForward
             OpenSearch, OpenMenu, is OpenFavorite -> false
+        }
+
+    /**
+     * Un champ de saisie de la page a le focus (clavier système ouvert ou non) : la touche lui revient (chiffre
+     * tapé, Recherche ou Page ± pour l'IME et le champ), jamais un favori, la saisie d'adresse ni un défilement.
+     * Les touches média et Info ne tapent rien : elles gardent leur rôle.
+     */
+    val yieldsToPageTextField: Boolean
+        get() = when (this) {
+            is ScrollPage, OpenSearch, is OpenFavorite -> true
+            is Media, OpenMenu -> false
         }
 }
 
@@ -68,13 +77,4 @@ object RemoteKeyMap {
 
     /** Action de [keyCode] (code `android.view.KeyEvent`), `null` = touche laissée à qui la reçoit. */
     fun actionFor(keyCode: Int): RemoteAction? = actions[keyCode]
-}
-
-/** Part de la hauteur visible parcourue par un défilement d'un écran : un peu moins, pour garder un repère de lecture. */
-private const val PAGE_SCROLL_FRACTION = 0.9f
-
-/** Pixels de l'écran à parcourir pour défiler d'un écran dans [direction] (négatif = vers le haut). */
-fun pageScrollPixels(visibleHeightOnScreen: Int, direction: ScrollDirection): Int {
-    val distance = (visibleHeightOnScreen * PAGE_SCROLL_FRACTION).toInt()
-    return if (direction == ScrollDirection.Up) -distance else distance
 }

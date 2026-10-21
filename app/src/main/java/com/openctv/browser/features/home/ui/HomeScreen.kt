@@ -64,7 +64,6 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.common.Resource
-import com.openctv.browser.core.remote.RemoteKeyMap
 import com.openctv.browser.core.designsystem.DPadIcon
 import com.openctv.browser.core.designsystem.ExpressiveShape
 import com.openctv.browser.core.designsystem.FocusableTile
@@ -82,6 +81,7 @@ import com.openctv.browser.core.designsystem.focusRingBorder
 import com.openctv.browser.core.designsystem.morphBackground
 import com.openctv.browser.core.designsystem.morphToCircle
 import com.openctv.browser.core.navigation.Destination
+import com.openctv.browser.core.remote.dispatchRemoteAction
 import com.openctv.browser.features.home.domain.HomeFavorite
 import com.openctv.browser.features.home.domain.HomeFocus
 import com.openctv.browser.features.search.domain.SearchRequest
@@ -125,11 +125,7 @@ fun HomeScreen(
     BackHandler(enabled = !isSearchOpen && favoriteMenu == null) { viewModel.onBack() }
 
     Box(
-        modifier.fillMaxSize().onPreviewKeyEvent { event ->
-            val isKeyDown = event.type == KeyEventType.KeyDown
-            val action = RemoteKeyMap.actionFor(event.nativeKeyEvent.keyCode)
-            isKeyDown && action != null && viewModel.onRemoteAction(action, isRepeat = event.nativeKeyEvent.repeatCount > 0)
-        },
+        modifier.fillMaxSize().onPreviewKeyEvent { event -> event.dispatchRemoteAction(viewModel::onRemoteAction) },
     ) {
         HomeContent(
             favorites = favorites,

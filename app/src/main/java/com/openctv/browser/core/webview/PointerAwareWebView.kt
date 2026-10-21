@@ -3,8 +3,6 @@ package com.openctv.browser.core.webview
 import android.content.Context
 import android.view.PointerIcon
 import android.webkit.WebView
-import com.openctv.browser.core.remote.ScrollDirection
-import com.openctv.browser.core.remote.pageScrollPixels
 import com.openctv.browser.core.zoom.PageZoom
 import kotlin.math.roundToInt
 

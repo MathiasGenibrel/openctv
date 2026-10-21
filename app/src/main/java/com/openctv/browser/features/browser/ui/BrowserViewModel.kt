@@ -6,13 +6,13 @@ import com.openctv.browser.core.common.Resource
 import com.openctv.browser.core.history.NoPageVisits
 import com.openctv.browser.core.history.PageVisitsContract
 import com.openctv.browser.core.remote.RemoteAction
-import com.openctv.browser.core.remote.ScrollDirection
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
 import com.openctv.browser.core.security.SiteHost
 import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.MediaCommand
 import com.openctv.browser.core.webview.NavigationDecision
+import com.openctv.browser.core.webview.ScrollDirection
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.WebNavigationPolicy
 import com.openctv.browser.core.webview.WebPageListener
@@ -353,12 +353,15 @@ class BrowserViewModel(
     /**
      * Touche « confort » de la télécommande ([RemoteKeyMap]), appui initial ou répétition. Renvoie `true` si elle
      * est consommée. Sous une surcouche (saisie, menu, historique, plein écran) rien n'est pris : le chiffre tapé
-     * dans la saisie reste un chiffre, et la page dessous ne bouge pas. Le réveil de l'interface masquée est
-     * décidé avant ([onRemoteKey]) : ces touches ne le contournent pas.
+     * dans la saisie reste un chiffre, et la page dessous ne bouge pas. De même quand un champ de saisie de la page
+     * a le focus ([isPageTextFieldFocused]) : chiffres, Recherche et Chaîne lui reviennent
+     * ([RemoteAction.yieldsToPageTextField]). Le réveil de l'interface masquée est décidé avant ([onRemoteKey]) :
+     * ces touches ne le contournent pas.
      */
-    fun onRemoteAction(action: RemoteAction, isRepeat: Boolean): Boolean {
-        val layers = _layers.value
-        if (layers.isOverlayOpen) return false
+    fun onRemoteAction(action: RemoteAction, isRepeat: Boolean, isPageTextFieldFocused: Boolean = false): Boolean {
+        val isOverlayOpen = _layers.value.isOverlayOpen
+        val isLeftToPageTextField = isPageTextFieldFocused && action.yieldsToPageTextField
+        if (isOverlayOpen || isLeftToPageTextField) return false
         if (isRepeat && !action.repeatsWhenHeld) return true
         val isPageShown = _pageState.value !is PageState.Error
         when (action) {

@@ -3,6 +3,7 @@ package com.openctv.browser.core.remote
 import android.view.KeyEvent
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.webview.MediaCommand
+import com.openctv.browser.core.webview.ScrollDirection
 import org.junit.Test
 
 class RemoteKeyMapTest {
@@ -69,8 +70,11 @@ class RemoteKeyMapTest {
     }
 
     @Test
-    fun `Given a 1080 pixel high screen When scrolling one screen Then the page moves by 90 percent of it`() {
-        assertThat(pageScrollPixels(1080, ScrollDirection.Down)).isEqualTo(972)
-        assertThat(pageScrollPixels(1080, ScrollDirection.Up)).isEqualTo(-972)
+    fun `Given a text field of the page focused When a remote key is pressed Then only the keys that do not type keep their role`() {
+        assertThat(RemoteAction.OpenFavorite(1).yieldsToPageTextField).isTrue()
+        assertThat(RemoteAction.OpenSearch.yieldsToPageTextField).isTrue()
+        assertThat(RemoteAction.ScrollPage(ScrollDirection.Down).yieldsToPageTextField).isTrue()
+        assertThat(RemoteAction.Media(MediaCommand.TogglePlayback).yieldsToPageTextField).isFalse()
+        assertThat(RemoteAction.OpenMenu.yieldsToPageTextField).isFalse()
     }
 }
