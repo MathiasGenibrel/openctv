@@ -33,6 +33,25 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     /** Appelé sur le thread UI quand [pointerKind] change. */
     var onPointerKindChanged: ((PointerKind) -> Unit)? = null
 
+    /**
+     * Lecture / pause de la vidéo plein écran de la page (ou, à défaut, de la première vidéo). Les sites vidéo
+     * mobiles (YouTube) n'ont aucun raccourci clavier : c'est le seul moyen qu'a OK de les piloter. Appel natif
+     * ponctuel, sans état ni interface exposée à la page.
+     */
+    fun togglePlayback() {
+        evaluateJavascript(playerScript("if(v.paused){v.play();}else{v.pause();}"), null)
+    }
+
+    /** Recule (< 0) ou avance (> 0) la vidéo de [seconds] secondes, comme [togglePlayback]. */
+    fun seekBy(seconds: Int) {
+        evaluateJavascript(playerScript("v.currentTime=Math.max(0,v.currentTime+($seconds));"), null)
+    }
+
+    private fun playerScript(action: String): String =
+        "(function(){var f=document.fullscreenElement;" +
+            "var v=(f&&(f.tagName==='VIDEO'?f:f.querySelector('video')))||document.querySelector('video');" +
+            "if(!v)return;$action})()"
+
     override fun setPointerIcon(pointerIcon: PointerIcon?) {
         super.setPointerIcon(pointerIcon)
         val kind = kindOf(pointerIcon)

@@ -1,6 +1,7 @@
 package com.openctv.browser.features.browser.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -70,10 +71,21 @@ fun BrowserScreen(
     // Une seule WebView vivante : créée une fois ici, détruite quand l'écran quitte la composition.
     val context = LocalContext.current
     // Le plein écran vidéo naît et meurt avec la WebView : rendu à la page avant sa destruction (WebViewLifecycle).
-    val fullscreen = remember {
-        BrowserFullscreen(onShown = viewModel::onFullscreenShown, onHidden = viewModel::onFullscreenHidden)
+    val activity = context.findActivity()
+    val backDispatcher = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
+    // La WebView ne naît qu'après l'hôte plein écran (il est son client) : l'hôte reçoit donc sa bascule lecture
+    // / pause par une référence résolue au moment de l'appui.
+    val webViewRef = remember { arrayOfNulls<PointerAwareWebView>(1) }
+    val fullscreen = remember(activity, backDispatcher) {
+        BrowserFullscreen(
+            onShown = viewModel::onFullscreenShown,
+            onHidden = viewModel::onFullscreenHidden,
+            presenter = activity?.let {
+                DecorFullscreenPresenter(it, backDispatcher, onPlayerAction = { action -> webViewRef[0]?.perform(action) })
+            } ?: FullscreenPresenter.None,
+        )
     }
-    val webView = remember { webViewFactory.create(context, viewModel, fullscreen) }
+    val webView = remember { webViewFactory.create(context, viewModel, fullscreen).also { webViewRef[0] = it } }
     WebViewLifecycle(webView, fullscreen)
 
     val currentOnClose by rememberUpdatedState(onClose)
@@ -151,8 +163,15 @@ fun BrowserScreen(
         val isMenuShown = layers.isMenuOpen && !layers.isFullscreen
         if (isMenuShown) menu()
         layers.addressInput?.let { addressInput(it) }
-        fullscreen.view?.let { FullscreenLayer(it) }
+        if (fullscreen.view != null) ImmersiveMode()
     }
+}
+
+private fun PointerAwareWebView.perform(action: PlayerAction) = when (action) {
+    PlayerAction.TogglePlayback -> togglePlayback()
+    PlayerAction.SeekBack -> seekBy(-FullscreenKeys.SEEK_SECONDS)
+    PlayerAction.SeekForward -> seekBy(FullscreenKeys.SEEK_SECONDS)
+    PlayerAction.None -> Unit
 }
 
 @Composable

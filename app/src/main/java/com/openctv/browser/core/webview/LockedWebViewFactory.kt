@@ -42,6 +42,8 @@ class LockedWebViewFactory(
     @SuppressLint("SetJavaScriptEnabled")
     fun create(context: Context, listener: WebPageListener, fullscreenHost: FullscreenHost): PointerAwareWebView =
         PointerAwareWebView(context).apply {
+            // Pas de petit carré bleu (contour de focus Android) sur la page : le curseur virtuel est le repère visuel.
+            defaultFocusHighlightEnabled = false
             settings.apply {
                 javaScriptEnabled = true
                 domStorageEnabled = true
