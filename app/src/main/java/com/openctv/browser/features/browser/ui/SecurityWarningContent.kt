@@ -47,7 +47,7 @@ import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.webview.CertificateProblem
 import com.openctv.browser.core.webview.SecurityWarning
-import com.openctv.browser.core.webview.isLocalNetworkHost
+import com.openctv.browser.core.security.isLocalNetworkHost
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter

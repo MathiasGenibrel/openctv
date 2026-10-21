@@ -98,4 +98,22 @@ class SettingsDomainTest {
         assertThat(CursorSpeed.fromId("warp")).isEqualTo(CursorSpeed.Normal)
         assertThat(HudHideDelay.Never.delay).isNull()
     }
+
+    @Test
+    fun `Given an internal site When chosen as start page Then its http address is kept`() {
+        assertThat(StartPage.fromInput("gitlab-dashboard.tools.internal"))
+            .isEqualTo(StartPage.Site("http://gitlab-dashboard.tools.internal"))
+        assertThat(StartPage.fromInput("http://gitlab-dashboard.tools.internal/"))
+            .isEqualTo(StartPage.Site("http://gitlab-dashboard.tools.internal/"))
+    }
+
+    @Test
+    fun `Given an internal site typed in capitals or with a trailing dot When chosen as start page Then it opens in http`() {
+        assertThat(StartPage.fromInput("GitLab.Tools.Internal"))
+            .isEqualTo(StartPage.Site("http://GitLab.Tools.Internal"))
+        assertThat(StartPage.fromInput("gitlab.tools.internal."))
+            .isEqualTo(StartPage.Site("http://gitlab.tools.internal."))
+        assertThat(StartPage.fromInput("internal.evil.com"))
+            .isEqualTo(StartPage.Site("https://internal.evil.com"))
+    }
 }

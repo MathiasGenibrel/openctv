@@ -50,4 +50,12 @@ class BookmarkUrlTest {
     fun `Given a url with port and credentials When naming the site Then only the host is kept`() {
         assertThat(BookmarkUrl.siteName("https://user@www.arte.tv:8443/fr?x=1")).isEqualTo("arte.tv")
     }
+
+    @Test
+    fun `Given an internal http site When bookmarked Then the http scheme is kept`() {
+        assertThat(BookmarkUrl.normalize("http://Gitlab-Dashboard.tools.internal/"))
+            .isEqualTo("http://gitlab-dashboard.tools.internal")
+        assertThat(BookmarkUrl.key("http://gitlab-dashboard.tools.internal/"))
+            .isEqualTo("gitlab-dashboard.tools.internal")
+    }
 }

@@ -1,5 +1,6 @@
 package com.openctv.browser.features.search.domain
 
+import com.openctv.browser.core.security.isHttpByDefaultHost
 import com.openctv.browser.features.settings.domain.SearchEngine
 
 /**
@@ -7,7 +8,8 @@ import com.openctv.browser.features.settings.domain.SearchEngine
  *
  * - `https://…` / `http://…` : adresse telle quelle ;
  * - `arte.tv`, `arte.tv/replay` : adresse, ouverte en `https` ;
- * - `localhost`, `localhost:8080`, IPv4 (`192.168.1.10:3000`) : adresse, ouverte en `http` (pas de TLS en local) ;
+ * - `localhost`, `localhost:8080`, IPv4 (`192.168.1.10:3000`), noms de réseau privé (`gitlab.tools.internal`,
+ *   `.local`, `.lan`, `.home`, `.home.arpa`, `.localdomain`) : adresse, ouverte en `http` (pas de TLS en local) ;
  * - tout le reste (mots, espaces, autres schémas comme `javascript:` ou `file://`) : recherche.
  *
  * Seuls `http`/`https` sont donc jamais produits.
@@ -37,7 +39,7 @@ object InputResolver {
 
         val authority = authorityOf(input)
         val host = hostOf(authority) ?: return null
-        val isLocal = host == "localhost" || isIpv4(host)
+        val isLocal = isHttpByDefaultHost(host)
         val defaultScheme = if (isLocal) "http" else "https"
         return "$defaultScheme://$input"
     }
