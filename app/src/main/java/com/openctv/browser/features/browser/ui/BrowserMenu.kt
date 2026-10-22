@@ -16,8 +16,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -26,6 +26,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import com.openctv.browser.R
 import com.openctv.browser.core.designsystem.ListGroup
+import com.openctv.browser.core.designsystem.ListGroupDensity
 import com.openctv.browser.core.designsystem.ListGroupStyle
 import com.openctv.browser.core.designsystem.ListNavigationRow
 import com.openctv.browser.core.designsystem.ListRadioOptions
@@ -36,6 +37,7 @@ import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.SidePanelOverlay
+import com.openctv.browser.core.designsystem.appPluralStringResource
 import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.core.zoom.percentLabel
@@ -73,6 +75,13 @@ fun BrowserMenu(
     )
 }
 
+/**
+ * Hauteur du menu en 540 dp : zone sûre 486 − marge du panneau 2 × 16 = 454 dp pour le contenu, qui en prend 436 :
+ * en-tête 56 + groupe 238 (4 + 64 + 2 + 64 + 2 + 48 + 2 + 48 + 4) + 8 + groupe 106 (4 + 48 + 2 + 48 + 4) + marge de
+ * la colonne 8 + aide 20.
+ */
+private val MenuPanelVerticalPadding = 16.dp
+
 internal class MenuActions(
     val onToggleAdBlock: () -> Unit,
     val onToggleBookmark: () -> Unit,
@@ -92,7 +101,7 @@ internal fun BrowserMenuContent(
 ) {
     // Hissé ici : survit au remplacement de la liste par un sous-panneau, pour rendre le focus à la bonne ligne.
     val rowFocus = remember { MenuFocus() }
-    SidePanelOverlay(onDismiss = onBack, modifier = modifier) {
+    SidePanelOverlay(onDismiss = onBack, modifier = modifier, verticalPadding = MenuPanelVerticalPadding) {
         Column(Modifier.fillMaxSize()) {
             val panel = state.openPanel
             if (panel == null) MenuList(state, actions, rowFocus) else MenuPanel(panel, state, actions)
@@ -106,13 +115,20 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
     LaunchedEffect(Unit) { rowFocus.restore() }
 
     Text(stringResource(R.string.browser_menu_title), style = MaterialTheme.typography.headlineSmall)
-    Text(state.site, style = MaterialTheme.typography.bodyLarge, color = OpenCtvColors.OnSurfaceVariant)
-    // Les groupes défilent si l'écran est trop bas ; le padding laisse la place à l'anneau de focus.
+    Text(
+        state.site,
+        style = MaterialTheme.typography.bodyLarge,
+        color = OpenCtvColors.OnSurfaceVariant,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+    )
+    // Tient en 540 dp sans défiler (cf. design.md) ; la colonne ne défile qu'en filet de sécurité (texte agrandi,
+    // écran plus bas). Son padding laisse la place à l'anneau de focus, que le défilement rognerait sinon.
     Column(
-        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 16.dp, horizontal = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(vertical = 4.dp, horizontal = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        ListGroup(style = ListGroupStyle.Vibrant) {
+        ListGroup(style = ListGroupStyle.Vibrant, density = ListGroupDensity.Compact) {
             ListSwitchRow(
                 icon = OpenCtvIcons.Shield,
                 label = stringResource(R.string.browser_menu_ad_block),
@@ -142,7 +158,7 @@ private fun ColumnScope.MenuList(state: BrowserMenuState, actions: MenuActions, 
                 onClick = actions.onToggleNavigationMode,
             )
         }
-        ListGroup(style = ListGroupStyle.Vibrant) {
+        ListGroup(style = ListGroupStyle.Vibrant, density = ListGroupDensity.Compact) {
             ListRow(OpenCtvIcons.Home, stringResource(R.string.browser_menu_home), onClick = actions.onHome)
             ListRow(OpenCtvIcons.History, stringResource(R.string.browser_menu_history), onClick = actions.onHistory)
         }
@@ -233,7 +249,7 @@ private fun navigationModeLabel(mode: NavigationMode): String = when (mode) {
 @Composable
 private fun adBlockSummary(status: AdBlockStatus): String = when (status) {
     is AdBlockStatus.Active ->
-        pluralStringResource(R.plurals.browser_menu_ad_block_count, status.blockedCount, status.blockedCount)
+        appPluralStringResource(R.plurals.browser_menu_ad_block_count, status.blockedCount, status.blockedCount)
     AdBlockStatus.DisabledForSite -> stringResource(R.string.browser_menu_ad_block_site_off)
     AdBlockStatus.DisabledEverywhere -> stringResource(R.string.browser_menu_ad_block_global_off)
 }

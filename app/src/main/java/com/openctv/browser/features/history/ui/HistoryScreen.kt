@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Devices
@@ -53,6 +52,7 @@ import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.asShape
 import com.openctv.browser.core.designsystem.focusTrap
+import com.openctv.browser.core.designsystem.appPluralStringResource
 import com.openctv.browser.features.history.domain.DayLabel
 import com.openctv.browser.features.history.domain.HistoryDay
 import com.openctv.browser.features.history.domain.HistoryEntry
@@ -384,7 +384,7 @@ private fun ClearConfirmation(count: Int, onCancel: () -> Unit, onConfirm: () ->
             )
             Spacer(Modifier.height(12.dp))
             Text(
-                text = pluralStringResource(R.plurals.history_clear_message, count, count),
+                text = appPluralStringResource(R.plurals.history_clear_message, count, count),
                 style = MaterialTheme.typography.bodyMedium,
                 color = OpenCtvColors.OnSurfaceVariant,
             )

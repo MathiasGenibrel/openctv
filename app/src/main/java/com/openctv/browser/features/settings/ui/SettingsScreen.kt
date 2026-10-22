@@ -38,7 +38,6 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -80,6 +79,7 @@ import com.openctv.browser.core.designsystem.OverscanSafeArea
 import com.openctv.browser.core.designsystem.SidePanelOverlay
 import com.openctv.browser.core.designsystem.focusRing
 import com.openctv.browser.core.designsystem.focusRingBorder
+import com.openctv.browser.core.designsystem.appPluralStringResource
 import com.openctv.browser.features.bookmarks.domain.Bookmark
 import com.openctv.browser.features.settings.domain.ClearDataSelection
 import com.openctv.browser.features.settings.domain.ClearDataStep
@@ -365,7 +365,7 @@ private fun filterListsSummary(status: FilterListsStatus): String {
         FilterListsSummary.Never -> stringResource(R.string.settings_filter_lists_never)
         FilterListsSummary.Today -> stringResource(R.string.settings_filter_lists_today)
         is FilterListsSummary.DaysAgo ->
-            pluralStringResource(R.plurals.settings_filter_lists_days_ago, summary.days, summary.days)
+            appPluralStringResource(R.plurals.settings_filter_lists_days_ago, summary.days, summary.days)
     }
     return stringResource(R.string.settings_filter_lists_summary, freshness)
 }
@@ -375,7 +375,7 @@ private fun securityExceptionsSummary(count: Int): String =
     if (count == 0) {
         stringResource(R.string.settings_security_exceptions_none)
     } else {
-        pluralStringResource(R.plurals.settings_security_exceptions_count, count, count)
+        appPluralStringResource(R.plurals.settings_security_exceptions_count, count, count)
     }
 
 @Composable
@@ -511,9 +511,9 @@ private fun ClearDataPanel(
 
 @Composable
 private fun clearStepSupporting(step: ClearDataStep, historyCount: Int?, recentSearchCount: Int?): String? = when (step) {
-    ClearDataStep.History -> historyCount?.let { pluralStringResource(R.plurals.settings_clear_data_pages, it, it) }
+    ClearDataStep.History -> historyCount?.let { appPluralStringResource(R.plurals.settings_clear_data_pages, it, it) }
     ClearDataStep.RecentSearches ->
-        recentSearchCount?.let { pluralStringResource(R.plurals.settings_clear_data_searches, it, it) }
+        recentSearchCount?.let { appPluralStringResource(R.plurals.settings_clear_data_searches, it, it) }
     ClearDataStep.SiteData -> stringResource(R.string.settings_clear_data_site_data_hint)
     ClearDataStep.Cache -> stringResource(R.string.settings_clear_data_cache_hint)
 }

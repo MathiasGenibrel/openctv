@@ -82,6 +82,9 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   Haut agit **au relâchement** : appui court = Maj+Tab, appui long (première répétition) = barre d'adresse, sans Maj+Tab.
   `PointerAwareWebView.focusSearch` renvoie la WebView elle-même : Tab après le dernier élément (`takeFocus` du moteur)
   ou une flèche non consommée par la page ne font jamais sortir le focus Android de la WebView ; seule l'app le déplace.
+- **Focus rendu à la page** (`webView.requestFocus()`, `BrowserFocus`) : la fabrique pose `setNeedInitialFocus(false)`,
+  sinon Chromium focalise le premier élément de la page (clavier ouvert sur un champ, saut de page, contour en (0,0)).
+  Ne jamais le réactiver : le mode éléments n'en dépend pas (Tab part de l'élément courant, ou du premier).
 - Toute API WebView récente passe par `WebViewFeature.isFeatureSupported(...)` (androidx.webkit).
 - `evaluateJavascript` autorisé pour **deux usages seulement**, tous deux dans `core/webview/`, à résultat ignoré et
   échec silencieux, jamais de JavaScript persistant ni d'`addJavascriptInterface` :
@@ -174,6 +177,10 @@ entités → domaine, états `Resource`. Pas chaque fonction.
 
 ## Lisibilité
 - SRP : nommer chaque booléen intermédiaire, pas de condition composée inline.
+
+## Textes
+- Les textes de l'app sont en français (`values/` seulement). Pluriels : **`appPluralStringResource`** (`core/designsystem`),
+  jamais `pluralStringResource`, qui accorde selon la langue de la TV (« 0 bloquées » sur une TV en anglais).
 
 ## UI Components
 - Simples et réutilisables, pas de sur-spécialisation

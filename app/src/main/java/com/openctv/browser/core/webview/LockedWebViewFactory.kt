@@ -50,6 +50,11 @@ class LockedWebViewFactory(
             // Pas de petit carré bleu (contour de focus Android) sur la page : le curseur virtuel est le repère visuel.
             defaultFocusHighlightEnabled = false
             settings.apply {
+                // Sans cela, `requestFocus()` (retour du focus à la page après la barre, le menu ou le plein écran) fait
+                // focaliser à Chromium le premier élément de la page (hors mode tactile, `setInitialFocus`) : clavier
+                // ouvert sur un champ, page qui défile, contour de focus en (0,0). L'élément focalisé de la page est
+                // conservé ; il ne change que par Tab / Maj+Tab (mode éléments), un clic du curseur ou la page elle-même.
+                setNeedInitialFocus(false)
                 javaScriptEnabled = true
                 domStorageEnabled = true
                 allowFileAccess = false
