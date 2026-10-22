@@ -12,14 +12,7 @@ enum class BrowserMenuPanel { PageZoom }
 /** Ce que dit la ligne « Bloqueur de pubs » du menu. */
 sealed interface AdBlockStatus {
     /** Bloqueur actif sur ce site, [blockedCount] requêtes bloquées depuis le lancement. */
-    data class Active(val blockedCount: Int) : AdBlockStatus {
-        /**
-         * Catégorie de pluriel du libellé « N bloquée(s) » : en français, 0 et 1 sont au singulier. Android ne le sait que
-         * si la langue de l'appareil est le français (en anglais, 0 est « other ») : le libellé étant français quelle
-         * que soit la langue de la TV, la règle est portée ici.
-         */
-        val pluralQuantity: Int get() = if (blockedCount <= 1) 1 else blockedCount
-    }
+    data class Active(val blockedCount: Int) : AdBlockStatus
 
     /** Désactivé pour ce site seulement. */
     data object DisabledForSite : AdBlockStatus

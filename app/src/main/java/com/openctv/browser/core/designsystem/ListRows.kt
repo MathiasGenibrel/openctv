@@ -41,17 +41,38 @@ enum class ListGroupStyle { Standard, Vibrant }
 
 /**
  * Densité d'un groupe : `Comfortable` (Réglages, sous-panneaux), ou `Compact` (menu du navigateur, qui doit tenir en
- * 540 dp sans défiler) : lignes d'une ligne 48 dp, de deux lignes 64 dp, textes sur une seule ligne.
+ * 540 dp sans défiler) : lignes d'une ligne 48 dp, de deux lignes 64 dp, textes sur une seule ligne (ellipse), tailles
+ * de texte inchangées. Toutes les dimensions qui en dépendent sont ci-dessous.
  */
 enum class ListGroupDensity { Comfortable, Compact }
 
 private val LocalListGroupDensity = staticCompositionLocalOf { ListGroupDensity.Comfortable }
 
+private val ListGroupDensity.isCompact: Boolean
+    get() = this == ListGroupDensity.Compact
+
 private val ListGroupDensity.groupPadding: Dp
-    get() = if (this == ListGroupDensity.Compact) CompactGroupPadding else ListGroupPadding
+    get() = if (isCompact) CompactGroupPadding else ListGroupPadding
 
 private val ListGroupDensity.rowSpacing: Dp
-    get() = if (this == ListGroupDensity.Compact) 2.dp else 4.dp
+    get() = if (isCompact) 2.dp else 4.dp
+
+/** Écart entre l'icône (ou la radio), les textes et l'élément de fin. */
+private val ListGroupDensity.rowContentSpacing: Dp
+    get() = if (isCompact) 12.dp else 16.dp
+
+/** Textes d'une [ListRow] sur une seule ligne (ellipse) : la hauteur fixée ne doit pas être dépassée. */
+private val ListGroupDensity.isRowTextSingleLine: Boolean
+    get() = isCompact
+
+private fun ListGroupDensity.rowMinHeight(style: ListGroupStyle, hasSupportingLine: Boolean): Dp = when {
+    !isCompact -> style.rowMinHeight
+    hasSupportingLine -> CompactTwoLinesRowHeight
+    else -> CompactOneLineRowHeight
+}
+
+private fun ListGroupDensity.rowHorizontalPadding(style: ListGroupStyle): Dp =
+    if (isCompact) CompactRowHorizontalPadding else style.rowHorizontalPadding
 
 /** Style des lignes : celui du [ListGroup] englobant ; `Standard` hors groupe (radios d'un sous-panneau). */
 private val LocalListGroupStyle = staticCompositionLocalOf { ListGroupStyle.Standard }
@@ -74,6 +95,12 @@ private val ListGroupStyle.rowHorizontalPadding: Dp
  * anneau (5 dp), qui ne doivent pas déborder de la carte.
  */
 private val ListGroupPadding = 12.dp
+
+/**
+ * Marge `Compact` : l'anneau d'une ligne focalisée déborde un peu de la carte (≈ 2 dp en haut et en bas, ≈ 4 dp sur
+ * les côtés avec l'agrandissement). Il n'est pas rogné tant que le conteneur laisse au moins 2 dp de plus autour du
+ * groupe avant tout clip (colonne défilable du menu : 4 dp).
+ */
 private val CompactGroupPadding = 4.dp
 private val CompactOneLineRowHeight = 48.dp
 private val CompactTwoLinesRowHeight = 64.dp
@@ -128,7 +155,7 @@ fun ListGroup(
 /**
  * Ligne focalisable : [icon], [label], [supporting] optionnel (deuxième ligne) et [trailing]
  * (valeur, interrupteur, chevron). [iconTint] colore l'icône de tête (couleur du contenu par défaut).
- * La ligne grandit avec son contenu : rien n'est découpé.
+ * La ligne grandit avec son contenu : rien n'est découpé, sauf en densité `Compact` (textes sur une ligne, ellipse).
  */
 @Composable
 fun ListRow(
@@ -143,18 +170,17 @@ fun ListRow(
     trailing: @Composable () -> Unit = {},
 ) {
     val style = LocalListGroupStyle.current
-    val isCompact = LocalListGroupDensity.current == ListGroupDensity.Compact
+    val density = LocalListGroupDensity.current
     val hasSupportingLine = supporting != null
-    val compactMinHeight = if (hasSupportingLine) CompactTwoLinesRowHeight else CompactOneLineRowHeight
     ListRowLayout(
         onClick = onClick,
         modifier = modifier,
-        minHeight = if (isCompact) compactMinHeight else style.rowMinHeight,
-        horizontalPadding = if (isCompact) CompactRowHorizontalPadding else style.rowHorizontalPadding,
+        minHeight = density.rowMinHeight(style, hasSupportingLine),
+        horizontalPadding = density.rowHorizontalPadding(style),
         leading = { Icon(icon, contentDescription = null, tint = iconTint.takeOrElse { LocalContentColor.current }) },
         label = label,
-        isLabelSingleLine = isLabelSingleLine || isCompact,
-        isSupportingSingleLine = isCompact,
+        isLabelSingleLine = isLabelSingleLine || density.isRowTextSingleLine,
+        isSupportingSingleLine = density.isRowTextSingleLine,
         supporting = supporting,
         supportingStyle = MaterialTheme.typography.bodyMedium,
         trailing = trailing,
@@ -210,7 +236,7 @@ fun ListNavigationRow(
     modifier: Modifier = Modifier,
 ) {
     val tint = LocalListGroupStyle.current.secondaryContent
-    val isCompact = LocalListGroupDensity.current == ListGroupDensity.Compact
+    val isCompact = LocalListGroupDensity.current.isCompact
     val chevron = @Composable {
         Icon(OpenCtvIcons.ChevronRight, contentDescription = null, tint = tint.takeOrElse { LocalContentColor.current })
     }
@@ -332,6 +358,7 @@ private fun ListRowLayout(
     isSupportingSingleLine: Boolean = false,
 ) {
     val style = LocalListGroupStyle.current
+    val density = LocalListGroupDensity.current
     val shape = OpenCtvShapes.Medium
     Surface(
         onClick = onClick,
@@ -344,7 +371,7 @@ private fun ListRowLayout(
         Row(
             modifier = Modifier.heightIn(min = minHeight).padding(horizontal = horizontalPadding, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(if (isSupportingSingleLine) 12.dp else 16.dp),
+            horizontalArrangement = Arrangement.spacedBy(density.rowContentSpacing),
         ) {
             leading()
             Column(modifier = Modifier.weight(1f)) {

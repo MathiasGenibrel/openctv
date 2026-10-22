@@ -52,8 +52,8 @@ class LockedWebViewFactory(
             settings.apply {
                 // Sans cela, `requestFocus()` (retour du focus à la page après la barre, le menu ou le plein écran) fait
                 // focaliser à Chromium le premier élément de la page (hors mode tactile, `setInitialFocus`) : clavier
-                // ouvert sur un champ, page qui défile, contour de focus en (0,0). Le focus de la page ne bouge que sur
-                // Tab / Maj+Tab (mode éléments) ou un clic du curseur.
+                // ouvert sur un champ, page qui défile, contour de focus en (0,0). L'élément focalisé de la page est
+                // conservé ; il ne change que par Tab / Maj+Tab (mode éléments), un clic du curseur ou la page elle-même.
                 setNeedInitialFocus(false)
                 javaScriptEnabled = true
                 domStorageEnabled = true

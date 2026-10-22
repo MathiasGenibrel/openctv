@@ -16,7 +16,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Devices
@@ -38,6 +37,7 @@ import com.openctv.browser.core.designsystem.OpenCtvColors
 import com.openctv.browser.core.designsystem.OpenCtvIcons
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.SidePanelOverlay
+import com.openctv.browser.core.designsystem.appPluralStringResource
 import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.zoom.PageZoom
 import com.openctv.browser.core.zoom.percentLabel
@@ -249,7 +249,7 @@ private fun navigationModeLabel(mode: NavigationMode): String = when (mode) {
 @Composable
 private fun adBlockSummary(status: AdBlockStatus): String = when (status) {
     is AdBlockStatus.Active ->
-        pluralStringResource(R.plurals.browser_menu_ad_block_count, status.pluralQuantity, status.blockedCount)
+        appPluralStringResource(R.plurals.browser_menu_ad_block_count, status.blockedCount, status.blockedCount)
     AdBlockStatus.DisabledForSite -> stringResource(R.string.browser_menu_ad_block_site_off)
     AdBlockStatus.DisabledEverywhere -> stringResource(R.string.browser_menu_ad_block_global_off)
 }
