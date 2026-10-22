@@ -123,7 +123,12 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
   favoris, Zoom de la page → « 100 % » (icône `zoom_in`), Navigation → « Curseur » / « Éléments » (icône
   `keyboard_tab`)] [Accueil, Historique (icône `history`)] ; « Retour pour fermer le menu ». « Actualiser la page »
   (dans la barre), « Moteur de recherche » et « Vitesse du curseur » (dans Réglages) n'y sont plus : le menu tient en
-  540 dp. Navigation : OK bascule le mode pour le site ouvert (mémorisé), le menu se ferme, snackbar
+  540 dp **sans défiler** (colonne défilable gardée en filet de sécurité). Dimensions réelles (`ListGroupDensity.Compact`) :
+  zone sûre 486 dp − marge verticale du panneau 2 × 16 = 454 dp ; en-tête 56 (titre + site sur une ligne) ; groupe 1 =
+  4 + 64 (Bloqueur, deux lignes) + 2 + 64 (Favoris, deux lignes) + 2 + 48 (Zoom, valeur en fin de ligne) + 2 + 48
+  (Navigation) + 4 = 238 ; 8 d'écart ; groupe 2 = 4 + 48 + 2 + 48 + 4 = 106 ; marge de colonne 8 (anneau de focus) ;
+  aide 20 ⇒ 436 dp. Compteur du bloqueur raccourci pour tenir sur une ligne à côté de l'interrupteur : « 12 bloquées sur
+  ce site » (0 et 1 au singulier). Navigation : OK bascule le mode pour le site ouvert (mémorisé), le menu se ferme, snackbar
   « Navigation par éléments pour <hôte> » / « Navigation au curseur pour <hôte> ».
 - **Menu / Moteur de recherche** `6-5331` : radios DuckDuckGo (Par défaut), Google, Bing, Qwant (Sans
   pistage), Ecosia, Brave Search (Sans pistage).

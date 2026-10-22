@@ -32,6 +32,7 @@ val SidePanelWidth: Dp = 380.dp
 fun SidePanel(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    verticalPadding: Dp = 24.dp,
     content: @Composable () -> Unit,
 ) {
     BackHandler(onBack = onDismiss)
@@ -43,7 +44,7 @@ fun SidePanel(
             contentColor = OpenCtvColors.OnSurface,
         ),
     ) {
-        Column(modifier = Modifier.focusGroup().padding(24.dp)) { content() }
+        Column(modifier = Modifier.focusGroup().padding(horizontal = 24.dp, vertical = verticalPadding)) { content() }
     }
 }
 
@@ -56,13 +57,14 @@ fun SidePanel(
 fun SidePanelOverlay(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
+    verticalPadding: Dp = 24.dp,
     content: @Composable () -> Unit,
 ) {
     Box(modifier.fillMaxSize().focusTrap()) {
         Box(Modifier.fillMaxSize().background(OpenCtvColors.Scrim.copy(alpha = 0.5f)))
         OverscanSafeArea {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.CenterEnd) {
-                SidePanel(onDismiss = onDismiss, content = content)
+                SidePanel(onDismiss = onDismiss, verticalPadding = verticalPadding, content = content)
             }
         }
     }

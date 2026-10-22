@@ -39,6 +39,20 @@ import androidx.tv.material3.Text
  */
 enum class ListGroupStyle { Standard, Vibrant }
 
+/**
+ * Densité d'un groupe : `Comfortable` (Réglages, sous-panneaux), ou `Compact` (menu du navigateur, qui doit tenir en
+ * 540 dp sans défiler) : lignes d'une ligne 48 dp, de deux lignes 64 dp, textes sur une seule ligne.
+ */
+enum class ListGroupDensity { Comfortable, Compact }
+
+private val LocalListGroupDensity = staticCompositionLocalOf { ListGroupDensity.Comfortable }
+
+private val ListGroupDensity.groupPadding: Dp
+    get() = if (this == ListGroupDensity.Compact) CompactGroupPadding else ListGroupPadding
+
+private val ListGroupDensity.rowSpacing: Dp
+    get() = if (this == ListGroupDensity.Compact) 2.dp else 4.dp
+
 /** Style des lignes : celui du [ListGroup] englobant ; `Standard` hors groupe (radios d'un sous-panneau). */
 private val LocalListGroupStyle = staticCompositionLocalOf { ListGroupStyle.Standard }
 
@@ -60,6 +74,10 @@ private val ListGroupStyle.rowHorizontalPadding: Dp
  * anneau (5 dp), qui ne doivent pas déborder de la carte.
  */
 private val ListGroupPadding = 12.dp
+private val CompactGroupPadding = 4.dp
+private val CompactOneLineRowHeight = 48.dp
+private val CompactTwoLinesRowHeight = 64.dp
+private val CompactRowHorizontalPadding = 12.dp
 private const val RowFocusedScale = 1.02f
 private val RadioRowMinHeight = 56.dp
 private val RadioRowHorizontalPadding = 16.dp
@@ -93,15 +111,16 @@ private fun ListGroupStyle.rowColors() = when (this) {
 fun ListGroup(
     modifier: Modifier = Modifier,
     style: ListGroupStyle = ListGroupStyle.Standard,
+    density: ListGroupDensity = ListGroupDensity.Comfortable,
     content: @Composable () -> Unit,
 ) {
-    CompositionLocalProvider(LocalListGroupStyle provides style) {
+    CompositionLocalProvider(LocalListGroupStyle provides style, LocalListGroupDensity provides density) {
         Column(
             modifier = modifier
                 .fillMaxWidth()
                 .background(style.container, OpenCtvShapes.Large)
-                .padding(ListGroupPadding),
-            verticalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(density.groupPadding),
+            verticalArrangement = Arrangement.spacedBy(density.rowSpacing),
         ) { content() }
     }
 }
@@ -124,14 +143,18 @@ fun ListRow(
     trailing: @Composable () -> Unit = {},
 ) {
     val style = LocalListGroupStyle.current
+    val isCompact = LocalListGroupDensity.current == ListGroupDensity.Compact
+    val hasSupportingLine = supporting != null
+    val compactMinHeight = if (hasSupportingLine) CompactTwoLinesRowHeight else CompactOneLineRowHeight
     ListRowLayout(
         onClick = onClick,
         modifier = modifier,
-        minHeight = style.rowMinHeight,
-        horizontalPadding = style.rowHorizontalPadding,
+        minHeight = if (isCompact) compactMinHeight else style.rowMinHeight,
+        horizontalPadding = if (isCompact) CompactRowHorizontalPadding else style.rowHorizontalPadding,
         leading = { Icon(icon, contentDescription = null, tint = iconTint.takeOrElse { LocalContentColor.current }) },
         label = label,
-        isLabelSingleLine = isLabelSingleLine,
+        isLabelSingleLine = isLabelSingleLine || isCompact,
+        isSupportingSingleLine = isCompact,
         supporting = supporting,
         supportingStyle = MaterialTheme.typography.bodyMedium,
         trailing = trailing,
@@ -187,13 +210,27 @@ fun ListNavigationRow(
     modifier: Modifier = Modifier,
 ) {
     val tint = LocalListGroupStyle.current.secondaryContent
+    val isCompact = LocalListGroupDensity.current == ListGroupDensity.Compact
+    val chevron = @Composable {
+        Icon(OpenCtvIcons.ChevronRight, contentDescription = null, tint = tint.takeOrElse { LocalContentColor.current })
+    }
     ListRow(
         icon = icon,
         label = label,
         onClick = onClick,
         modifier = modifier,
-        supporting = value,
-        trailing = { Icon(OpenCtvIcons.ChevronRight, contentDescription = null, tint = tint.takeOrElse { LocalContentColor.current }) },
+        // Compact : la valeur tient sur la ligne du libellé, devant le chevron.
+        supporting = value.takeUnless { isCompact },
+        trailing = {
+            if (isCompact) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(value, style = MaterialTheme.typography.labelLarge, color = tint)
+                    chevron()
+                }
+            } else {
+                chevron()
+            }
+        },
     )
 }
 
@@ -292,6 +329,7 @@ private fun ListRowLayout(
     supportingStyle: TextStyle,
     trailing: @Composable () -> Unit = {},
     isLabelSingleLine: Boolean = false,
+    isSupportingSingleLine: Boolean = false,
 ) {
     val style = LocalListGroupStyle.current
     val shape = OpenCtvShapes.Medium
@@ -306,7 +344,7 @@ private fun ListRowLayout(
         Row(
             modifier = Modifier.heightIn(min = minHeight).padding(horizontal = horizontalPadding, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            horizontalArrangement = Arrangement.spacedBy(if (isSupportingSingleLine) 12.dp else 16.dp),
         ) {
             leading()
             Column(modifier = Modifier.weight(1f)) {
@@ -317,7 +355,13 @@ private fun ListRowLayout(
                     overflow = if (isLabelSingleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
                 )
                 if (supporting != null) {
-                    Text(supporting, style = supportingStyle, color = style.secondaryContent)
+                    Text(
+                        supporting,
+                        style = supportingStyle,
+                        color = style.secondaryContent,
+                        maxLines = if (isSupportingSingleLine) 1 else Int.MAX_VALUE,
+                        overflow = if (isSupportingSingleLine) TextOverflow.Ellipsis else TextOverflow.Clip,
+                    )
                 }
             }
             trailing()

@@ -116,6 +116,24 @@ class BrowserHudAutoHideTest {
         }
 
     @Test
+    fun `Given a hidden HUD When the user presses Menu twice Then the first press only reveals and the second opens the interface`() =
+        runTest {
+            val viewModel = loadedViewModel()
+            idleFor(5_000)
+            val menu = android.view.KeyEvent.KEYCODE_MENU
+
+            val isFirstSwallowed = viewModel.down(menu)
+            viewModel.up(menu)
+            val isInterfaceOpenedByFirst = viewModel.layers.value.isInterfaceMode
+            val isSecondConsumed = viewModel.down(menu)
+
+            assertThat(isFirstSwallowed).isTrue()
+            assertThat(isInterfaceOpenedByFirst).isFalse()
+            assertThat(isSecondConsumed).isTrue()
+            assertThat(viewModel.layers.value.isInterfaceMode).isTrue()
+        }
+
+    @Test
     fun `Given a visible HUD When the user presses a key Then the key goes through and the timer restarts`() = runTest {
         val viewModel = loadedViewModel()
         idleFor(4_000)
