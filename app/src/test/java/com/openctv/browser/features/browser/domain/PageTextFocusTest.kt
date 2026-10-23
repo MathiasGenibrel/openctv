@@ -29,4 +29,21 @@ class PageTextFocusTest {
         focus.onPageInteraction()
         assertThat(focus.isTextFieldFocused(isEditorFocusedInEngine = true, isPageDisplayed = true)).isTrue()
     }
+
+    @Test
+    fun `Given a field focused and the keyboard visible When asked Then the keyboard is shown`() {
+        assertThat(focus.isKeyboardShown(isEditorFocusedInEngine = true, isKeyboardShownBySystem = true, isPageDisplayed = true)).isTrue()
+    }
+
+    @Test
+    fun `Given a field focused but the keyboard closed by Back When asked Then the keyboard is not shown`() {
+        assertThat(focus.isKeyboardShown(isEditorFocusedInEngine = true, isKeyboardShownBySystem = false, isPageDisplayed = true)).isFalse()
+    }
+
+    @Test
+    fun `Given a keyboard visible but no field focused or a stale engine state When asked Then the keyboard is not shown`() {
+        assertThat(focus.isKeyboardShown(isEditorFocusedInEngine = false, isKeyboardShownBySystem = true, isPageDisplayed = true)).isFalse()
+        focus.onPageCovered()
+        assertThat(focus.isKeyboardShown(isEditorFocusedInEngine = true, isKeyboardShownBySystem = true, isPageDisplayed = true)).isFalse()
+    }
 }

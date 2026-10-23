@@ -11,7 +11,7 @@ sealed interface ElementKeyAction {
     /** Envoie [key] à la WebView (appui puis relâchement). */
     data class Send(val key: ElementKey) : ElementKeyAction
 
-    /** Un champ de saisie est focalisé : OK ouvre le clavier système. */
+    /** Un champ de saisie est focalisé : OK (ré)ouvre le clavier système. */
     data object OpenKeyboard : ElementKeyAction
 
     /** Haut maintenu : ouvre la barre d'adresse. */
@@ -35,28 +35,22 @@ sealed interface ElementKeyAction {
 class ElementKeys {
     private var isUpPending = false
 
-    /** OK a ouvert le clavier sur le champ focalisé : seulement alors Gauche/Droite déplacent le curseur de texte. */
-    private var isEditingText = false
-
     /**
-     * Action de [key] dans [phase]. Un champ de saisie focalisé ([isTextFieldFocused]) n'ouvre pas le clavier de lui-même :
-     * OK l'ouvre ; tant que OK ne l'a pas fait, toutes les flèches changent d'élément. Une fois le clavier ouvert,
-     * Gauche/Droite restent à la page (curseur de texte) ; Haut/Bas changent d'élément (et ramènent à la navigation).
+     * Action de [key] dans [phase]. Tab peut ouvrir le clavier sur un champ de saisie ([isTextFieldFocused]) : OK le
+     * (ré)ouvre. Seul un clavier réellement affiché ([isKeyboardShown]) garde Gauche/Droite pour le curseur de texte ;
+     * clavier fermé (Retour l'a fermé), toutes les flèches changent d'élément, même sur un champ qui a eu un clavier.
+     * Haut/Bas changent toujours d'élément.
      */
-    fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
-        if (!isTextFieldFocused) isEditingText = false
+    fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean, isKeyboardShown: Boolean = false): ElementKeyAction {
         val isHorizontal = key == PadKey.Left || key == PadKey.Right
-        val isLeftToTextField = isTextFieldFocused && isEditingText && isHorizontal
+        val isLeftToTextField = isTextFieldFocused && isKeyboardShown && isHorizontal
         if (isLeftToTextField) return ElementKeyAction.PassThrough
         if (key == PadKey.Up) return upAction(phase)
-        val action = when (phase) {
+        return when (phase) {
             KeyPhase.Down -> pressAction(key, isTextFieldFocused)
             KeyPhase.Repeat -> if (key == PadKey.Ok) ElementKeyAction.Ignore else pressAction(key, isTextFieldFocused)
             KeyPhase.Up -> ElementKeyAction.Ignore
         }
-        if (action == ElementKeyAction.OpenKeyboard) isEditingText = true
-        if (action is ElementKeyAction.Send) isEditingText = false
-        return action
     }
 
     /** Haut : l'appui attend ; la première répétition ouvre la barre, sinon le relâchement passe à l'élément précédent. */
@@ -67,10 +61,7 @@ class ElementKeys {
             phase == KeyPhase.Down -> ElementKeyAction.Ignore
             !wasPending -> ElementKeyAction.Ignore
             phase == KeyPhase.Repeat -> ElementKeyAction.OpenInterface
-            else -> {
-                isEditingText = false
-                ElementKeyAction.Send(ElementKey.Previous)
-            }
+            else -> ElementKeyAction.Send(ElementKey.Previous)
         }
     }
 

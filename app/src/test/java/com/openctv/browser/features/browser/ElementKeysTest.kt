@@ -11,14 +11,14 @@ import org.junit.Test
 class ElementKeysTest {
     private val keys = ElementKeys()
 
-    private fun press(key: PadKey, isTextFieldFocused: Boolean = false) =
-        keys.actionFor(key, KeyPhase.Down, isTextFieldFocused)
+    private fun press(key: PadKey, isTextFieldFocused: Boolean = false, isKeyboardShown: Boolean = false) =
+        keys.actionFor(key, KeyPhase.Down, isTextFieldFocused, isKeyboardShown)
 
-    private fun repeat(key: PadKey, isTextFieldFocused: Boolean = false) =
-        keys.actionFor(key, KeyPhase.Repeat, isTextFieldFocused)
+    private fun repeat(key: PadKey, isTextFieldFocused: Boolean = false, isKeyboardShown: Boolean = false) =
+        keys.actionFor(key, KeyPhase.Repeat, isTextFieldFocused, isKeyboardShown)
 
-    private fun release(key: PadKey, isTextFieldFocused: Boolean = false) =
-        keys.actionFor(key, KeyPhase.Up, isTextFieldFocused)
+    private fun release(key: PadKey, isTextFieldFocused: Boolean = false, isKeyboardShown: Boolean = false) =
+        keys.actionFor(key, KeyPhase.Up, isTextFieldFocused, isKeyboardShown)
 
     @Test
     fun `Given the elements mode When the user presses Down or Right Then the next element is asked with Tab`() {
@@ -48,26 +48,31 @@ class ElementKeysTest {
     }
 
     @Test
-    fun `Given a text field reached with Tab When the user presses Left or Right before OK Then the focus keeps moving between elements`() {
+    fun `Given a text field focused without keyboard When the user presses Left or Right Then the focus keeps moving between elements`() {
         assertThat(press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
         assertThat(press(PadKey.Right, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Next))
     }
 
     @Test
-    fun `Given the keyboard opened by OK on a text field When the user presses Left or Right Then the keys move the text cursor`() {
-        press(PadKey.Ok, isTextFieldFocused = true)
-
-        assertThat(press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
-        assertThat(press(PadKey.Right, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
-        assertThat(release(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
+    fun `Given the keyboard shown on a text field When the user presses Left or Right Then the keys move the text cursor`() {
+        assertThat(press(PadKey.Left, isTextFieldFocused = true, isKeyboardShown = true)).isEqualTo(ElementKeyAction.PassThrough)
+        assertThat(press(PadKey.Right, isTextFieldFocused = true, isKeyboardShown = true)).isEqualTo(ElementKeyAction.PassThrough)
+        assertThat(release(PadKey.Left, isTextFieldFocused = true, isKeyboardShown = true)).isEqualTo(ElementKeyAction.PassThrough)
     }
 
     @Test
-    fun `Given the keyboard opened on a field When the user leaves it with Down and reaches another field Then Left goes to the elements again`() {
-        press(PadKey.Ok, isTextFieldFocused = true)
-        press(PadKey.Down, isTextFieldFocused = true)
+    fun `Given a keyboard that was shown on a field When Back closed it and the user presses Right Then the next element is asked`() {
+        press(PadKey.Left, isTextFieldFocused = true, isKeyboardShown = true)
 
-        assertThat(press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
+        val afterBack = press(PadKey.Right, isTextFieldFocused = true, isKeyboardShown = false)
+
+        assertThat(afterBack).isEqualTo(ElementKeyAction.Send(ElementKey.Next))
+    }
+
+    @Test
+    fun `Given the keyboard shown on a field When the user presses Up or Down Then the focus leaves the field`() {
+        assertThat(press(PadKey.Down, isTextFieldFocused = true, isKeyboardShown = true))
+            .isEqualTo(ElementKeyAction.Send(ElementKey.Next))
     }
 
     @Test

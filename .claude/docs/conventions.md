@@ -78,26 +78,27 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   (`core/webview/ElementKeyInjector`) ; la page dessine son propre contour (`:focus-visible`) et défile jusqu'à
   l'élément, **aucun style n'est injecté**. Seule cette traduction envoie des touches à la page, et seulement quand
   `BrowserViewModel.onElementKey` l'autorise : mode éléments, page affichée, ni surcouche ni mode interface ni erreur.
-  Champ de saisie focalisé (`isTextFieldFocused`) : OK ouvre le clavier, Gauche/Droite restent à la page.
+  Champ de saisie focalisé (`isTextFieldFocused`) : OK ouvre le clavier ; Gauche/Droite restent à la page tant que le clavier est affiché.
   Haut agit **au relâchement** : appui court = Maj+Tab, appui long (première répétition) = barre d'adresse, sans Maj+Tab.
   `PointerAwareWebView.focusSearch` renvoie la WebView elle-même : Tab après le dernier élément (`takeFocus` du moteur)
   ou une flèche non consommée par la page ne font jamais sortir le focus Android de la WebView ; seule l'app le déplace.
   Fin de page : `FocusWrap` (Kotlin pur) réinjecte **une fois** le Tab / Maj+Tab de l'utilisateur quand le moteur rend le
   focus dans les 400 ms (bouclage au premier / dernier élément) ; jamais pour sa propre réinjection, ni après une autre
   touche reçue par la vue (flèche au bord d'un champ), ni si la vue est détachée ou a perdu le focus entre-temps.
-- **Clavier en mode éléments** : Tab / Maj+Tab qui arrive sur un champ ne doit **pas** ouvrir l'IME ; seul OK l'ouvre. Le moteur
-  ne montre le clavier que si la vue se déclare éditeur de texte : `PointerAwareWebView.onCheckIsTextEditor` répond donc `false`
-  entre un Tab injecté (`sendElementTab`) et le prochain OK (`allowSoftKeyboard` : `restartInput` puis `showSoftInput`) ou clic
-  du curseur (`ACTION_DOWN` injecté). `isEditorFocusedInEngine` / `WebView.isTextFieldFocused` lisent la vérité du moteur, clavier
-  retenu ou non. Aucun JavaScript, pas de `hideSoftInputFromWindow` après coup (clignotement). `ElementKeys` : Gauche/Droite ne vont
-  au champ (curseur de texte) qu'après le OK qui a ouvert le clavier ; avant, toutes les flèches changent d'élément.
+- **Clavier en mode éléments** : Tab / Maj+Tab qui arrive sur un champ **peut** ouvrir l'IME (Chromium appelle `showSoftInput` de
+  lui-même ; on ne l'intercepte pas, `onCheckIsTextEditor` n'est pas surchargé). Retour ferme le clavier (le système) sans quitter
+  la page ni reculer l'historique ; ensuite Haut/Bas/Gauche/Droite reprennent la navigation par éléments, même sur le champ qui
+  a eu un clavier. OK sur un champ (re)ouvre le clavier (`showSoftKeyboard`). **Une seule source** : l'état d'IME du moteur
+  (`WebView.isTextFieldFocused`, champ focalisé) et l'inset IME du système (`WebView.isKeyboardShown`), crus seulement via
+  `PageTextFocus` (`isTextFieldFocused`, `isKeyboardShown`). `ElementKeys` n'a aucun état de saisie : Gauche/Droite vont au
+  champ (curseur de texte) seulement si le clavier est réellement affiché, pas parce que le champ est focalisé. Aucun JavaScript.
 - **Focus après un écran d'erreur ou d'avertissement** : le bouton de l'écran détient le focus et ne le donne à personne en
   disparaissant. `rememberBrowserFocus` (`BrowserFocus.kt`, seul endroit qui déplace le focus du navigateur) traite la fin de
   `PageState.Error` comme la fermeture d'une surcouche (`AfterClosed`, un cadre plus tard : « Retour en sécurité », Retour,
   Réessayer) et rend le focus à la page ou à la barre.
   Filet : `FocusRescue` (`core/remote`, Kotlin pur, testé ; appelé par `MainActivity.dispatchKeyEvent` **après** la hiérarchie de
   vues, l'Activity ne fait que lui passer la touche) : si plus rien n'a le focus, une touche de la croix / de `RemoteKeyMap` rend
-  le focus à la page et est rejouée une fois ; Recherche non prise est avalée (jamais l'assistant système). Jamais une touche
+  le focus à la page et est rejouée une fois, **sauf OK / Entrée** (le focus rendu suffit : rejoué, il activerait un élément que l'utilisateur n'a pas visé) ; Recherche non prise est avalée (jamais l'assistant système). Jamais une touche
   système (Accueil, Retour, Volume, Muet, Alimentation, Assistant). L'écran s'y inscrit (`PageFocusRescuer`, via
   `LocalFocusRescue`) ; « plus rien n'a le focus » se lit par `onFocusChanged` sur la racine du navigateur, **sans**
   `focusGroup()` : `onFocusChanged` agrège déjà les focusTarget en dessous, et un focusTarget conteneur de plus serait

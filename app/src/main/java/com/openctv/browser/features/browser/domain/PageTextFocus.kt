@@ -28,4 +28,12 @@ class PageTextFocus {
         val isTrusted = isPageDisplayed && !isEngineStateStale
         return isEditorFocusedInEngine && isTrusted
     }
+
+    /**
+     * Le clavier est réellement affiché sur un champ de la page : la même lecture que [isTextFieldFocused] (une seule
+     * source, l'état d'IME du moteur) et le clavier système visible ([isKeyboardShownBySystem]). Un champ focalisé sans
+     * clavier (Tab l'a atteint, Retour l'a fermé) n'est pas « en saisie ».
+     */
+    fun isKeyboardShown(isEditorFocusedInEngine: Boolean, isKeyboardShownBySystem: Boolean, isPageDisplayed: Boolean): Boolean =
+        isKeyboardShownBySystem && isTextFieldFocused(isEditorFocusedInEngine, isPageDisplayed)
 }

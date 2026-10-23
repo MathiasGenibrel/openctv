@@ -570,9 +570,17 @@ class BrowserViewModel(
      * curseur, surcouche, mode interface, écran d'erreur, plein écran) rien n'est pris : [ElementKeyAction.PassThrough].
      * « Haut » maintenu ouvre la barre ici même et la touche est prise ([ElementKeyAction.Ignore]).
      */
-    fun onElementKey(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
+    fun onElementKey(
+        key: PadKey,
+        phase: KeyPhase,
+        isTextFieldFocused: Boolean,
+        isKeyboardShown: Boolean = false,
+    ): ElementKeyAction {
         if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
-        val action = elementKeys.actionFor(key, phase, isPageAwaitingText(isTextFieldFocused))
+        val isPageDisplayed = _pageState.value !is PageState.Error
+        val isEditing = pageTextFocus.isTextFieldFocused(isTextFieldFocused, isPageDisplayed)
+        val isTyping = pageTextFocus.isKeyboardShown(isTextFieldFocused, isKeyboardShown, isPageDisplayed)
+        val action = elementKeys.actionFor(key, phase, isEditing, isTyping)
         if (action is ElementKeyAction.Send || action == ElementKeyAction.OpenKeyboard) pageTextFocus.onPageInteraction()
         if (action == ElementKeyAction.OpenInterface) {
             enterInterfaceMode()

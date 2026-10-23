@@ -7,6 +7,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import com.openctv.browser.core.remote.dispatchRemoteAction
+import com.openctv.browser.core.webview.isKeyboardShown
 import com.openctv.browser.core.webview.isTextFieldFocused
 import com.openctv.browser.core.webview.sendEnter
 import com.openctv.browser.core.webview.sendTabWrapping
@@ -75,7 +76,12 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
  */
 private fun BrowserViewModel.consumesElementKey(event: KeyEvent, webView: WebView): Boolean {
     val pad = event.toPadKey() ?: return false
-    val action = onElementKey(pad, event.toKeyPhase(), isTextFieldFocused = webView.isTextFieldFocused)
+    val action = onElementKey(
+        pad,
+        event.toKeyPhase(),
+        isTextFieldFocused = webView.isTextFieldFocused,
+        isKeyboardShown = webView.isKeyboardShown,
+    )
     when (action) {
         is ElementKeyAction.Send -> when (action.key) {
             ElementKey.Next -> webView.sendTabWrapping(isBackwards = false)
