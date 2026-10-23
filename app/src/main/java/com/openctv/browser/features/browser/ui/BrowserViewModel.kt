@@ -400,8 +400,7 @@ class BrowserViewModel(
      */
     fun onRemoteAction(action: RemoteAction, isRepeat: Boolean, isPageTextFieldFocused: Boolean = false): Boolean {
         val isOverlayOpen = _layers.value.isOverlayOpen
-        val isTextFieldFocused = pageTextFocus.isTextFieldFocused(isPageTextFieldFocused, _pageState.value !is PageState.Error)
-        val isLeftToPageTextField = isTextFieldFocused && action.yieldsToPageTextField
+        val isLeftToPageTextField = isPageAwaitingText(isPageTextFieldFocused) && action.yieldsToPageTextField
         if (isOverlayOpen || isLeftToPageTextField) return false
         if (isRepeat && !action.repeatsWhenHeld) return true
         val isPageShown = _pageState.value !is PageState.Error
@@ -573,8 +572,7 @@ class BrowserViewModel(
      */
     fun onElementKey(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
         if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
-        val isTextFocused = pageTextFocus.isTextFieldFocused(isTextFieldFocused, _pageState.value !is PageState.Error)
-        val action = elementKeys.actionFor(key, phase, isTextFocused)
+        val action = elementKeys.actionFor(key, phase, isPageAwaitingText(isTextFieldFocused))
         if (action is ElementKeyAction.Send || action == ElementKeyAction.OpenKeyboard) pageTextFocus.onPageInteraction()
         if (action == ElementKeyAction.OpenInterface) {
             enterInterfaceMode()
@@ -619,8 +617,23 @@ class BrowserViewModel(
         load(url)
     }
 
-    /** L'utilisateur agit sur la page (clic du curseur…) : l'état d'IME du moteur redevient fiable. */
-    fun onPageInteraction() = pageTextFocus.onPageInteraction()
+    /**
+     * Le curseur a pris [key] (cf. `PageKeyHandler`). OK est un clic dans la page, qui a pu focaliser un champ :
+     * l'état d'IME du moteur redevient fiable ([PageTextFocus]). Un déplacement du pointeur ne change rien.
+     */
+    fun onCursorKeyConsumed(key: PadKey?) {
+        if (key == PadKey.Ok) pageTextFocus.onPageInteraction()
+    }
+
+    /**
+     * Seule lecture du « champ de saisie de la page focalisé », pour les touches de la table ([onRemoteAction],
+     * garde [RemoteAction.yieldsToPageTextField]) comme pour le mode éléments ([onElementKey]) : la réponse du moteur
+     * ([isEditorFocusedInEngine]) n'est crue que si une page est affichée et que son état d'IME n'est pas périmé.
+     */
+    private fun isPageAwaitingText(isEditorFocusedInEngine: Boolean): Boolean {
+        val isPageDisplayed = _pageState.value !is PageState.Error
+        return pageTextFocus.isTextFieldFocused(isEditorFocusedInEngine, isPageDisplayed)
+    }
 
     override fun onPageStarted(url: String) {
         pageTextFocus.onPageInteraction()

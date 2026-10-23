@@ -64,6 +64,18 @@ class BrowserHistoryTest {
     }
 
     @Test
+    fun `Given a page whose loading screen is lifted by its commit or its progress When it has not finished Then nothing is recorded yet`() = runTest {
+        val viewModel = viewModel()
+
+        viewModel.onPageStarted(url)
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+        viewModel.onProgressChanged(90)
+
+        assertThat((viewModel.pageState.value as PageState.Loading).isPageShown).isTrue()
+        assertThat(visits.recorded).isEmpty()
+    }
+
+    @Test
     fun `Given a page still loading When its title arrives Then nothing is recorded before it is displayed`() = runTest {
         val viewModel = viewModel()
 

@@ -82,6 +82,9 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   Haut agit **au relâchement** : appui court = Maj+Tab, appui long (première répétition) = barre d'adresse, sans Maj+Tab.
   `PointerAwareWebView.focusSearch` renvoie la WebView elle-même : Tab après le dernier élément (`takeFocus` du moteur)
   ou une flèche non consommée par la page ne font jamais sortir le focus Android de la WebView ; seule l'app le déplace.
+  Fin de page : `FocusWrap` (Kotlin pur) réinjecte **une fois** le Tab / Maj+Tab de l'utilisateur quand le moteur rend le
+  focus dans les 400 ms (bouclage au premier / dernier élément) ; jamais pour sa propre réinjection, ni après une autre
+  touche reçue par la vue (flèche au bord d'un champ), ni si la vue est détachée ou a perdu le focus entre-temps.
 - **Focus rendu à la page** (`webView.requestFocus()`, `BrowserFocus`) : la fabrique pose `setNeedInitialFocus(false)`,
   sinon Chromium focalise le premier élément de la page (clavier ouvert sur un champ, saut de page, contour en (0,0)).
   Ne jamais le réactiver : le mode éléments n'en dépend pas (Tab part de l'élément courant, ou du premier).
@@ -139,6 +142,9 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - **Champ de saisie de la page** : `onPreviewKeyEvent` passe avant la WebView. Quand un champ éditable de la page a le
   focus (`WebView.isTextFieldFocused`, `core/webview` : état d'IME du moteur, sans JavaScript), chiffres, Recherche et
   Chaîne/Page ± lui reviennent (`RemoteAction.yieldsToPageTextField`) ; média et Info gardent leur rôle.
+  Cet état d'IME n'est cru que via `PageTextFocus` (lu par `BrowserViewModel.isPageAwaitingText`, seule source pour
+  ces touches et le mode éléments) : jamais sous une erreur, et **périmé** après une erreur ou un avertissement jusqu'au
+  prochain geste sur la page (nouvelle page, OK du curseur, Tab/OK du mode éléments).
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth
 Style Gherkin obligatoire, dans le **nom de la méthode** (pas de fichier `.feature`) :

@@ -47,7 +47,7 @@ fun PageState.Loading.withProgress(percent: Int): PageState.Loading {
 fun PageState.revealedByCommit(): PageState =
     if (this is PageState.Loading && !isPageShown) copy(isPageShown = true) else this
 
-const val REVEAL_PROGRESS_PERCENT = 70
+private const val REVEAL_PROGRESS_PERCENT = 70
 
 /** `https://www.arte.tv/fr/?x=1` -> `arte.tv` : même libellé que le titre d'un favori ([BookmarkUrl.siteName]). */
 fun siteLabelOf(url: String): String = BookmarkUrl.siteName(url)

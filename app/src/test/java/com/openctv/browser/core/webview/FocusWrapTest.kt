@@ -34,4 +34,30 @@ class FocusWrapTest {
         wrap.armed(isBackwards = false, nowMs = 1_000)
         assertThat(wrap.onEngineTookFocus(nowMs = 2_000)).isNull()
     }
+
+    @Test
+    fun `Given Tab pressed When the engine asks for another view twice for the same hand-off Then Tab is sent again only once`() {
+        wrap.armed(isBackwards = false, nowMs = 1_000)
+
+        assertThat(wrap.onEngineTookFocus(nowMs = 1_050)).isFalse()
+        assertThat(wrap.onEngineTookFocus(nowMs = 1_051)).isNull()
+    }
+
+    @Test
+    fun `Given Tab pressed into a text field When an arrow the field does not use asks for another view Then nothing is sent again`() {
+        wrap.armed(isBackwards = false, nowMs = 1_000)
+
+        wrap.onKeyDispatched(isTab = false)
+
+        assertThat(wrap.onEngineTookFocus(nowMs = 1_100)).isNull()
+    }
+
+    @Test
+    fun `Given Tab pressed When the view receives that Tab itself Then the wrap stays armed`() {
+        wrap.armed(isBackwards = true, nowMs = 1_000)
+
+        wrap.onKeyDispatched(isTab = true)
+
+        assertThat(wrap.onEngineTookFocus(nowMs = 1_050)).isTrue()
+    }
 }

@@ -2,6 +2,7 @@ package com.openctv.browser.core.webview
 
 import android.content.Context
 import android.os.SystemClock
+import android.view.KeyEvent
 import android.view.PointerIcon
 import android.view.View
 import android.webkit.WebView
@@ -97,11 +98,26 @@ class PointerAwareWebView(context: Context) : WebView(context) {
     override fun focusSearch(direction: Int): View {
         val reinjectBackwards = focusWrap.onEngineTookFocus(SystemClock.uptimeMillis())
         // Tab au-delà du dernier élément : on boucle au premier, après le retour du moteur (pas dans son rappel).
-        if (reinjectBackwards != null) post { sendElementTab(reinjectBackwards, isUserPress = false) }
+        if (reinjectBackwards != null) post { reinjectElementTab(reinjectBackwards) }
         return this
     }
 
     private val focusWrap = FocusWrap()
+
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        focusWrap.onKeyDispatched(isTab = event.keyCode == KeyEvent.KEYCODE_TAB)
+        return super.dispatchKeyEvent(event)
+    }
+
+    /**
+     * Réinjection du bouclage, au tour suivant de la boucle : rien si la vue a été retirée (écran quitté, WebView
+     * détruite) ou si elle n'a plus le focus (barre, surcouche ouvertes entre-temps) : la page ne reçoit une touche
+     * que tant qu'elle est l'élément actif.
+     */
+    private fun reinjectElementTab(isBackwards: Boolean) {
+        val isStillThePage = isAttachedToWindow && hasFocus()
+        if (isStillThePage) sendElementTab(isBackwards, isUserPress = false)
+    }
 
     /**
      * Tab ou Maj+Tab du mode éléments. Un appui de l'utilisateur ([isUserPress]) arme le bouclage de fin de page

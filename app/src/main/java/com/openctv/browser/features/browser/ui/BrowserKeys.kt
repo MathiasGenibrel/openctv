@@ -48,8 +48,7 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
     // Page sans surcouche : le curseur (flèches, OK) passe avant la WebView ; il décide des touches qu'il prend.
     val isPageMode = !currentLayers.isInterfaceMode && !currentLayers.isOverlayOpen
     if (isPageMode && pageKeys.onPageKey(event)) {
-        // Un clic du curseur peut avoir focalisé un champ : l'état d'IME du moteur est de nouveau fiable.
-        if (event.toPadKey() == PadKey.Ok) onPageInteraction()
+        onCursorKeyConsumed(event.toPadKey())
         return true
     }
     // Navigation par éléments : le D-pad part à la page en Tab / Maj+Tab / Entrée (le curseur est alors inactif).
