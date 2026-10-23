@@ -20,11 +20,14 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -117,7 +120,12 @@ internal fun HistoryContentScreen(
 
     // Le focus ne se perd jamais, et une seule source le donne : le bouton retour pendant la lecture, puis la cible
     // décidée par le ViewModel (`initialFocus`). Re-demander le focus à un bouton qui l'a déjà fait perdre son anneau.
-    LaunchedEffect(content::class) {
+    // Le bouton doit être composé, posé à l'écran **et** avoir eu son premier dessin avant qu'on lui donne le focus :
+    // une demande au tout premier frame (état Loading, Historique déjà vide) n'aboutit pas, ou sans anneau.
+    val isBackButtonPlaced = focus.isBackButtonPlaced
+    LaunchedEffect(content::class, isBackButtonPlaced) {
+        if (!isBackButtonPlaced) return@LaunchedEffect
+        withFrameNanos { }
         val isLoading = content is HistoryContent.Loading
         val target = if (isLoading) HistoryFocus.BackButton else currentInitialFocus
         focus.request(target, currentDays, listState)
@@ -160,6 +168,9 @@ internal fun HistoryContentScreen(
 /** Un [FocusRequester] par élément que l'écran peut focaliser. */
 private class HistoryFocusTargets {
     val backButton = FocusRequester()
+
+    /** Le bouton retour a été posé à l'écran (lu par l'écran pour ne demander le focus qu'à un bouton attaché). */
+    var isBackButtonPlaced by mutableStateOf(false)
 
     /** Le bouton retour a le focus (lu par l'écran pour ne pas le redemander). */
     var isBackButtonFocused = false
@@ -215,6 +226,7 @@ private fun IntroColumn(
                 onClick = onClose,
                 modifier = Modifier
                     .focusRequester(focus.backButton)
+                    .onGloballyPositioned { focus.isBackButtonPlaced = true }
                     .onFocusChanged { focus.isBackButtonFocused = it.isFocused },
             )
             Spacer(Modifier.height(32.dp))

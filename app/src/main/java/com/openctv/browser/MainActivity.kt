@@ -1,8 +1,10 @@
 package com.openctv.browser
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -15,6 +17,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.openctv.browser.core.designsystem.OpenCtvTheme
 import com.openctv.browser.core.designsystem.StartupScreen
+import com.openctv.browser.core.remote.FocusRescue
+import com.openctv.browser.core.remote.LocalFocusRescue
 import com.openctv.browser.core.navigation.Destination
 import com.openctv.browser.core.navigation.DestinationHost
 import com.openctv.browser.core.navigation.ScopedViewModels
@@ -76,6 +80,19 @@ class MainActivity : ComponentActivity() {
     private val pageVisits: PageVisitsContract by inject()
     private val webData: WebDataContract by inject()
 
+    /** Filet de sécurité du focus : l'écran affiché s'y inscrit, l'Activity lui confie les touches que personne n'a prises. */
+    private val focusRescue = FocusRescue()
+
+    /**
+     * Une touche de la télécommande que la hiérarchie de vues n'a prise ([FocusRescue]) : aucun élément n'a le focus,
+     * le navigateur le rend à sa page et la touche est rejouée ; Recherche n'ouvre jamais l'assistant du système.
+     */
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (super.dispatchKeyEvent(event)) return true
+        val isKeyDown = event.action == KeyEvent.ACTION_DOWN
+        return focusRescue.onUnhandledKey(event.keyCode, isKeyDown) { window.superDispatchKeyEvent(event) }
+    }
+
     /** Zoom des Réglages pour les sites sans zoom propre : suit les Réglages, lisible tout de suite. */
     private val defaultPageZoom: StateFlow<PageZoom> by lazy {
         settings.settings.map { it.orDefaults().pageZoom }.distinctUntilChanged()
@@ -89,7 +106,7 @@ class MainActivity : ComponentActivity() {
         // Charge le moteur WebView en tâche de fond pendant l'écran de démarrage (sans effet s'il ne le gère pas).
         webViewFactory.warmUp(this)
         setContent {
-            OpenCtvTheme {
+            CompositionLocalProvider(LocalFocusRescue provides focusRescue) { OpenCtvTheme {
                 // Destination hissée ici : l'accueil ouvre un site, le navigateur revient à l'accueil.
                 // `null` le temps de lire la page de démarrage ; restaurée telle quelle après une
                 // recréation de l'activité (la page de démarrage n'est jamais réappliquée).
@@ -225,7 +242,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                 }
-            }
+            } }
         }
     }
 

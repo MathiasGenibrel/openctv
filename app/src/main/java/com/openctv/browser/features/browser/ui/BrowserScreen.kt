@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
+import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +16,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -146,7 +148,7 @@ fun BrowserScreen(
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
     // en bas d'écran, menu, saisie d'adresse. La vidéo plein écran est hors de cette pile, au-dessus de tout
     // (montée dans le decorView par DecorFullscreenPresenter) ; seul le mode immersif suit son état ici.
-    Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
+    Box(modifier.fillMaxSize().onFocusChanged { focus.hasFocus = it.hasFocus }.focusGroup().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
         BrowserContent(
             pageState = pageState,
             pageView = { PageView(webView, pageZoom, isVisible = pageState !is PageState.Error) },

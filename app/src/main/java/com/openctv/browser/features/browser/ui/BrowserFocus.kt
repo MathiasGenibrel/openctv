@@ -2,6 +2,7 @@ package com.openctv.browser.features.browser.ui
 
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -9,6 +10,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.focus.FocusRequester
+import com.openctv.browser.core.remote.LocalFocusRescue
+import com.openctv.browser.core.remote.PageFocusRescuer
+import com.openctv.browser.features.browser.domain.PageCover
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.withFrameNanos
 import com.openctv.browser.features.browser.domain.BrowserLayers
 import com.openctv.browser.features.browser.domain.PageState
 
@@ -17,7 +23,10 @@ class BrowserFocus(
     val retry: FocusRequester = FocusRequester(),
     val address: FocusRequester = FocusRequester(),
     val menuButton: FocusRequester = FocusRequester(),
-)
+) {
+    /** Un élément Compose de l'écran a le focus (mis à jour par la racine de [BrowserScreen]). */
+    var hasFocus: Boolean = false
+}
 
 /**
  * Seul endroit qui déplace le focus quand les couches changent (cf. [BrowserLayers]) : le focus ne doit
@@ -28,6 +37,8 @@ class BrowserFocus(
  * - En sortie du plein écran vidéo, le focus revient à la page (au menu s'il était ouvert : il le reprend
  *   lui-même en réapparaissant). L'entrée est gérée par `DecorFullscreenPresenter`, qui attache le lecteur hors de
  *   Compose et lui donne le focus Android.
+ * - Un écran d'erreur ou d'avertissement qui disparaît ([PageCover]) rend le focus à la page : son bouton le détenait.
+ * - Filet : si plus rien n'a le focus quand une touche arrive, [FocusRescue] (Activity) le rend à la page.
  * - La page = la WebView, ou le bouton Réessayer quand une erreur la remplace.
  */
 @Composable
@@ -41,6 +52,18 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
     val focusToolbarOr = { toolbarTarget: FocusRequester ->
         val isInterfaceMode = viewModel.layers.value.isInterfaceMode
         if (isInterfaceMode) toolbarTarget.requestFocus() else focusPage()
+    }
+    // « Retour en sécurité », Retour ou Réessayer : l'écran qui détenait le focus disparaît, la page le reprend.
+    // Après un cadre : la WebView redevient visible (donc focalisable) dans la même recomposition.
+    val isPageCovered = PageCover.isCovering(viewModel.pageState.collectAsState().value)
+    var wasPageCovered by remember { mutableStateOf(isPageCovered) }
+    LaunchedEffect(isPageCovered) {
+        val shouldRestore = PageCover.shouldRestoreFocus(wasPageCovered, isPageCovered)
+        wasPageCovered = isPageCovered
+        if (shouldRestore) {
+            withFrameNanos { }
+            focusToolbarOr(focus.address)
+        }
     }
     // Sortie du plein écran : retour au menu ouvert, sinon à la page (ou à la barre).
     AfterClosed(layers.isFullscreen) {
@@ -57,6 +80,24 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
     OnChanged(layers.mode) { focusToolbarOr(focus.address) }
     // Recréation de l'activité en mode interface : le focus ne doit pas rester sans élément.
     LaunchedEffect(Unit) { if (viewModel.layers.value.isInterfaceMode) focus.address.requestFocus() }
+
+    val rescue = LocalFocusRescue.current
+    if (rescue != null) {
+        DisposableEffect(rescue) {
+            val rescuer = object : PageFocusRescuer {
+                override fun isFocusLost(): Boolean = !focus.hasFocus
+
+                override fun restoreFocus(): Boolean {
+                    val current = viewModel.layers.value
+                    val isHandledByOverlay = current.isOverlayOpen
+                    if (isHandledByOverlay) return false
+                    focusToolbarOr(focus.address)
+                    return true
+                }
+            }
+            onDispose(rescue.register(rescuer))
+        }
+    }
 
     return focus
 }

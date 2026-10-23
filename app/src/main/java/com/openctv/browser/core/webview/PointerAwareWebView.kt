@@ -3,6 +3,8 @@ package com.openctv.browser.core.webview
 import android.content.Context
 import android.os.SystemClock
 import android.view.KeyEvent
+import android.view.MotionEvent
+import android.view.inputmethod.InputMethodManager
 import android.view.PointerIcon
 import android.view.View
 import android.webkit.WebView
@@ -104,6 +106,34 @@ class PointerAwareWebView(context: Context) : WebView(context) {
 
     private val focusWrap = FocusWrap()
 
+    /**
+     * Le mode éléments ne doit pas ouvrir le clavier tout seul quand Tab arrive sur un champ : le moteur ne montre l'IME
+     * que si la vue se déclare éditeur de texte. Entre un Tab ([sendElementTab]) et le prochain OK ([allowSoftKeyboard])
+     * ou clic, [onCheckIsTextEditor] répond donc `false` au système (pas de connexion d'IME, pas de clavier) ; la page,
+     * elle, garde son champ focalisé et [isEditorFocusedInEngine] dit la vérité du moteur. Aucun JavaScript.
+     */
+    private var isSoftKeyboardHeld = false
+
+    override fun onCheckIsTextEditor(): Boolean = !isSoftKeyboardHeld && super.onCheckIsTextEditor()
+
+    /** Un champ de saisie éditable a le focus dans le moteur, que le clavier soit retenu ou non. */
+    val isEditorFocusedInEngine: Boolean
+        get() = hasFocus() && super.onCheckIsTextEditor()
+
+    /** OK sur un champ : le clavier est de nouveau permis, et le système est invité à relire l'éditeur. */
+    fun allowSoftKeyboard() {
+        if (!isSoftKeyboardHeld) return
+        isSoftKeyboardHeld = false
+        val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+        imm?.restartInput(this)
+    }
+
+    /** Un clic du curseur (événement tactile injecté) rend au moteur la main sur le clavier : toucher un champ l'ouvre. */
+    override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+        if (event.actionMasked == MotionEvent.ACTION_DOWN) isSoftKeyboardHeld = false
+        return super.dispatchTouchEvent(event)
+    }
+
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         focusWrap.onKeyDispatched(isTab = event.keyCode == KeyEvent.KEYCODE_TAB)
         return super.dispatchKeyEvent(event)
@@ -125,6 +155,7 @@ class PointerAwareWebView(context: Context) : WebView(context) {
      */
     fun sendElementTab(isBackwards: Boolean, isUserPress: Boolean = true) {
         if (isUserPress) focusWrap.armed(isBackwards, SystemClock.uptimeMillis())
+        isSoftKeyboardHeld = true
         if (isBackwards) sendShiftTab() else sendTab()
     }
 
