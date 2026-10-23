@@ -3,6 +3,7 @@ package com.openctv.browser.features.browser
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.navmode.NavigationMode
 import com.openctv.browser.core.webview.LoadErrorCause
+import com.openctv.browser.core.webview.SecurityWarning
 import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.features.browser.domain.BrowserNotice
 import com.openctv.browser.features.browser.domain.ElementKey
@@ -168,6 +169,22 @@ class BrowserNavigationModeTest {
 
         assertThat(viewModel.press(PadKey.Down)).isEqualTo(ElementKeyAction.Send(ElementKey.Next))
         assertThat(viewModel.press(PadKey.Ok)).isEqualTo(ElementKeyAction.Send(ElementKey.Activate))
+    }
+
+    @Test
+    fun `Given elements mode and a warning dismissed When the engine still reports an editor Then OK activates and the next element is trusted again`() {
+        val httpUrl = "http://neverssl.com/"
+        val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
+        viewModel.onPageStarted(wikipedia)
+        viewModel.onUrlChanged(wikipedia, canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished(wikipedia)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "neverssl.com")))
+        viewModel.onBack(canGoBack = true)
+
+        // État d'IME périmé : pas de clavier ouvert sur un champ qui n'existe pas.
+        assertThat(viewModel.press(PadKey.Ok, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Activate))
+        // Après ce geste sur la page, le moteur est de nouveau cru.
+        assertThat(viewModel.press(PadKey.Ok, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.OpenKeyboard)
     }
 
     @Test

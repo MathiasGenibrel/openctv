@@ -31,3 +31,13 @@ fun WebView.showSoftKeyboard() {
     val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
     imm?.showSoftInput(this, 0)
 }
+
+/** Tab / Maj+Tab du mode éléments, bouclant en fin de page ([FocusWrap]) quand la vue le permet ; sinon appui simple. */
+fun WebView.sendTabWrapping(isBackwards: Boolean) {
+    val aware = this as? PointerAwareWebView
+    when {
+        aware != null -> aware.sendElementTab(isBackwards)
+        isBackwards -> sendShiftTab()
+        else -> sendTab()
+    }
+}

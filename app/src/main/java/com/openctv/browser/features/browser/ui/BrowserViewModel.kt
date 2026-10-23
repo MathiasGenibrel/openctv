@@ -36,6 +36,9 @@ import com.openctv.browser.features.browser.domain.KeyPhase
 import com.openctv.browser.features.browser.domain.PadKey
 import com.openctv.browser.features.browser.domain.HudAutoHide
 import com.openctv.browser.features.browser.domain.PageState
+import com.openctv.browser.features.browser.domain.PageTextFocus
+import com.openctv.browser.features.browser.domain.revealedByCommit
+import com.openctv.browser.features.browser.domain.withProgress
 import com.openctv.browser.features.browser.domain.PageUnderError
 import com.openctv.browser.features.browser.domain.RemoteKey
 import com.openctv.browser.features.browser.domain.RevealKeyGuard
@@ -159,6 +162,8 @@ class BrowserViewModel(
 
     /** Adresse de la page en échec affichée par l'écran d'erreur (significative en [PageState.Error] seulement). */
     private var failedUrl: String = initialUrl
+
+    private val pageTextFocus = PageTextFocus()
 
     private val _pageState = MutableStateFlow(freshStateFor(initialUrl))
     val pageState: StateFlow<PageState> = _pageState.asStateFlow()
@@ -395,7 +400,7 @@ class BrowserViewModel(
      */
     fun onRemoteAction(action: RemoteAction, isRepeat: Boolean, isPageTextFieldFocused: Boolean = false): Boolean {
         val isOverlayOpen = _layers.value.isOverlayOpen
-        val isLeftToPageTextField = isPageTextFieldFocused && action.yieldsToPageTextField
+        val isLeftToPageTextField = isPageAwaitingText(isPageTextFieldFocused) && action.yieldsToPageTextField
         if (isOverlayOpen || isLeftToPageTextField) return false
         if (isRepeat && !action.repeatsWhenHeld) return true
         val isPageShown = _pageState.value !is PageState.Error
@@ -567,7 +572,8 @@ class BrowserViewModel(
      */
     fun onElementKey(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
         if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
-        val action = elementKeys.actionFor(key, phase, isTextFieldFocused)
+        val action = elementKeys.actionFor(key, phase, isPageAwaitingText(isTextFieldFocused))
+        if (action is ElementKeyAction.Send || action == ElementKeyAction.OpenKeyboard) pageTextFocus.onPageInteraction()
         if (action == ElementKeyAction.OpenInterface) {
             enterInterfaceMode()
             return ElementKeyAction.Ignore
@@ -611,7 +617,26 @@ class BrowserViewModel(
         load(url)
     }
 
+    /**
+     * Le curseur a pris [key] (cf. `PageKeyHandler`). OK est un clic dans la page, qui a pu focaliser un champ :
+     * l'état d'IME du moteur redevient fiable ([PageTextFocus]). Un déplacement du pointeur ne change rien.
+     */
+    fun onCursorKeyConsumed(key: PadKey?) {
+        if (key == PadKey.Ok) pageTextFocus.onPageInteraction()
+    }
+
+    /**
+     * Seule lecture du « champ de saisie de la page focalisé », pour les touches de la table ([onRemoteAction],
+     * garde [RemoteAction.yieldsToPageTextField]) comme pour le mode éléments ([onElementKey]) : la réponse du moteur
+     * ([isEditorFocusedInEngine]) n'est crue que si une page est affichée et que son état d'IME n'est pas périmé.
+     */
+    private fun isPageAwaitingText(isEditorFocusedInEngine: Boolean): Boolean {
+        val isPageDisplayed = _pageState.value !is PageState.Error
+        return pageTextFocus.isTextFieldFocused(isEditorFocusedInEngine, isPageDisplayed)
+    }
+
     override fun onPageStarted(url: String) {
+        pageTextFocus.onPageInteraction()
         pageTitle = ""
         recordedUrl = null
         _pageUrl.value = url
@@ -637,12 +662,15 @@ class BrowserViewModel(
         val isShownPage = _pageState.value is PageState.Loaded
         val isNewAddress = url != recordedUrl
         if (isShownPage && isNewAddress) recordVisit(url)
+        // L'adresse est validée par le moteur : la page courante est celle de la navigation (cache, redirection,
+        // même adresse), il n'y a plus de raison de la masquer si `onPageCommitVisible` n'est pas venu.
+        _pageState.update { it.revealedByCommit() }
     }
 
     override fun onProgressChanged(progress: Int) {
         val state = _pageState.value
         if (state is PageState.Loading) {
-            _pageState.value = state.copy(progress = progress.coerceIn(0, 100) / 100f)
+            _pageState.value = state.withProgress(progress)
         }
     }
 
@@ -686,6 +714,7 @@ class BrowserViewModel(
         recordedUrl = null
         failedUrl = error.url ?: _pageUrl.value
         setWarningOptionsOpen(false)
+        pageTextFocus.onPageCovered()
         _pageState.value = PageState.Error(siteLabelOf(failedUrl), error.cause, error.warning)
     }
 
@@ -713,6 +742,7 @@ class BrowserViewModel(
         failedUrl = url
         setWarningOptionsOpen(false)
         val state = freshStateFor(url)
+        if (state is PageState.Error) pageTextFocus.onPageCovered()
         _pageState.value = state
         val isAllowed = state is PageState.Loading
         if (isAllowed) _commands.trySend(BrowserCommand.Load(url))

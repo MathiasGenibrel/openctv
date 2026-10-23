@@ -101,6 +101,7 @@
     <string name="settings_cookie_banners">Bandeaux de cookies</string>
     <string name="settings_cookie_banners_on">Masqués · vous refusez par défaut</string>
     <string name="settings_cookie_banners_off">Affichés</string>
+    <string name="settings_cookie_banners_inactive">Inactif · le bloqueur de pubs est coupé</string>
     <string name="settings_filter_lists">Listes de filtres</string>
     <!-- %1$s : listes, %2$s : état des mises à jour -->
     <string name="settings_filter_lists_summary">EasyList, EasyList Cookie · %1$s</string>

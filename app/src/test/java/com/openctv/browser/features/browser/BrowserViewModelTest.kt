@@ -145,6 +145,40 @@ class BrowserViewModelTest {
     }
 
     @Test
+    fun `Given a page reopened from the cache When no first render is signaled but the progress is well advanced Then the loading screen goes away`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+
+        viewModel.onProgressChanged(80)
+
+        assertThat(viewModel.pageState.value).isEqualTo(PageState.Loading("arte.tv", 0.8f, isPageShown = true))
+    }
+
+    @Test
+    fun `Given a navigation committed by the engine When its first render is never signaled Then the loading screen goes away`() {
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted("https://old.example/")
+
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+
+        assertThat((viewModel.pageState.value as PageState.Loading).isPageShown).isTrue()
+    }
+
+    @Test
+    fun `Given a security warning When the engine reports progress and a commit Then the warning stays`() {
+        val httpUrl = "http://neverssl.com/"
+        val warning = SecurityWarning.InsecureHttp(httpUrl, "neverssl.com")
+        val viewModel = BrowserViewModel(url, bookmarks)
+        viewModel.onPageStarted(url)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, warning))
+
+        viewModel.onProgressChanged(100)
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+
+        assertThat((viewModel.pageState.value as PageState.Error).warning).isEqualTo(warning)
+    }
+
+    @Test
     fun `Given an error replacing the page When a stale first render arrives Then the error stays and nothing is revealed`() {
         val viewModel = BrowserViewModel(url, bookmarks)
         viewModel.onPageStarted(url)

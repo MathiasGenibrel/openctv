@@ -29,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Devices
@@ -114,11 +115,12 @@ internal fun HistoryContentScreen(
     val currentDays by rememberUpdatedState(days)
     val currentInitialFocus by rememberUpdatedState(state.initialFocus)
 
-    // Le focus ne se perd jamais : le bouton retour d'abord (pendant la lecture), puis le premier élément utile.
-    LaunchedEffect(Unit) { focus.backButton.requestFocus() }
+    // Le focus ne se perd jamais, et une seule source le donne : le bouton retour pendant la lecture, puis la cible
+    // décidée par le ViewModel (`initialFocus`). Re-demander le focus à un bouton qui l'a déjà fait perdre son anneau.
     LaunchedEffect(content::class) {
         val isLoading = content is HistoryContent.Loading
-        if (!isLoading) focus.request(currentInitialFocus, currentDays, listState)
+        val target = if (isLoading) HistoryFocus.BackButton else currentInitialFocus
+        focus.request(target, currentDays, listState)
     }
     // Focus décidé par le ViewModel : après un retrait (entrée voisine) ou la fermeture du dialogue.
     LaunchedEffect(requestedFocus) {
@@ -158,6 +160,9 @@ internal fun HistoryContentScreen(
 /** Un [FocusRequester] par élément que l'écran peut focaliser. */
 private class HistoryFocusTargets {
     val backButton = FocusRequester()
+
+    /** Le bouton retour a le focus (lu par l'écran pour ne pas le redemander). */
+    var isBackButtonFocused = false
     val clearAll = FocusRequester()
     private val entries = mutableMapOf<Long, FocusRequester>()
 
@@ -177,6 +182,9 @@ private class HistoryFocusTargets {
                 if (dayIndex >= 0) of(target.id) else backButton
             }
         }
+        // Re-demander le focus à l'élément qui l'a déjà ne change rien, sinon son anneau disparaît (Historique vide).
+        val isAlreadyFocused = requester === backButton && isBackButtonFocused
+        if (isAlreadyFocused) return
         runCatching { requester.requestFocus() }.onFailure { runCatching { backButton.requestFocus() } }
     }
 }
@@ -205,7 +213,9 @@ private fun IntroColumn(
                 icon = OpenCtvIcons.ArrowBack,
                 contentDescription = stringResource(R.string.history_back),
                 onClick = onClose,
-                modifier = Modifier.focusRequester(focus.backButton),
+                modifier = Modifier
+                    .focusRequester(focus.backButton)
+                    .onFocusChanged { focus.isBackButtonFocused = it.isFocused },
             )
             Spacer(Modifier.height(32.dp))
             Text(

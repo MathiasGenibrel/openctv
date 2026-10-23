@@ -26,6 +26,7 @@ class RemoteKeyMapTest {
             KeyEvent.KEYCODE_MEDIA_NEXT to MediaCommand.SeekForward,
             KeyEvent.KEYCODE_MEDIA_REWIND to MediaCommand.SeekBack,
             KeyEvent.KEYCODE_MEDIA_PREVIOUS to MediaCommand.SeekBack,
+            KeyEvent.KEYCODE_MEDIA_STOP to MediaCommand.Pause,
         )
         expected.forEach { (keyCode, command) ->
             assertThat(RemoteKeyMap.actionFor(keyCode)).isEqualTo(RemoteAction.Media(command))
@@ -35,8 +36,12 @@ class RemoteKeyMapTest {
     @Test
     fun `Given the search and info keys When they are pressed Then they open the address input and the menu`() {
         assertThat(RemoteKeyMap.actionFor(KeyEvent.KEYCODE_SEARCH)).isEqualTo(RemoteAction.OpenSearch)
-        assertThat(RemoteKeyMap.actionFor(KeyEvent.KEYCODE_ASSIST)).isEqualTo(RemoteAction.OpenSearch)
         assertThat(RemoteKeyMap.actionFor(KeyEvent.KEYCODE_INFO)).isEqualTo(RemoteAction.OpenMenu)
+    }
+
+    @Test
+    fun `Given the system assistant key When it is pressed Then the app leaves it to the system`() {
+        assertThat(RemoteKeyMap.actionFor(KeyEvent.KEYCODE_ASSIST)).isNull()
     }
 
     @Test
