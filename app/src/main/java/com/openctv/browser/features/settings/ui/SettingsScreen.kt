@@ -51,6 +51,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.openctv.browser.R
+import com.openctv.browser.core.designsystem.breakableHost
 import com.openctv.browser.core.designsystem.InsecurityMark
 import com.openctv.browser.core.designsystem.ListGroup
 import com.openctv.browser.core.designsystem.OpenCtvButton
@@ -571,7 +572,7 @@ private fun SecurityExceptionsPanel(
                     ListRow(
                         icon = mark.icon,
                         iconTint = mark.color,
-                        label = exception.host,
+                        label = breakableHost(exception.host),
                         supporting = securityExceptionKind(exception),
                         onClick = {
                             focusIndex = index

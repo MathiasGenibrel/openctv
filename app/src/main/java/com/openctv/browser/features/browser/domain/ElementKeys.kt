@@ -35,20 +35,28 @@ sealed interface ElementKeyAction {
 class ElementKeys {
     private var isUpPending = false
 
+    /** OK a ouvert le clavier sur le champ focalisé : seulement alors Gauche/Droite déplacent le curseur de texte. */
+    private var isEditingText = false
+
     /**
-     * Action de [key] dans [phase]. Dans un champ de saisie ([isTextFieldFocused]), Gauche/Droite restent à la page
-     * (curseur de texte) et OK ouvre le clavier ; Haut/Bas continuent de changer d'élément.
+     * Action de [key] dans [phase]. Un champ de saisie focalisé ([isTextFieldFocused]) n'ouvre pas le clavier de lui-même :
+     * OK l'ouvre ; tant que OK ne l'a pas fait, toutes les flèches changent d'élément. Une fois le clavier ouvert,
+     * Gauche/Droite restent à la page (curseur de texte) ; Haut/Bas changent d'élément (et ramènent à la navigation).
      */
     fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
+        if (!isTextFieldFocused) isEditingText = false
         val isHorizontal = key == PadKey.Left || key == PadKey.Right
-        val isLeftToTextField = isTextFieldFocused && isHorizontal
+        val isLeftToTextField = isTextFieldFocused && isEditingText && isHorizontal
         if (isLeftToTextField) return ElementKeyAction.PassThrough
         if (key == PadKey.Up) return upAction(phase)
-        return when (phase) {
+        val action = when (phase) {
             KeyPhase.Down -> pressAction(key, isTextFieldFocused)
             KeyPhase.Repeat -> if (key == PadKey.Ok) ElementKeyAction.Ignore else pressAction(key, isTextFieldFocused)
             KeyPhase.Up -> ElementKeyAction.Ignore
         }
+        if (action == ElementKeyAction.OpenKeyboard) isEditingText = true
+        if (action is ElementKeyAction.Send) isEditingText = false
+        return action
     }
 
     /** Haut : l'appui attend ; la première répétition ouvre la barre, sinon le relâchement passe à l'élément précédent. */
@@ -59,7 +67,10 @@ class ElementKeys {
             phase == KeyPhase.Down -> ElementKeyAction.Ignore
             !wasPending -> ElementKeyAction.Ignore
             phase == KeyPhase.Repeat -> ElementKeyAction.OpenInterface
-            else -> ElementKeyAction.Send(ElementKey.Previous)
+            else -> {
+                isEditingText = false
+                ElementKeyAction.Send(ElementKey.Previous)
+            }
         }
     }
 

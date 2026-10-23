@@ -2,13 +2,17 @@ package com.openctv.browser.features.browser.ui
 
 import android.webkit.WebView
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.focus.FocusRequester
+import com.openctv.browser.core.remote.LocalFocusRescue
+import com.openctv.browser.core.remote.PageFocusRescuer
 import com.openctv.browser.features.browser.domain.BrowserLayers
 import com.openctv.browser.features.browser.domain.PageState
 
@@ -17,7 +21,10 @@ class BrowserFocus(
     val retry: FocusRequester = FocusRequester(),
     val address: FocusRequester = FocusRequester(),
     val menuButton: FocusRequester = FocusRequester(),
-)
+) {
+    /** Un élément Compose de l'écran a le focus (mis à jour par la racine de [BrowserScreen]). */
+    var hasFocus: Boolean = false
+}
 
 /**
  * Seul endroit qui déplace le focus quand les couches changent (cf. [BrowserLayers]) : le focus ne doit
@@ -28,10 +35,18 @@ class BrowserFocus(
  * - En sortie du plein écran vidéo, le focus revient à la page (au menu s'il était ouvert : il le reprend
  *   lui-même en réapparaissant). L'entrée est gérée par `DecorFullscreenPresenter`, qui attache le lecteur hors de
  *   Compose et lui donne le focus Android.
+ * - Un écran d'erreur ou d'avertissement qui disparaît (« Retour en sécurité », Retour, Réessayer) rend le focus à la
+ *   page (ou à la barre) : son bouton le détenait et ne le donne à personne en disparaissant.
+ * - Filet : si plus rien n'a le focus quand une touche arrive, `FocusRescue` (Activity) le rend à la page.
  * - La page = la WebView, ou le bouton Réessayer quand une erreur la remplace.
  */
 @Composable
-internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView, layers: BrowserLayers): BrowserFocus {
+internal fun rememberBrowserFocus(
+    viewModel: BrowserViewModel,
+    webView: WebView,
+    layers: BrowserLayers,
+    pageState: PageState,
+): BrowserFocus {
     val focus = remember { BrowserFocus() }
 
     val focusPage = {
@@ -41,6 +56,12 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
     val focusToolbarOr = { toolbarTarget: FocusRequester ->
         val isInterfaceMode = viewModel.layers.value.isInterfaceMode
         if (isInterfaceMode) toolbarTarget.requestFocus() else focusPage()
+    }
+    // « Retour en sécurité », Retour ou Réessayer : l'écran qui détenait le focus disparaît, la page le reprend.
+    // Après un cadre : la WebView redevient visible (donc focalisable) dans la même recomposition.
+    AfterClosed(pageState is PageState.Error) {
+        withFrameNanos { }
+        focusToolbarOr(focus.address)
     }
     // Sortie du plein écran : retour au menu ouvert, sinon à la page (ou à la barre).
     AfterClosed(layers.isFullscreen) {
@@ -58,18 +79,36 @@ internal fun rememberBrowserFocus(viewModel: BrowserViewModel, webView: WebView,
     // Recréation de l'activité en mode interface : le focus ne doit pas rester sans élément.
     LaunchedEffect(Unit) { if (viewModel.layers.value.isInterfaceMode) focus.address.requestFocus() }
 
+    val rescue = LocalFocusRescue.current
+    if (rescue != null) {
+        DisposableEffect(rescue) {
+            val rescuer = object : PageFocusRescuer {
+                override fun isFocusLost(): Boolean = !focus.hasFocus
+
+                override fun restoreFocus(): Boolean {
+                    val current = viewModel.layers.value
+                    val isHandledByOverlay = current.isOverlayOpen
+                    if (isHandledByOverlay) return false
+                    focusToolbarOr(focus.address)
+                    return true
+                }
+            }
+            onDispose(rescue.register(rescuer))
+        }
+    }
+
     return focus
 }
 
 /** Appelle [action] à chaque fermeture d'une surcouche (pas à l'ouverture de l'écran). */
 @Composable
-private fun AfterClosed(isOpen: Boolean, action: () -> Unit) {
+private fun AfterClosed(isOpen: Boolean, action: suspend () -> Unit) {
     OnChanged(isOpen) { nowOpen -> if (!nowOpen) action() }
 }
 
 /** Appelle [action] à chaque changement de [value], sauf à l'ouverture de l'écran. */
 @Composable
-private fun <T> OnChanged(value: T, action: (T) -> Unit) {
+private fun <T> OnChanged(value: T, action: suspend (T) -> Unit) {
     var previous by remember { mutableStateOf(value) }
     val currentAction by rememberUpdatedState(action)
     LaunchedEffect(value) {

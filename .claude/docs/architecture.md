@@ -52,7 +52,7 @@ Cette carte est la cible, créée au fil des tâches (déjà en place : `core/co
 | `core/security/` | Exceptions de sécurité accordées par l'utilisateur (`SecurityExceptionsContract` : HTTP par hôte, certificat par hôte + empreinte SHA-256), session en mémoire + DataStore local ; `SiteHost` (hôte exact, parseur strict) |
 | `core/zoom/` | Zoom des pages : niveaux (`PageZoom` : 100 % = 960 px, 75 %, 67 %, 50 % = 1920 px), zoom propre à un site (`PageZoomContract` : DataStore local, hôte exact `SiteHost`) et niveau effectif d'une page (`effectiveZoom` : zoom du site, sinon niveau par défaut de `Settings.pageZoom`). La mise en page zoomée de la WebView (`pageZoomLayout`) et l'échelle de la vue (`PointerAwareWebView.applyPageZoom`) sont dans `core/webview/` ; `PointerAwareWebView` est le seul endroit qui convertit les coordonnées de l'écran en coordonnées de la vue (`toViewCoordinate`, `scrollByOnScreen`) : le curseur ne parle qu'en pixels de l'écran. |
 | `core/history/` | `PageVisitsContract` : le navigateur y enregistre les pages affichées, sans connaître `features/history` qui l'implémente |
-| `core/remote/` | Table unique des touches « confort » de la télécommande (`RemoteKeyMap` → `RemoteAction`, Kotlin pur) et leur traduction Compose (`dispatchRemoteAction`). Dépend de `core/webview` (commandes média, sens de défilement), jamais l'inverse. |
+| `core/remote/` | Table unique des touches « confort » de la télécommande (`RemoteKeyMap` → `RemoteAction`, Kotlin pur) et leur traduction Compose (`dispatchRemoteAction`). Filet du focus `FocusRescue` (Kotlin pur) : une touche de la croix ou de `RemoteKeyMap` que personne n'a prise faute d'élément focalisé rend le focus à l'écran inscrit (`PageFocusRescuer`, le navigateur) et est rejouée ; `MainActivity.dispatchKeyEvent` n'en est que l'adaptateur. Dépend de `core/webview` (commandes média, sens de défilement), jamais l'inverse. |
 | `core/navmode/` | Mode de navigation par site (`NavigationModeContract` : curseur par défaut, ou éléments à la Tab), hôtes exacts en mode éléments mémorisés dans DataStore ; `navigationModeOf(url, hôtes)` |
 | `core/common/` | `Resource<T>`, dispatchers, utilitaires |
 | `core/database/` | Base Room de l'app ; schémas versionnés dans `app/schemas/` (`exportSchema`), migrations dans `Migrations.kt` (`AllMigrations`, jamais destructives), vérifiées contre ces schémas par `MigrationSchemaTest` : toute nouvelle version de la base ajoute sa migration et commite son schéma |
@@ -71,6 +71,9 @@ Points d'attention :
 - Mode éléments : `BrowserViewModel.navigationMode` (suit la page, donc le mode mémorisé est réappliqué à chaque page de l'hôte)
   masque le curseur (`BrowserHud.isCursorVisible`) et donne le D-pad à la page (`BrowserHud.isElementsActive`, seule
   condition d'envoi de touches) ; `features/cursor` n'est pas modifié, sa session devient inactive et rend les touches. La traduction D-pad → Tab / Maj+Tab / Entrée est `ElementKeys` (`features/browser/domain`), jamais de JavaScript.
+  Un Tab qui arrive sur un champ n'ouvre pas le clavier : `PointerAwareWebView` (`core/webview`) retient l'IME
+  (`onCheckIsTextEditor`) jusqu'au OK (`allowSoftKeyboard`) ou au clic du curseur ; `ElementKeys` ne laisse Gauche/Droite au
+  champ qu'après ce OK. L'état brut du moteur (`isEditorFocusedInEngine`) reste filtré par `PageTextFocus`.
 - Le moteur de décision du bloqueur est appelé depuis `shouldInterceptRequest` (thread de fond, une
   fois par requête) : il doit être synchrone, sans I/O, et préchargé en mémoire.
 - La logique du curseur (calcul de position, bords, accélération) est du Kotlin pur, testée en JUnit ;

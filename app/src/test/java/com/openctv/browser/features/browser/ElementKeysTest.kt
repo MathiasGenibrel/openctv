@@ -48,10 +48,26 @@ class ElementKeysTest {
     }
 
     @Test
-    fun `Given a text field focused When the user presses Left or Right Then the keys move the text cursor`() {
+    fun `Given a text field reached with Tab When the user presses Left or Right before OK Then the focus keeps moving between elements`() {
+        assertThat(press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
+        assertThat(press(PadKey.Right, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Next))
+    }
+
+    @Test
+    fun `Given the keyboard opened by OK on a text field When the user presses Left or Right Then the keys move the text cursor`() {
+        press(PadKey.Ok, isTextFieldFocused = true)
+
         assertThat(press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
         assertThat(press(PadKey.Right, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
         assertThat(release(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
+    }
+
+    @Test
+    fun `Given the keyboard opened on a field When the user leaves it with Down and reaches another field Then Left goes to the elements again`() {
+        press(PadKey.Ok, isTextFieldFocused = true)
+        press(PadKey.Down, isTextFieldFocused = true)
+
+        assertThat(press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
     }
 
     @Test

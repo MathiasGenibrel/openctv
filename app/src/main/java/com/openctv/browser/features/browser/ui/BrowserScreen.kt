@@ -15,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -121,7 +122,7 @@ fun BrowserScreen(
     // Saisie ou historique ouverts : c'est eux qui traitent Retour (leur BackHandler ferme la surcouche).
     BackHandler(enabled = !layers.isAddressInputOpen && !layers.isHistoryOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
-    val focus = rememberBrowserFocus(viewModel, webView, layers)
+    val focus = rememberBrowserFocus(viewModel, webView, layers, pageState)
     val toolbarActions = remember(viewModel) {
         ToolbarActions(
             onBack = viewModel::goBack,
@@ -146,7 +147,13 @@ fun BrowserScreen(
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
     // en bas d'écran, menu, saisie d'adresse. La vidéo plein écran est hors de cette pile, au-dessus de tout
     // (montée dans le decorView par DecorFullscreenPresenter) ; seul le mode immersif suit son état ici.
-    Box(modifier.fillMaxSize().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
+    // `onFocusChanged` agrège l'état des premiers focusTarget en dessous : aucun `focusGroup()` ici, il ajouterait un
+    // focusTarget conteneur que des `focusProperties` d'un parent pourraient rendre focalisable (cf. conventions, Retour).
+    val rootModifier = modifier
+        .fillMaxSize()
+        .onFocusChanged { focus.hasFocus = it.hasFocus }
+        .onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }
+    Box(rootModifier) {
         BrowserContent(
             pageState = pageState,
             pageView = { PageView(webView, pageZoom, isVisible = pageState !is PageState.Error) },
