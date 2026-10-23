@@ -90,7 +90,7 @@ fun OpenCtvButton(
 
 /**
  * Bouton icône rond d'OpenCTV (40 dp), mêmes styles et anneau de focus que [OpenCtvButton]. `Tonal` par
- * défaut : icônes d'en-tête (Réglages…). Désactivé ([enabled] faux) : grisé et non focalisable. [contentDescription] est obligatoire : pas de libellé visible.
+ * défaut : icônes d'en-tête (Réglages…). [isRingFromFocus] : anneau dessiné d'après le focus réel (écran qui focalise le bouton dès son ouverture). Désactivé ([enabled] faux) : grisé et non focalisable. [contentDescription] est obligatoire : pas de libellé visible.
  */
 @Composable
 fun OpenCtvIconButton(
@@ -100,15 +100,21 @@ fun OpenCtvIconButton(
     modifier: Modifier = Modifier,
     style: OpenCtvButtonStyle = OpenCtvButtonStyle.Tonal,
     enabled: Boolean = true,
+    isRingFromFocus: Boolean = false,
 ) {
+    // Anneau lu sur le focus réel du bouton (`onFocusChanged`) et non sur l'`interactionSource` de la Surface : un bouton
+    // qui a le focus dès sa composition (écran ouvert depuis l'accueil) n'en reçoit jamais le `FocusInteraction.Focus`.
+    // Un seul anneau : celui de la surface est alors retiré, et l'agrandissement au focus aussi (il rognerait l'écart).
+    val ringModifier = if (isRingFromFocus) Modifier.focusRing(CircleShape) else Modifier
     IconButton(
         onClick = onClick,
         // Les surfaces tv-material sont `focusable()` même désactivées : on retire explicitement le focus
         // (jamais `canFocus = true`, cf. conventions). Le bouton qui le perd en cours de focus est géré par l'écran.
-        modifier = modifier.focusProperties { if (!enabled) canFocus = false },
+        modifier = modifier.then(ringModifier).focusProperties { if (!enabled) canFocus = false },
         enabled = enabled,
         shape = IconButtonDefaults.shape(CircleShape),
-        border = IconButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
+        scale = if (isRingFromFocus) IconButtonDefaults.scale(focusedScale = 1f) else IconButtonDefaults.scale(),
+        border = if (isRingFromFocus) IconButtonDefaults.border() else IconButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
         colors = IconButtonDefaults.colors(
             containerColor = style.container,
             contentColor = style.onContainer,

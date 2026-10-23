@@ -7,7 +7,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import com.openctv.browser.core.remote.dispatchRemoteAction
-import com.openctv.browser.core.webview.isKeyboardShown
 import com.openctv.browser.core.webview.isTextFieldFocused
 import com.openctv.browser.core.webview.sendEnter
 import com.openctv.browser.core.webview.sendTabWrapping
@@ -71,17 +70,11 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
 
 /**
  * Touche du D-pad ou OK en mode éléments : le ViewModel décide ([BrowserViewModel.onElementKey]), cette fonction envoie
- * seulement des `KeyEvent` à la [webView] (aucun JavaScript). `false` = la touche poursuit (curseur de texte d'un champ,
- * ou autre mode).
+ * seulement des `KeyEvent` à la [webView] (aucun JavaScript). `false` = la touche poursuit (autre mode).
  */
 private fun BrowserViewModel.consumesElementKey(event: KeyEvent, webView: WebView): Boolean {
     val pad = event.toPadKey() ?: return false
-    val action = onElementKey(
-        pad,
-        event.toKeyPhase(),
-        isTextFieldFocused = webView.isTextFieldFocused,
-        isKeyboardShown = webView.isKeyboardShown,
-    )
+    val action = onElementKey(pad, event.toKeyPhase(), isTextFieldFocused = webView.isTextFieldFocused)
     when (action) {
         is ElementKeyAction.Send -> when (action.key) {
             ElementKey.Next -> webView.sendTabWrapping(isBackwards = false)

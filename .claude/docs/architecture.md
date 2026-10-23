@@ -72,8 +72,8 @@ Points d'attention :
   masque le curseur (`BrowserHud.isCursorVisible`) et donne le D-pad à la page (`BrowserHud.isElementsActive`, seule
   condition d'envoi de touches) ; `features/cursor` n'est pas modifié, sa session devient inactive et rend les touches. La traduction D-pad → Tab / Maj+Tab / Entrée est `ElementKeys` (`features/browser/domain`), jamais de JavaScript.
   Un Tab qui arrive sur un champ peut ouvrir le clavier (le moteur l'ouvre de lui-même, sans interception) : Retour le ferme
-  (le système), puis toutes les flèches changent d'élément ; `ElementKeys` ne laisse Gauche/Droite au champ que tant que le
-  clavier est réellement affiché (`WebView.isKeyboardShown`, inset IME), lu via `PageTextFocus`, seule source de l'état « en saisie ».
+  (le système), puis les flèches changent d'élément. Tant que le clavier est affiché, c'est lui qui reçoit la croix (l'IME passe
+  avant l'app, qui n'est pas appelée) ; `ElementKeys` n'a donc aucun cas particulier pour la saisie.
 - Le moteur de décision du bloqueur est appelé depuis `shouldInterceptRequest` (thread de fond, une
   fois par requête) : il doit être synchrone, sans I/O, et préchargé en mémoire.
 - La logique du curseur (calcul de position, bords, accélération) est du Kotlin pur, testée en JUnit ;
