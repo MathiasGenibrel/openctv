@@ -3,7 +3,6 @@ package com.openctv.browser.features.browser.ui
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
-import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -123,7 +122,7 @@ fun BrowserScreen(
     // Saisie ou historique ouverts : c'est eux qui traitent Retour (leur BackHandler ferme la surcouche).
     BackHandler(enabled = !layers.isAddressInputOpen && !layers.isHistoryOpen) { viewModel.onBack(canGoBack = webView.canGoBack()) }
 
-    val focus = rememberBrowserFocus(viewModel, webView, layers)
+    val focus = rememberBrowserFocus(viewModel, webView, layers, pageState)
     val toolbarActions = remember(viewModel) {
         ToolbarActions(
             onBack = viewModel::goBack,
@@ -148,7 +147,13 @@ fun BrowserScreen(
     // Ordre d'empilement, du bas vers le haut : page (+ chargement / erreur) et barre d'outils, message
     // en bas d'écran, menu, saisie d'adresse. La vidéo plein écran est hors de cette pile, au-dessus de tout
     // (montée dans le decorView par DecorFullscreenPresenter) ; seul le mode immersif suit son état ici.
-    Box(modifier.fillMaxSize().onFocusChanged { focus.hasFocus = it.hasFocus }.focusGroup().onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }) {
+    // `onFocusChanged` agrège l'état des premiers focusTarget en dessous : aucun `focusGroup()` ici, il ajouterait un
+    // focusTarget conteneur que des `focusProperties` d'un parent pourraient rendre focalisable (cf. conventions, Retour).
+    val rootModifier = modifier
+        .fillMaxSize()
+        .onFocusChanged { focus.hasFocus = it.hasFocus }
+        .onPreviewKeyEvent { event -> viewModel.consumesKey(event, webView, pageKeys) }
+    Box(rootModifier) {
         BrowserContent(
             pageState = pageState,
             pageView = { PageView(webView, pageZoom, isVisible = pageState !is PageState.Error) },

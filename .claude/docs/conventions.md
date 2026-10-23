@@ -92,10 +92,16 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   retenu ou non. Aucun JavaScript, pas de `hideSoftInputFromWindow` après coup (clignotement). `ElementKeys` : Gauche/Droite ne vont
   au champ (curseur de texte) qu'après le OK qui a ouvert le clavier ; avant, toutes les flèches changent d'élément.
 - **Focus après un écran d'erreur ou d'avertissement** : le bouton de l'écran détient le focus et ne le donne à personne en
-  disparaissant (`PageCover.shouldRestoreFocus`, appliqué par `rememberBrowserFocus` : « Retour en sécurité », Retour, Réessayer).
-  Filet : `FocusRescue` (`core/remote`, appelé par `MainActivity.dispatchKeyEvent` **après** la hiérarchie de vues) : si plus rien
-  n'a le focus, une touche de la croix / de `RemoteKeyMap` rend le focus à la page et est rejouée une fois ; Recherche non prise est
-  avalée (jamais l'assistant système). Jamais une touche système (Accueil, Retour, Volume, Muet, Alimentation, Assistant).
+  disparaissant. `rememberBrowserFocus` (`BrowserFocus.kt`, seul endroit qui déplace le focus du navigateur) traite la fin de
+  `PageState.Error` comme la fermeture d'une surcouche (`AfterClosed`, un cadre plus tard : « Retour en sécurité », Retour,
+  Réessayer) et rend le focus à la page ou à la barre.
+  Filet : `FocusRescue` (`core/remote`, Kotlin pur, testé ; appelé par `MainActivity.dispatchKeyEvent` **après** la hiérarchie de
+  vues, l'Activity ne fait que lui passer la touche) : si plus rien n'a le focus, une touche de la croix / de `RemoteKeyMap` rend
+  le focus à la page et est rejouée une fois ; Recherche non prise est avalée (jamais l'assistant système). Jamais une touche
+  système (Accueil, Retour, Volume, Muet, Alimentation, Assistant). L'écran s'y inscrit (`PageFocusRescuer`, via
+  `LocalFocusRescue`) ; « plus rien n'a le focus » se lit par `onFocusChanged` sur la racine du navigateur, **sans**
+  `focusGroup()` : `onFocusChanged` agrège déjà les focusTarget en dessous, et un focusTarget conteneur de plus serait
+  exposé aux `focusProperties` d'un parent (voir la règle `canFocus` ci-dessus).
 - **Focus rendu à la page** (`webView.requestFocus()`, `BrowserFocus`) : la fabrique pose `setNeedInitialFocus(false)`,
   sinon Chromium focalise le premier élément de la page (clavier ouvert sur un champ, saut de page, contour en (0,0)).
   Ne jamais le réactiver : le mode éléments n'en dépend pas (Tab part de l'élément courant, ou du premier).

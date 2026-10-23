@@ -1,7 +1,7 @@
 package com.openctv.browser.core.designsystem
 
 /** Espace sans chasse : autorise un retour à la ligne sans rien afficher. */
-private const val ZERO_WIDTH_SPACE = '​'
+private const val ZERO_WIDTH_SPACE = '\u200B'
 
 /**
  * Hôte long qui se coupe **aux points** (« gitlab-dashboard.tools. / internal ») plutôt qu'au milieu d'un libellé : un
