@@ -41,8 +41,9 @@ Tu reçois de l'orchestrateur : l'**URL/ID de la PR**, la **branche**, le **chem
    adb connect 10.0.0.51:5555
    export ANDROID_SERIAL=10.0.0.51:5555
    ./gradlew :app:installDebug
-   adb shell am start -n com.openctv.browser/.MainActivity
+   adb shell am start -n com.openctv.browser.dev/com.openctv.browser.MainActivity
    ```
+   Le build debug a l'identifiant `com.openctv.browser.dev` (la release `com.openctv.browser` reste installée à côté, intacte) : utilise ce package pour `pidof com.openctv.browser.dev`, `logcat --pid`, `run-as com.openctv.browser.dev` et le socket DevTools `webview_devtools_remote_<pid>`. L'activité reste `com.openctv.browser.MainActivity` (le `namespace` ne change pas).
    Si `adb connect` échoue ou rend `unauthorized`, la TV est éteinte, hors réseau ou demande une autorisation : arrête-toi et signale-le, ce n'est pas un défaut de la PR.
 2. **Rejoue chaque critère d'acceptation / scénario Gherkin** comme un utilisateur, **uniquement par la télécommande** :
    ```bash
