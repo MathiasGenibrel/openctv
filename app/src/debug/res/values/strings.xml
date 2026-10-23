@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Même ressource que main/ : le lanceur et l'en-tête affichent « OpenCTV Dev » dans le build debug. -->
+    <string name="app_name">OpenCTV Dev</string>
+</resources>

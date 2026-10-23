@@ -13,7 +13,11 @@ qui, et les enjeux (navigation au D-pad, UI à 10 pieds, vie privée, sécurité
 
 ## Quick Reference
 - **Min SDK 28 / Target SDK 35** — Kotlin 2.x, Java 17, Gradle (wrapper `./gradlew`)
-- **Package / applicationId** : `com.openctv.browser` — activité de lancement `com.openctv.browser/.MainActivity`
+- **Package / applicationId** : deux applis côte à côte sur la TV, chacune avec ses données (favoris, réglages, exceptions, zooms).
+  Debug `com.openctv.browser.dev` (« OpenCTV Dev »), lancée par `com.openctv.browser.dev/com.openctv.browser.MainActivity` ;
+  release `com.openctv.browser` (« OpenCTV »), activité `com.openctv.browser/.MainActivity`. Le `namespace` / package Kotlin reste
+  `com.openctv.browser`. `installDebug` n'écrase jamais la release, et inversement : la coexistence vient de l'identifiant, pas de la
+  signature (la release reste signée par la clé debug locale tant qu'aucune vraie clé n'est configurée).
   (déclarée `LEANBACK_LAUNCHER`, `android.software.leanback` requis, `android.hardware.touchscreen` non requis)
 - **Test command**: `./gradlew :app:testDebugUnitTest`
 - **Install command** (utilisateur uniquement): `adb connect 10.0.0.51:5555 && ANDROID_SERIAL=10.0.0.51:5555 ./gradlew :app:installDebug`

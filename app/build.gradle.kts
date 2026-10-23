@@ -44,6 +44,11 @@ android {
     }
 
     buildTypes {
+        // Identifiant propre au debug (com.openctv.browser.dev) : installable à côté de la release, données séparées.
+        // Le libellé « OpenCTV Dev » vient de app/src/debug/res/values/strings.xml.
+        debug {
+            applicationIdSuffix = ".dev"
+        }
         release {
             signingConfig = signingConfigs.findByName("release") ?: signingConfigs.getByName("debug")
             isMinifyEnabled = true
