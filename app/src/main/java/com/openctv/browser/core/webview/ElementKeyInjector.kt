@@ -28,7 +28,6 @@ fun WebView.sendEnter() = sendKeyPress(KeyEvent.KEYCODE_ENTER)
 
 /** Ouvre le clavier système sur le champ de saisie focalisé de la page. */
 fun WebView.showSoftKeyboard() {
-    (this as? PointerAwareWebView)?.allowSoftKeyboard()
     val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
     imm?.showSoftInput(this, 0)
 }

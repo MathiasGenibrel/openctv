@@ -403,10 +403,9 @@ class BrowserViewModel(
         val isLeftToPageTextField = isPageAwaitingText(isPageTextFieldFocused) && action.yieldsToPageTextField
         if (isOverlayOpen || isLeftToPageTextField) return false
         if (isRepeat && !action.repeatsWhenHeld) return true
-        val isPageShown = _pageState.value !is PageState.Error
         when (action) {
-            is RemoteAction.ScrollPage -> if (isPageShown) _commands.trySend(BrowserCommand.ScrollPage(action.direction))
-            is RemoteAction.Media -> if (isPageShown) _commands.trySend(BrowserCommand.Media(action.command))
+            is RemoteAction.ScrollPage -> if (isPageDisplayed) _commands.trySend(BrowserCommand.ScrollPage(action.direction))
+            is RemoteAction.Media -> if (isPageDisplayed) _commands.trySend(BrowserCommand.Media(action.command))
             RemoteAction.OpenSearch -> openAddressInput()
             RemoteAction.OpenMenu -> openMenu()
             is RemoteAction.OpenFavorite -> openFavorite(action.position)
@@ -570,9 +569,16 @@ class BrowserViewModel(
      * curseur, surcouche, mode interface, écran d'erreur, plein écran) rien n'est pris : [ElementKeyAction.PassThrough].
      * « Haut » maintenu ouvre la barre ici même et la touche est prise ([ElementKeyAction.Ignore]).
      */
-    fun onElementKey(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
+    fun onElementKey(
+        key: PadKey,
+        phase: KeyPhase,
+        isTextFieldFocused: Boolean,
+        isKeyboardShown: Boolean,
+    ): ElementKeyAction {
         if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
-        val action = elementKeys.actionFor(key, phase, isPageAwaitingText(isTextFieldFocused))
+        val isAwaitingText = isPageAwaitingText(isTextFieldFocused)
+        val isTyping = isPageTyping(isTextFieldFocused, isKeyboardShown)
+        val action = elementKeys.actionFor(key, phase, isAwaitingText, isTyping)
         if (action is ElementKeyAction.Send || action == ElementKeyAction.OpenKeyboard) pageTextFocus.onPageInteraction()
         if (action == ElementKeyAction.OpenInterface) {
             enterInterfaceMode()
@@ -630,10 +636,19 @@ class BrowserViewModel(
      * garde [RemoteAction.yieldsToPageTextField]) comme pour le mode éléments ([onElementKey]) : la réponse du moteur
      * ([isEditorFocusedInEngine]) n'est crue que si une page est affichée et que son état d'IME n'est pas périmé.
      */
-    private fun isPageAwaitingText(isEditorFocusedInEngine: Boolean): Boolean {
-        val isPageDisplayed = _pageState.value !is PageState.Error
-        return pageTextFocus.isTextFieldFocused(isEditorFocusedInEngine, isPageDisplayed)
-    }
+    private fun isPageAwaitingText(isEditorFocusedInEngine: Boolean): Boolean =
+        pageTextFocus.isTextFieldFocused(isEditorFocusedInEngine, isPageDisplayed)
+
+    /**
+     * Le clavier système est affiché sur ce champ ([isKeyboardShownBySystem] : inset IME), avec la même confiance que
+     * [isPageAwaitingText] : seulement alors Gauche/Droite restent à la page en mode éléments ([onElementKey]).
+     */
+    private fun isPageTyping(isEditorFocusedInEngine: Boolean, isKeyboardShownBySystem: Boolean): Boolean =
+        pageTextFocus.isKeyboardShown(isEditorFocusedInEngine, isKeyboardShownBySystem, isPageDisplayed)
+
+    /** Une page est affichée, pas un écran d'erreur ou d'avertissement. */
+    private val isPageDisplayed: Boolean
+        get() = _pageState.value !is PageState.Error
 
     override fun onPageStarted(url: String) {
         pageTextFocus.onPageInteraction()

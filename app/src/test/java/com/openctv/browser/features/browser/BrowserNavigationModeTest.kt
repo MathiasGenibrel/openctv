@@ -38,8 +38,8 @@ class BrowserNavigationModeTest {
     private fun viewModel(url: String, modes: FakeNavigationModes = FakeNavigationModes()) =
         BrowserViewModel(url, bookmarks, navigationModes = modes)
 
-    private fun BrowserViewModel.press(key: PadKey, isTextFieldFocused: Boolean = false) =
-        onElementKey(key, KeyPhase.Down, isTextFieldFocused)
+    private fun BrowserViewModel.press(key: PadKey, isTextFieldFocused: Boolean = false, isKeyboardShown: Boolean = false) =
+        onElementKey(key, KeyPhase.Down, isTextFieldFocused, isKeyboardShown)
 
     @Test
     fun `Given a site never switched When it opens Then it is in cursor mode with the cursor shown`() {
@@ -192,8 +192,8 @@ class BrowserNavigationModeTest {
         val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
 
         val pressed = viewModel.press(PadKey.Up)
-        val repeated = viewModel.onElementKey(PadKey.Up, KeyPhase.Repeat, isTextFieldFocused = false)
-        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false)
+        val repeated = viewModel.onElementKey(PadKey.Up, KeyPhase.Repeat, isTextFieldFocused = false, isKeyboardShown = false)
+        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false, isKeyboardShown = false)
 
         assertThat(pressed).isEqualTo(ElementKeyAction.Ignore)
         assertThat(repeated).isEqualTo(ElementKeyAction.Ignore)
@@ -206,7 +206,7 @@ class BrowserNavigationModeTest {
         val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
 
         viewModel.press(PadKey.Up)
-        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false)
+        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false, isKeyboardShown = false)
 
         assertThat(released).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
         assertThat(viewModel.layers.value.isInterfaceMode).isFalse()
@@ -221,11 +221,30 @@ class BrowserNavigationModeTest {
     }
 
     @Test
-    fun `Given elements mode with a text field focused When the user presses OK Then the keyboard opens and Left goes to the field`() {
+    fun `Given elements mode with a text field focused When the keyboard is shown Then Left goes to the field and once closed it goes to the previous element`() {
         val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
 
         assertThat(viewModel.press(PadKey.Ok, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.OpenKeyboard)
-        assertThat(viewModel.press(PadKey.Left, isTextFieldFocused = true)).isEqualTo(ElementKeyAction.PassThrough)
+        val withKeyboard = viewModel.press(PadKey.Left, isTextFieldFocused = true, isKeyboardShown = true)
+        val afterBack = viewModel.press(PadKey.Left, isTextFieldFocused = true, isKeyboardShown = false)
+
+        assertThat(withKeyboard).isEqualTo(ElementKeyAction.PassThrough)
+        assertThat(afterBack).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
+    }
+
+    @Test
+    fun `Given elements mode and a warning dismissed When the system still reports a keyboard Then the arrows still move between elements`() {
+        val httpUrl = "http://neverssl.com/"
+        val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
+        viewModel.onPageStarted(wikipedia)
+        viewModel.onUrlChanged(wikipedia, canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished(wikipedia)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "neverssl.com")))
+        viewModel.onBack(canGoBack = true)
+
+        val action = viewModel.press(PadKey.Left, isTextFieldFocused = true, isKeyboardShown = true)
+
+        assertThat(action).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
     }
 
     @Test

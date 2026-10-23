@@ -85,7 +85,8 @@ class MainActivity : ComponentActivity() {
 
     /**
      * Une touche de la télécommande que la hiérarchie de vues n'a prise ([FocusRescue]) : aucun élément n'a le focus,
-     * le navigateur le rend à sa page et la touche est rejouée ; Recherche n'ouvre jamais l'assistant du système.
+     * le navigateur le rend à sa page et la touche est rejouée (OK / Entrée avalés) ; Recherche n'ouvre jamais l'assistant
+     * du système.
      */
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         if (super.dispatchKeyEvent(event)) return true

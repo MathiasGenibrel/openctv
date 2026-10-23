@@ -17,6 +17,8 @@ interface PageFocusRescuer {
  * focus** (écran d'avertissement disparu, par exemple) ne doit pas tomber dans les défauts de l'Activity (Recherche
  * ouvre l'assistant système, les chiffres sont perdus). L'Activity ([MainActivity.dispatchKeyEvent]) nous la confie
  * **après** que la hiérarchie de vues l'a laissée passer ; on rend le focus à la page et on rejoue la touche une fois.
+ * Sauf OK / Entrée : le focus rendu suffit et la touche est avalée, pour ne jamais activer un élément que l'utilisateur
+ * n'a pas visé.
  *
  * Ne concerne que la croix, OK et les touches de [RemoteKeyMap] : jamais Accueil, Retour, Volume, Muet, Alimentation,
  * Assistant ni touches d'applications. Recherche, si personne ne la traite, est avalée (elle ne doit jamais ouvrir
@@ -38,17 +40,23 @@ class FocusRescue {
     fun onUnhandledKey(keyCode: Int, isKeyDown: Boolean, replay: () -> Boolean): Boolean {
         if (isKeyDown && isRescuable(keyCode)) {
             val current = rescuer
-            val isReplayed = current != null && current.isFocusLost() && current.restoreFocus() && replay()
-            if (isReplayed) return true
+            val isFocusRestored = current != null && current.isFocusLost() && current.restoreFocus()
+            // Rendre le focus suffit pour OK / Entrée : rejoués, ils activeraient un élément que l'utilisateur n'a pas visé.
+            if (isFocusRestored && isActivation(keyCode)) return true
+            if (isFocusRestored && replay()) return true
         }
         return isSwallowedWhenUnhandled(keyCode)
     }
 
     companion object {
-        private val padKeys = setOf(
+        private val activationKeys = setOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
+
+        private val padKeys = activationKeys + setOf(
             KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
         )
+
+        /** OK / Entrée : une action sur l'élément focalisé, jamais rejouée par le filet. */
+        fun isActivation(keyCode: Int): Boolean = keyCode in activationKeys
 
         /** La croix, OK et les touches « confort » de [RemoteKeyMap] ; aucune touche système. */
         fun isRescuable(keyCode: Int): Boolean = keyCode in padKeys || RemoteKeyMap.actionFor(keyCode) != null

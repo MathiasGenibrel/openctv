@@ -30,6 +30,34 @@ class FocusRescueTest {
     }
 
     @Test
+    fun `Given no element has the focus When OK is not handled Then the focus comes back without activating anything`() {
+        val activationKeys = listOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
+
+        activationKeys.forEach { key ->
+            val rescuer = FakeRescuer(isLost = true)
+            val localRescue = FocusRescue().also { it.register(rescuer) }
+            var replays = 0
+
+            val consumed = localRescue.onUnhandledKey(key, isKeyDown = true) { replays++; true }
+
+            assertThat(consumed).isTrue()
+            assertThat(rescuer.restoreCount).isEqualTo(1)
+            assertThat(replays).isEqualTo(0)
+        }
+    }
+
+    @Test
+    fun `Given no element has the focus When a D-pad arrow is not handled Then it is replayed on the restored focus`() {
+        rescue.register(FakeRescuer(isLost = true))
+        var replays = 0
+
+        val consumed = rescue.onUnhandledKey(KeyEvent.KEYCODE_DPAD_DOWN, isKeyDown = true) { replays++; true }
+
+        assertThat(consumed).isTrue()
+        assertThat(replays).isEqualTo(1)
+    }
+
+    @Test
     fun `Given no element has the focus When a digit is not handled Then it is replayed once the page has the focus`() {
         rescue.register(FakeRescuer(isLost = true))
 
