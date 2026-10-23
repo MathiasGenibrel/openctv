@@ -160,8 +160,8 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - **Champ de saisie de la page** : `onPreviewKeyEvent` passe avant la WebView. Quand un champ éditable de la page a le
   focus (`WebView.isTextFieldFocused`, `core/webview` : état d'IME du moteur, sans JavaScript), chiffres, Recherche et
   Chaîne/Page ± lui reviennent (`RemoteAction.yieldsToPageTextField`) ; média et Info gardent leur rôle.
-  Cet état d'IME n'est cru que via `PageTextFocus` (lu par `BrowserViewModel.isPageAwaitingText`, seule source pour
-  ces touches et le mode éléments) : jamais sous une erreur, et **périmé** après une erreur ou un avertissement jusqu'au
+  Cet état d'IME n'est cru que via `PageTextFocus` (lu par `BrowserViewModel.isPageAwaitingText`, et `isPageTyping` pour
+  le clavier affiché : seules lectures pour ces touches et le mode éléments) : jamais sous une erreur, et **périmé** après une erreur ou un avertissement jusqu'au
   prochain geste sur la page (nouvelle page, OK du curseur, Tab/OK du mode éléments).
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth

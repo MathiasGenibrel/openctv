@@ -160,11 +160,13 @@ internal fun HistoryContentScreen(
 /** Un [FocusRequester] par élément que l'écran peut focaliser. */
 private class HistoryFocusTargets {
     val backButton = FocusRequester()
+    val clearAll = FocusRequester()
+    private val entries = mutableMapOf<Long, FocusRequester>()
 
     /**
      * Le bouton retour a reçu le focus de notre demande et ne l'a pas perdu depuis. Posé **tout de suite** à la demande :
      * l'événement de focus de la vue n'arrive qu'après, et un second `requestFocus` sur un bouton qui l'a déjà lui fait
-     * perdre son anneau (cf. [request]).
+     * perdre son anneau (cf. [focusOn]).
      */
     var isBackButtonHolding = false
         private set
@@ -179,8 +181,6 @@ private class HistoryFocusTargets {
             isBackButtonHolding = false
         }
     }
-    val clearAll = FocusRequester()
-    private val entries = mutableMapOf<Long, FocusRequester>()
 
     fun of(entryId: Long): FocusRequester = entries.getOrPut(entryId) { FocusRequester() }
 
@@ -198,13 +198,23 @@ private class HistoryFocusTargets {
                 if (dayIndex >= 0) of(target.id) else backButton
             }
         }
-        // Demander une seconde fois le focus au bouton retour qui l'a déjà fait disparaître son anneau (Historique déjà
-        // vide à l'ouverture : demande pendant le chargement, puis de nouveau quand la liste vide arrive, avant que
-        // l'événement de focus de la première ait été livré). Une seule demande tant qu'il l'a.
-        val isBackButtonTarget = requester === backButton
-        if (isBackButtonTarget && isBackButtonHolding) return
-        isBackButtonHolding = isBackButtonTarget
-        runCatching { requester.requestFocus() }.onFailure { runCatching { backButton.requestFocus() } }
+        val isFocused = focusOn(requester)
+        if (!isFocused) focusOn(backButton)
+    }
+
+    /**
+     * Demande le focus à [requester] ; `false` s'il n'est pas (encore) composé. Demander une seconde fois
+     * le focus au bouton retour qui l'a déjà fait disparaître son anneau (Historique déjà vide à l'ouverture : demande
+     * pendant le chargement, puis de nouveau quand la liste vide arrive, avant que l'événement de focus de la première
+     * ait été livré) : une seule demande tant qu'il l'a, y compris en repli. Seul un focus accordé change de détenteur.
+     */
+    private fun focusOn(requester: FocusRequester): Boolean {
+        val isBackButton = requester === backButton
+        if (isBackButton && isBackButtonHolding) return true
+        val request = runCatching { requester.requestFocus() }
+        val isGranted = request.getOrDefault(false)
+        if (isGranted) isBackButtonHolding = isBackButton
+        return request.isSuccess
     }
 }
 

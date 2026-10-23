@@ -192,8 +192,8 @@ class BrowserNavigationModeTest {
         val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
 
         val pressed = viewModel.press(PadKey.Up)
-        val repeated = viewModel.onElementKey(PadKey.Up, KeyPhase.Repeat, isTextFieldFocused = false)
-        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false)
+        val repeated = viewModel.onElementKey(PadKey.Up, KeyPhase.Repeat, isTextFieldFocused = false, isKeyboardShown = false)
+        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false, isKeyboardShown = false)
 
         assertThat(pressed).isEqualTo(ElementKeyAction.Ignore)
         assertThat(repeated).isEqualTo(ElementKeyAction.Ignore)
@@ -206,7 +206,7 @@ class BrowserNavigationModeTest {
         val viewModel = viewModel(wikipedia, FakeNavigationModes("wikipedia.org"))
 
         viewModel.press(PadKey.Up)
-        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false)
+        val released = viewModel.onElementKey(PadKey.Up, KeyPhase.Up, isTextFieldFocused = false, isKeyboardShown = false)
 
         assertThat(released).isEqualTo(ElementKeyAction.Send(ElementKey.Previous))
         assertThat(viewModel.layers.value.isInterfaceMode).isFalse()

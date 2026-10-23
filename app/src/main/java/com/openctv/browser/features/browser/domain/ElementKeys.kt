@@ -41,7 +41,7 @@ class ElementKeys {
      * clavier fermé (Retour l'a fermé), toutes les flèches changent d'élément, même sur un champ qui a eu un clavier.
      * Haut/Bas changent toujours d'élément.
      */
-    fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean, isKeyboardShown: Boolean = false): ElementKeyAction {
+    fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean, isKeyboardShown: Boolean): ElementKeyAction {
         val isHorizontal = key == PadKey.Left || key == PadKey.Right
         val isLeftToTextField = isTextFieldFocused && isKeyboardShown && isHorizontal
         if (isLeftToTextField) return ElementKeyAction.PassThrough

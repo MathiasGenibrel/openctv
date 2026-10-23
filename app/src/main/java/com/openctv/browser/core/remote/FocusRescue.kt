@@ -16,8 +16,9 @@ interface PageFocusRescuer {
  * Filet de sécurité du focus : une touche de la télécommande que personne n'a prise parce qu'**aucun composable n'a le
  * focus** (écran d'avertissement disparu, par exemple) ne doit pas tomber dans les défauts de l'Activity (Recherche
  * ouvre l'assistant système, les chiffres sont perdus). L'Activity ([MainActivity.dispatchKeyEvent]) nous la confie
- * **après** que la hiérarchie de vues l'a laissée passer ; on rend le focus à la page et on rejoue la touche une fois (sauf OK / Entrée : le focus rendu suffit, la touche est
- * avalée, pour ne jamais activer un élément que l'utilisateur n'a pas visé).
+ * **après** que la hiérarchie de vues l'a laissée passer ; on rend le focus à la page et on rejoue la touche une fois.
+ * Sauf OK / Entrée : le focus rendu suffit et la touche est avalée, pour ne jamais activer un élément que l'utilisateur
+ * n'a pas visé.
  *
  * Ne concerne que la croix, OK et les touches de [RemoteKeyMap] : jamais Accueil, Retour, Volume, Muet, Alimentation,
  * Assistant ni touches d'applications. Recherche, si personne ne la traite, est avalée (elle ne doit jamais ouvrir
@@ -48,12 +49,11 @@ class FocusRescue {
     }
 
     companion object {
-        private val padKeys = setOf(
-            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
-            KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER,
-        )
-
         private val activationKeys = setOf(KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER)
+
+        private val padKeys = activationKeys + setOf(
+            KeyEvent.KEYCODE_DPAD_UP, KeyEvent.KEYCODE_DPAD_DOWN, KeyEvent.KEYCODE_DPAD_LEFT, KeyEvent.KEYCODE_DPAD_RIGHT,
+        )
 
         /** OK / Entrée : une action sur l'élément focalisé, jamais rejouée par le filet. */
         fun isActivation(keyCode: Int): Boolean = keyCode in activationKeys
