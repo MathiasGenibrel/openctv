@@ -53,6 +53,10 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   sécurité du brief produit. Aucune feature ne modifie `WebSettings` directement. Seule exception, dans
   `core/webview/` : l'instance temporaire de `WebViewDataCleaner.clearCache` (le cache HTTP n'est atteignable que par
   une instance), créée sur le thread principal, jamais chargée ni affichée, détruite aussitôt (`finally`).
+- **Hauteur de la WebView** : la fabrique lui pose `layoutParams` `MATCH_PARENT` × `MATCH_PARENT`, jamais `WRAP_CONTENT`.
+  Le moteur lit les `layoutParams` (pas la mesure exacte de `pageZoomLayout`) : en `WRAP_CONTENT` il force une hauteur de
+  mise en page nulle (`100vh` = 0, `html { height: 100% }` = 0, `visualViewport.scale` ≈ 1,14), et les sites à hauteur
+  d'écran n'affichent que leur en-tête. Tout parent qui rattache la WebView doit conserver ces `layoutParams`.
 - **Effacement des données** (`WebDataContract`) : `WebViewDataCleaner` reste un adaptateur mince (appels du moteur
   seulement) ; l'orchestration (catégories indépendantes, échecs listés, effacement non annulable une fois lancé)
   vit dans `ClearBrowsingData`, testé en JUnit.

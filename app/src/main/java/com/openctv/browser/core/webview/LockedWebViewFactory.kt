@@ -2,6 +2,7 @@ package com.openctv.browser.core.webview
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.view.ViewGroup
 import android.webkit.WebSettings
 import com.openctv.browser.core.security.NoSecurityExceptions
 import com.openctv.browser.core.security.SecurityExceptionsContract
@@ -47,6 +48,9 @@ class LockedWebViewFactory(
     @SuppressLint("SetJavaScriptEnabled")
     fun create(context: Context, listener: WebPageListener, fullscreenHost: FullscreenHost): PointerAwareWebView =
         PointerAwareWebView(context).apply {
+            // Hauteur exacte, jamais WRAP_CONTENT : le moteur lit ces layoutParams (pas la mesure) et, en WRAP_CONTENT,
+            // force une hauteur de mise en page nulle (`100vh` = 0, `html { height: 100% }` = 0, page agrandie et décalée).
+            layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
             // Pas de petit carré bleu (contour de focus Android) sur la page : le curseur virtuel est le repère visuel.
             defaultFocusHighlightEnabled = false
             settings.apply {
