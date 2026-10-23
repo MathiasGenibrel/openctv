@@ -59,6 +59,10 @@ Extra-small 4 · Small 8 · Medium 12 · Large 16 · Large-increased 20 · Extra
   celle de l'élément. Ne jamais le rogner (pas de clip sur les parents).
   Code : surface `tv-material` (Surface, Button, Card…) → `border = …Defaults.border(focusedBorder =
   focusRingBorder(shape))`, qui suit l'agrandissement au focus ; autre élément → `Modifier.focusRing(shape)`.
+  Exception : bouton icône focalisé dès la composition de son écran (bouton retour de l'Historique, ouvert depuis
+  l'accueil) → `OpenCtvIconButton(isRingFromFocus = true)` : anneau `focusRing` lu sur le focus réel (la surface
+  tv-material peut manquer l'événement de focus et ne pas se dessiner focalisée), sans anneau de surface ni
+  agrandissement au focus (il recouvrirait l'écart de 2 dp). Ce bouton ne grossit donc pas, contrairement aux autres.
 - Tuile de favori focalisée : fond `primaryContainer`, textes `onPrimaryContainer`, monogramme qui se
   transforme en cercle `primary` (morph, spring default spatial), élévation légère.
 - Bouton / FAB focalisé : variante Focused M3 + indicateur.

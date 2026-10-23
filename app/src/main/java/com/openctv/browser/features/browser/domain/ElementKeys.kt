@@ -20,7 +20,7 @@ sealed interface ElementKeyAction {
     /** Touche prise sans rien faire (Haut en attente de son relâchement, répétition d'OK, relâchement déjà traité). */
     data object Ignore : ElementKeyAction
 
-    /** Touche laissée à la WebView (Gauche/Droite dans un champ de saisie : déplacement du curseur de texte). */
+    /** Touche laissée à la WebView : le mode éléments n'est pas actif (curseur, surcouche, mode interface, erreur, plein écran). */
     data object PassThrough : ElementKeyAction
 }
 
@@ -37,14 +37,10 @@ class ElementKeys {
 
     /**
      * Action de [key] dans [phase]. Tab peut ouvrir le clavier sur un champ de saisie ([isTextFieldFocused]) : OK le
-     * (ré)ouvre. Seul un clavier réellement affiché ([isKeyboardShown]) garde Gauche/Droite pour le curseur de texte ;
-     * clavier fermé (Retour l'a fermé), toutes les flèches changent d'élément, même sur un champ qui a eu un clavier.
-     * Haut/Bas changent toujours d'élément.
+     * (ré)ouvre. Les flèches changent toujours d'élément : quand le clavier système est affiché, c'est lui qui reçoit la
+     * croix (l'IME passe avant l'app) et l'app n'est pas appelée ; ses flèches ← → déplacent le curseur de texte.
      */
-    fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean, isKeyboardShown: Boolean): ElementKeyAction {
-        val isHorizontal = key == PadKey.Left || key == PadKey.Right
-        val isLeftToTextField = isTextFieldFocused && isKeyboardShown && isHorizontal
-        if (isLeftToTextField) return ElementKeyAction.PassThrough
+    fun actionFor(key: PadKey, phase: KeyPhase, isTextFieldFocused: Boolean): ElementKeyAction {
         if (key == PadKey.Up) return upAction(phase)
         return when (phase) {
             KeyPhase.Down -> pressAction(key, isTextFieldFocused)

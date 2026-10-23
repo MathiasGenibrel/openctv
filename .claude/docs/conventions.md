@@ -78,7 +78,7 @@ single<BookmarksContract> { BookmarksImpl(get()) }
   (`core/webview/ElementKeyInjector`) ; la page dessine son propre contour (`:focus-visible`) et défile jusqu'à
   l'élément, **aucun style n'est injecté**. Seule cette traduction envoie des touches à la page, et seulement quand
   `BrowserViewModel.onElementKey` l'autorise : mode éléments, page affichée, ni surcouche ni mode interface ni erreur.
-  Champ de saisie focalisé (`isTextFieldFocused`) : OK ouvre le clavier ; Gauche/Droite restent à la page tant que le clavier est affiché.
+  Champ de saisie focalisé (`isTextFieldFocused`) : OK ouvre le clavier.
   Haut agit **au relâchement** : appui court = Maj+Tab, appui long (première répétition) = barre d'adresse, sans Maj+Tab.
   `PointerAwareWebView.focusSearch` renvoie la WebView elle-même : Tab après le dernier élément (`takeFocus` du moteur)
   ou une flèche non consommée par la page ne font jamais sortir le focus Android de la WebView ; seule l'app le déplace.
@@ -88,10 +88,11 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - **Clavier en mode éléments** : Tab / Maj+Tab qui arrive sur un champ **peut** ouvrir l'IME (Chromium appelle `showSoftInput` de
   lui-même ; on ne l'intercepte pas, `onCheckIsTextEditor` n'est pas surchargé). Retour ferme le clavier (le système) sans quitter
   la page ni reculer l'historique ; ensuite Haut/Bas/Gauche/Droite reprennent la navigation par éléments, même sur le champ qui
-  a eu un clavier. OK sur un champ (re)ouvre le clavier (`showSoftKeyboard`). **Une seule source** : l'état d'IME du moteur
-  (`WebView.isTextFieldFocused`, champ focalisé) et l'inset IME du système (`WebView.isKeyboardShown`), crus seulement via
-  `PageTextFocus` (`isTextFieldFocused`, `isKeyboardShown`). `ElementKeys` n'a aucun état de saisie : Gauche/Droite vont au
-  champ (curseur de texte) seulement si le clavier est réellement affiché, pas parce que le champ est focalisé. Aucun JavaScript.
+  a eu un clavier. OK sur un champ (re)ouvre le clavier (`showSoftKeyboard`). **Clavier affiché : c'est lui qui reçoit la croix**
+  (relevé sur la TCL : l'IME passe avant l'app, qui n'est pas appelée) ; le curseur de texte se déplace avec les flèches ← →
+  du clavier lui-même, et l'app n'a rien à faire (aucune règle « Gauche/Droite au champ », `ElementKeys` ne connaît pas
+  l'état du clavier). **Une seule source** pour l'état de saisie : l'état d'IME du moteur (`WebView.isTextFieldFocused`,
+  champ focalisé), cru seulement via `PageTextFocus`. Aucun JavaScript.
 - **Focus après un écran d'erreur ou d'avertissement** : le bouton de l'écran détient le focus et ne le donne à personne en
   disparaissant. `rememberBrowserFocus` (`BrowserFocus.kt`, seul endroit qui déplace le focus du navigateur) traite la fin de
   `PageState.Error` comme la fermeture d'une surcouche (`AfterClosed`, un cadre plus tard : « Retour en sécurité », Retour,
@@ -160,8 +161,8 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 - **Champ de saisie de la page** : `onPreviewKeyEvent` passe avant la WebView. Quand un champ éditable de la page a le
   focus (`WebView.isTextFieldFocused`, `core/webview` : état d'IME du moteur, sans JavaScript), chiffres, Recherche et
   Chaîne/Page ± lui reviennent (`RemoteAction.yieldsToPageTextField`) ; média et Info gardent leur rôle.
-  Cet état d'IME n'est cru que via `PageTextFocus` (lu par `BrowserViewModel.isPageAwaitingText`, et `isPageTyping` pour
-  le clavier affiché : seules lectures pour ces touches et le mode éléments) : jamais sous une erreur, et **périmé** après une erreur ou un avertissement jusqu'au
+  Cet état d'IME n'est cru que via `PageTextFocus` (lu par `BrowserViewModel.isPageAwaitingText`, seule lecture pour ces
+  touches et le mode éléments) : jamais sous une erreur, et **périmé** après une erreur ou un avertissement jusqu'au
   prochain geste sur la page (nouvelle page, OK du curseur, Tab/OK du mode éléments).
 
 ## Testing — JUnit 4 + MockK + Turbine + Truth

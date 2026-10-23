@@ -1,8 +1,6 @@
 package com.openctv.browser.core.webview
 
 import android.webkit.WebView
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 
 /**
  * Un champ de saisie de la page a le focus (clavier système ouvert ou non) : la page attend du texte. Lu dans l'état
@@ -12,10 +10,3 @@ import androidx.core.view.WindowInsetsCompat
  */
 val WebView.isTextFieldFocused: Boolean
     get() = hasFocus() && onCheckIsTextEditor()
-
-/**
- * Le clavier système est affiché (inset IME visible dans la fenêtre). Brut aussi : `PageTextFocus` ne le croit que sur
- * un champ de saisie fiable. Sans information d'insets (vue détachée), `false`. Thread principal.
- */
-val WebView.isKeyboardShown: Boolean
-    get() = ViewCompat.getRootWindowInsets(this)?.isVisible(WindowInsetsCompat.Type.ime()) == true

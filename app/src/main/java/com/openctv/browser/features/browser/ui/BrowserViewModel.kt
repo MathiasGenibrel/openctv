@@ -573,12 +573,10 @@ class BrowserViewModel(
         key: PadKey,
         phase: KeyPhase,
         isTextFieldFocused: Boolean,
-        isKeyboardShown: Boolean,
     ): ElementKeyAction {
         if (!currentHud().isElementsActive) return ElementKeyAction.PassThrough
         val isAwaitingText = isPageAwaitingText(isTextFieldFocused)
-        val isTyping = isPageTyping(isTextFieldFocused, isKeyboardShown)
-        val action = elementKeys.actionFor(key, phase, isAwaitingText, isTyping)
+        val action = elementKeys.actionFor(key, phase, isAwaitingText)
         if (action is ElementKeyAction.Send || action == ElementKeyAction.OpenKeyboard) pageTextFocus.onPageInteraction()
         if (action == ElementKeyAction.OpenInterface) {
             enterInterfaceMode()
@@ -638,13 +636,6 @@ class BrowserViewModel(
      */
     private fun isPageAwaitingText(isEditorFocusedInEngine: Boolean): Boolean =
         pageTextFocus.isTextFieldFocused(isEditorFocusedInEngine, isPageDisplayed)
-
-    /**
-     * Le clavier système est affiché sur ce champ ([isKeyboardShownBySystem] : inset IME), avec la même confiance que
-     * [isPageAwaitingText] : seulement alors Gauche/Droite restent à la page en mode éléments ([onElementKey]).
-     */
-    private fun isPageTyping(isEditorFocusedInEngine: Boolean, isKeyboardShownBySystem: Boolean): Boolean =
-        pageTextFocus.isKeyboardShown(isEditorFocusedInEngine, isKeyboardShownBySystem, isPageDisplayed)
 
     /** Une page est affichée, pas un écran d'erreur ou d'avertissement. */
     private val isPageDisplayed: Boolean

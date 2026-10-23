@@ -29,7 +29,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Devices
@@ -116,7 +115,7 @@ internal fun HistoryContentScreen(
     val currentInitialFocus by rememberUpdatedState(state.initialFocus)
 
     // Le focus ne se perd jamais, et une seule source le donne : le bouton retour pendant la lecture, puis la cible
-    // décidée par le ViewModel (`initialFocus`). Le bouton retour n'est demandé qu'une fois (cf. [HistoryFocusTargets.request]).
+    // décidée par le ViewModel (`initialFocus`). Son anneau suit le focus réel : une demande répétée est sans effet.
     LaunchedEffect(content::class) {
         val isLoading = content is HistoryContent.Loading
         val target = if (isLoading) HistoryFocus.BackButton else currentInitialFocus
@@ -163,25 +162,6 @@ private class HistoryFocusTargets {
     val clearAll = FocusRequester()
     private val entries = mutableMapOf<Long, FocusRequester>()
 
-    /**
-     * Le bouton retour a reçu le focus de notre demande et ne l'a pas perdu depuis. Posé **tout de suite** à la demande :
-     * l'événement de focus de la vue n'arrive qu'après, et un second `requestFocus` sur un bouton qui l'a déjà lui fait
-     * perdre son anneau (cf. [focusOn]).
-     */
-    var isBackButtonHolding = false
-        private set
-    private var hasBackButtonHadFocus = false
-
-    /** Seule une vraie perte du focus (après l'avoir eu) libère le bouton : l'événement initial « sans focus » ne compte pas. */
-    fun onBackButtonFocusChanged(isFocused: Boolean) {
-        if (isFocused) hasBackButtonHadFocus = true
-        val isLost = !isFocused && hasBackButtonHadFocus
-        if (isLost) {
-            hasBackButtonHadFocus = false
-            isBackButtonHolding = false
-        }
-    }
-
     fun of(entryId: Long): FocusRequester = entries.getOrPut(entryId) { FocusRequester() }
 
     /**
@@ -198,23 +178,9 @@ private class HistoryFocusTargets {
                 if (dayIndex >= 0) of(target.id) else backButton
             }
         }
-        val isFocused = focusOn(requester)
-        if (!isFocused) focusOn(backButton)
-    }
-
-    /**
-     * Demande le focus à [requester] ; `false` s'il n'est pas (encore) composé. Demander une seconde fois
-     * le focus au bouton retour qui l'a déjà fait disparaître son anneau (Historique déjà vide à l'ouverture : demande
-     * pendant le chargement, puis de nouveau quand la liste vide arrive, avant que l'événement de focus de la première
-     * ait été livré) : une seule demande tant qu'il l'a, y compris en repli. Seul un focus accordé change de détenteur.
-     */
-    private fun focusOn(requester: FocusRequester): Boolean {
-        val isBackButton = requester === backButton
-        if (isBackButton && isBackButtonHolding) return true
-        val request = runCatching { requester.requestFocus() }
-        val isGranted = request.getOrDefault(false)
-        if (isGranted) isBackButtonHolding = isBackButton
-        return request.isSuccess
+        // Un `FocusRequester` pas (encore) attaché à un élément composé lève une exception : repli sur le bouton retour.
+        val isAttached = runCatching { requester.requestFocus() }.isSuccess
+        if (!isAttached) runCatching { backButton.requestFocus() }
     }
 }
 
@@ -242,9 +208,8 @@ private fun IntroColumn(
                 icon = OpenCtvIcons.ArrowBack,
                 contentDescription = stringResource(R.string.history_back),
                 onClick = onClose,
-                modifier = Modifier
-                    .focusRequester(focus.backButton)
-                    .onFocusChanged { focus.onBackButtonFocusChanged(it.isFocused) },
+                modifier = Modifier.focusRequester(focus.backButton),
+                isRingFromFocus = true,
             )
             Spacer(Modifier.height(32.dp))
             Text(
