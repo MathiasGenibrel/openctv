@@ -126,7 +126,10 @@ single<BookmarksContract> { BookmarksImpl(get()) }
 ## Touches de la télécommande
 - Table unique : `core/remote/RemoteKeyMap` (Kotlin pur, testée). Ajuster une touche = changer cette table. Toute touche
   absente (Accueil, Retour, Volume, Muet, Alimentation, source, Réglages, Guide, touches d'applis, croix) n'est jamais
-  interceptée : **ne jamais y ajouter une touche système**.
+  interceptée : **ne jamais y ajouter une touche système** (Assistant `KEYCODE_ASSIST` en est une : le système l'ouvre).
+- Touches relevées sur la TCL : la télécommande BT `BT_RC833_U1` (`Vendor_0417_Product_0304.kl`) émet Chaîne ±, les touches
+  média (dont `MEDIA_STOP`, traité comme Pause), Recherche, Menu, Page ±, ZOOM_IN/OUT. Info et les chiffres viennent de
+  l'IR / d'un périphérique virtuel de la TCL (non confirmés sur la BT). Ne pas supposer qu'une télécommande les émet.
 - Traduction unique d'une touche Compose : `KeyEvent.dispatchRemoteAction` (`core/remote`), appelée par l'accueil et par
   `BrowserKeys` ; `onPreviewKeyEvent` ne fait que déléguer. Le plein écran (vue Android hors Compose) lit la même table
   via `FullscreenKeys`.

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.input.key.Key
@@ -321,14 +322,21 @@ private fun SettingsList(
                 isChecked = settings.isAdBlockEnabled,
                 onClick = { onAdBlockChange(!settings.isAdBlockEnabled) },
             )
-            val cookieBannerValue =
-                if (settings.isCookieBannerBlockEnabled) R.string.settings_cookie_banners_on else R.string.settings_cookie_banners_off
+            // Les bandeaux sont masqués par le bloqueur : coupé globalement, le réglage est inactif et sort du parcours.
+            val isCookieBannerEditable = settings.isAdBlockEnabled
+            val cookieBannerValue = when {
+                !isCookieBannerEditable -> R.string.settings_cookie_banners_inactive
+                settings.isCookieBannerBlockEnabled -> R.string.settings_cookie_banners_on
+                else -> R.string.settings_cookie_banners_off
+            }
             ListSwitchRow(
                 icon = OpenCtvIcons.Cookie,
                 label = stringResource(R.string.settings_cookie_banners),
                 supporting = stringResource(cookieBannerValue),
-                isChecked = settings.isCookieBannerBlockEnabled,
-                onClick = { onCookieBannerChange(!settings.isCookieBannerBlockEnabled) },
+                isChecked = settings.isCookieBannerBlockEnabled && isCookieBannerEditable,
+                onClick = { if (isCookieBannerEditable) onCookieBannerChange(!settings.isCookieBannerBlockEnabled) },
+                // Jamais `canFocus = true` : seulement le retrait du focus de la ligne elle-même.
+                modifier = Modifier.focusProperties { if (!isCookieBannerEditable) canFocus = false },
             )
             // OK = mettre à jour maintenant ; sans effet pendant une mise à jour (le focus reste sur la ligne).
             ListRow(
@@ -564,7 +572,6 @@ private fun SecurityExceptionsPanel(
                         icon = mark.icon,
                         iconTint = mark.color,
                         label = exception.host,
-                        isLabelSingleLine = true,
                         supporting = securityExceptionKind(exception),
                         onClick = {
                             focusIndex = index

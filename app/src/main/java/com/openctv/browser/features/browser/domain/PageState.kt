@@ -32,5 +32,22 @@ sealed interface PageState {
     ) : PageState
 }
 
+/**
+ * Progression [percent] (0..100) d'un chargement. Passé [REVEAL_PROGRESS_PERCENT], le moteur a rendu la page même
+ * si `onPageCommitVisible` n'est pas venu (page en cache, même adresse, redirection) : le voile se retire, la
+ * barre de progression continue.
+ */
+fun PageState.Loading.withProgress(percent: Int): PageState.Loading {
+    val clamped = percent.coerceIn(0, 100)
+    val isRendered = clamped >= REVEAL_PROGRESS_PERCENT
+    return copy(progress = clamped / 100f, isPageShown = isPageShown || isRendered)
+}
+
+/** Navigation validée par le moteur (adresse committée) : le voile d'un chargement en cours se retire. Jamais sous une erreur. */
+fun PageState.revealedByCommit(): PageState =
+    if (this is PageState.Loading && !isPageShown) copy(isPageShown = true) else this
+
+const val REVEAL_PROGRESS_PERCENT = 70
+
 /** `https://www.arte.tv/fr/?x=1` -> `arte.tv` : même libellé que le titre d'un favori ([BookmarkUrl.siteName]). */
 fun siteLabelOf(url: String): String = BookmarkUrl.siteName(url)

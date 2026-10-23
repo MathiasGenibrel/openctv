@@ -6,7 +6,10 @@ import androidx.compose.ui.input.key.KeyEvent as ComposeKeyEvent
 import app.cash.turbine.test
 import com.google.common.truth.Truth.assertThat
 import com.openctv.browser.core.remote.RemoteAction
+import com.openctv.browser.core.webview.LoadErrorCause
 import com.openctv.browser.core.webview.MediaCommand
+import com.openctv.browser.core.webview.SecurityWarning
+import com.openctv.browser.core.webview.WebLoadError
 import com.openctv.browser.core.webview.ScrollDirection
 import com.openctv.browser.features.browser.ui.BrowserCommand
 import com.openctv.browser.features.browser.ui.BrowserViewModel
@@ -55,6 +58,49 @@ class BrowserRemoteKeysTest {
             assertThat(isConsumed).isTrue()
             assertThat(awaitItem()).isEqualTo(BrowserCommand.ScrollPage(ScrollDirection.Down))
         }
+    }
+
+    @Test
+    fun `Given a security warning dismissed while the engine still reports an editor When Search is pressed Then the address input opens`() = runTest {
+        val httpUrl = "http://neverssl.com/"
+        val viewModel = viewModel()
+        viewModel.onPageStarted(url)
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished(url)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "neverssl.com")))
+        viewModel.onBack(canGoBack = true)
+
+        val isConsumed = viewModel.onRemoteAction(RemoteAction.OpenSearch, isRepeat = false, isPageTextFieldFocused = true)
+
+        assertThat(isConsumed).isTrue()
+        assertThat(viewModel.layers.value.addressInput?.mode).isEqualTo(SearchMode.Browse)
+    }
+
+    @Test
+    fun `Given a warning dismissed When the user clicks a field of the page Then digits go to that field again`() = runTest {
+        val httpUrl = "http://neverssl.com/"
+        val viewModel = viewModel()
+        viewModel.onPageStarted(url)
+        viewModel.onUrlChanged(url, canGoBack = false, canGoForward = false)
+        viewModel.onPageFinished(url)
+        viewModel.onLoadError(WebLoadError(httpUrl, LoadErrorCause.Unknown, SecurityWarning.InsecureHttp(httpUrl, "neverssl.com")))
+        viewModel.onBack(canGoBack = true)
+        viewModel.onPageInteraction()
+
+        val isConsumed = viewModel.onRemoteAction(RemoteAction.OpenFavorite(1), isRepeat = false, isPageTextFieldFocused = true)
+
+        assertThat(isConsumed).isFalse()
+    }
+
+    @Test
+    fun `Given a page shown with a text field focused When a digit is pressed Then it is left to the field`() = runTest {
+        val viewModel = viewModel()
+        viewModel.onPageStarted(url)
+        viewModel.onPageFinished(url)
+
+        val isConsumed = viewModel.onRemoteAction(RemoteAction.OpenFavorite(1), isRepeat = false, isPageTextFieldFocused = true)
+
+        assertThat(isConsumed).isFalse()
     }
 
     @Test

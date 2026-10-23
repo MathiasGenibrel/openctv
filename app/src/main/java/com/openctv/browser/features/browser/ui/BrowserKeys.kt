@@ -9,8 +9,7 @@ import androidx.compose.ui.input.key.type
 import com.openctv.browser.core.remote.dispatchRemoteAction
 import com.openctv.browser.core.webview.isTextFieldFocused
 import com.openctv.browser.core.webview.sendEnter
-import com.openctv.browser.core.webview.sendShiftTab
-import com.openctv.browser.core.webview.sendTab
+import com.openctv.browser.core.webview.sendTabWrapping
 import com.openctv.browser.core.webview.showSoftKeyboard
 import com.openctv.browser.features.browser.domain.ElementKey
 import com.openctv.browser.features.browser.domain.ElementKeyAction
@@ -48,7 +47,11 @@ internal fun BrowserViewModel.consumesKey(event: KeyEvent, webView: WebView, pag
     if (currentLayers.isFullscreen) return false
     // Page sans surcouche : le curseur (flèches, OK) passe avant la WebView ; il décide des touches qu'il prend.
     val isPageMode = !currentLayers.isInterfaceMode && !currentLayers.isOverlayOpen
-    if (isPageMode && pageKeys.onPageKey(event)) return true
+    if (isPageMode && pageKeys.onPageKey(event)) {
+        // Un clic du curseur peut avoir focalisé un champ : l'état d'IME du moteur est de nouveau fiable.
+        if (event.toPadKey() == PadKey.Ok) onPageInteraction()
+        return true
+    }
     // Navigation par éléments : le D-pad part à la page en Tab / Maj+Tab / Entrée (le curseur est alors inactif).
     if (isPageMode && consumesElementKey(event, webView)) return true
     val isKeyDown = event.type == KeyEventType.KeyDown
@@ -76,8 +79,8 @@ private fun BrowserViewModel.consumesElementKey(event: KeyEvent, webView: WebVie
     val action = onElementKey(pad, event.toKeyPhase(), isTextFieldFocused = webView.isTextFieldFocused)
     when (action) {
         is ElementKeyAction.Send -> when (action.key) {
-            ElementKey.Next -> webView.sendTab()
-            ElementKey.Previous -> webView.sendShiftTab()
+            ElementKey.Next -> webView.sendTabWrapping(isBackwards = false)
+            ElementKey.Previous -> webView.sendTabWrapping(isBackwards = true)
             ElementKey.Activate -> webView.sendEnter()
         }
         ElementKeyAction.OpenKeyboard -> webView.showSoftKeyboard()

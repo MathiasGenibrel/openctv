@@ -12,7 +12,7 @@ sealed interface RemoteAction {
     /** Touche média : commande sur la vidéo de la page. */
     data class Media(val command: MediaCommand) : RemoteAction
 
-    /** Recherche / assistant : ouvre la saisie d'adresse. */
+    /** Recherche : ouvre la saisie d'adresse. */
     data object OpenSearch : RemoteAction
 
     /** Info : ouvre le menu du navigateur. */
@@ -46,7 +46,7 @@ sealed interface RemoteAction {
  * d'une touche (ou ajouter un code relevé sur la TV avec `getevent`), c'est ici et nulle part ailleurs.
  *
  * Tout `keyCode` absent de la table n'est pas touché : Accueil, Retour, Volume, Muet, Alimentation, Entrée/source,
- * Réglages, Guide, touches d'applications (Netflix, YouTube…) continuent vers le système ou la page. Ne jamais y
+ * Assistant, Réglages, Guide, touches d'applications (Netflix, YouTube…) continuent vers le système ou la page. Ne jamais y
  * ajouter une touche système.
  */
 object RemoteKeyMap {
@@ -66,12 +66,13 @@ object RemoteKeyMap {
         KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE to RemoteAction.Media(MediaCommand.TogglePlayback),
         KeyEvent.KEYCODE_MEDIA_PLAY to RemoteAction.Media(MediaCommand.Play),
         KeyEvent.KEYCODE_MEDIA_PAUSE to RemoteAction.Media(MediaCommand.Pause),
+        // Télécommande BT : « stop » met en pause (la page garde sa position, rien n'est démonté).
+        KeyEvent.KEYCODE_MEDIA_STOP to RemoteAction.Media(MediaCommand.Pause),
         KeyEvent.KEYCODE_MEDIA_FAST_FORWARD to RemoteAction.Media(MediaCommand.SeekForward),
         KeyEvent.KEYCODE_MEDIA_NEXT to RemoteAction.Media(MediaCommand.SeekForward),
         KeyEvent.KEYCODE_MEDIA_REWIND to RemoteAction.Media(MediaCommand.SeekBack),
         KeyEvent.KEYCODE_MEDIA_PREVIOUS to RemoteAction.Media(MediaCommand.SeekBack),
         KeyEvent.KEYCODE_SEARCH to RemoteAction.OpenSearch,
-        KeyEvent.KEYCODE_ASSIST to RemoteAction.OpenSearch,
         KeyEvent.KEYCODE_INFO to RemoteAction.OpenMenu,
     ) + digitKeys
 
