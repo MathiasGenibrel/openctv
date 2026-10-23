@@ -90,7 +90,12 @@ fun OpenCtvButton(
 
 /**
  * Bouton icône rond d'OpenCTV (40 dp), mêmes styles et anneau de focus que [OpenCtvButton]. `Tonal` par
- * défaut : icônes d'en-tête (Réglages…). [isRingFromFocus] : anneau dessiné d'après le focus réel (écran qui focalise le bouton dès son ouverture). Désactivé ([enabled] faux) : grisé et non focalisable. [contentDescription] est obligatoire : pas de libellé visible.
+ * défaut : icônes d'en-tête (Réglages…). Désactivé ([enabled] faux) : grisé et non focalisable. [contentDescription]
+ * est obligatoire : pas de libellé visible.
+ *
+ * [isRingFromFocus] : anneau dessiné d'après le focus réel ([focusRing]) plutôt que par la surface, et sans
+ * agrandissement au focus. Réservé au bouton qu'un écran focalise dès sa composition (bouton retour de l'Historique) :
+ * la surface tv-material n'en reçoit pas toujours l'événement de focus et ne se dessinerait pas focalisée.
  */
 @Composable
 fun OpenCtvIconButton(
@@ -102,19 +107,26 @@ fun OpenCtvIconButton(
     enabled: Boolean = true,
     isRingFromFocus: Boolean = false,
 ) {
-    // Anneau lu sur le focus réel du bouton (`onFocusChanged`) et non sur l'`interactionSource` de la Surface : un bouton
-    // qui a le focus dès sa composition (écran ouvert depuis l'accueil) n'en reçoit jamais le `FocusInteraction.Focus`.
-    // Un seul anneau : celui de la surface est alors retiré, et l'agrandissement au focus aussi (il rognerait l'écart).
-    val ringModifier = if (isRingFromFocus) Modifier.focusRing(CircleShape) else Modifier
+    // Anneau lu sur le focus réel du bouton et non sur l'`interactionSource` de la Surface : un bouton qui a le focus dès
+    // sa composition (écran ouvert depuis l'accueil) n'en reçoit pas toujours le `FocusInteraction.Focus`. Un seul
+    // anneau : celui de la surface est alors retiré, et l'agrandissement au focus aussi ([focusRing] est dessiné hors du
+    // calque de la surface : un bouton agrandi de 10 % recouvrirait l'écart de 2 dp).
+    val ring = if (isRingFromFocus) Modifier.focusRing(CircleShape) else Modifier
+    val scale = if (isRingFromFocus) IconButtonDefaults.scale(focusedScale = 1f) else IconButtonDefaults.scale()
+    val border = if (isRingFromFocus) {
+        IconButtonDefaults.border()
+    } else {
+        IconButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape))
+    }
     IconButton(
         onClick = onClick,
         // Les surfaces tv-material sont `focusable()` même désactivées : on retire explicitement le focus
         // (jamais `canFocus = true`, cf. conventions). Le bouton qui le perd en cours de focus est géré par l'écran.
-        modifier = modifier.then(ringModifier).focusProperties { if (!enabled) canFocus = false },
+        modifier = modifier.then(ring).focusProperties { if (!enabled) canFocus = false },
         enabled = enabled,
         shape = IconButtonDefaults.shape(CircleShape),
-        scale = if (isRingFromFocus) IconButtonDefaults.scale(focusedScale = 1f) else IconButtonDefaults.scale(),
-        border = if (isRingFromFocus) IconButtonDefaults.border() else IconButtonDefaults.border(focusedBorder = focusRingBorder(CircleShape)),
+        scale = scale,
+        border = border,
         colors = IconButtonDefaults.colors(
             containerColor = style.container,
             contentColor = style.onContainer,

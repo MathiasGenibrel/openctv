@@ -178,8 +178,9 @@ private class HistoryFocusTargets {
                 if (dayIndex >= 0) of(target.id) else backButton
             }
         }
-        val isFocused = runCatching { requester.requestFocus() }.isSuccess
-        if (!isFocused) runCatching { backButton.requestFocus() }
+        // Un `FocusRequester` pas (encore) attaché à un élément composé lève une exception : repli sur le bouton retour.
+        val isAttached = runCatching { requester.requestFocus() }.isSuccess
+        if (!isAttached) runCatching { backButton.requestFocus() }
     }
 }
 

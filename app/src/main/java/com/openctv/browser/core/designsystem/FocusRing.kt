@@ -42,7 +42,9 @@ fun focusRingBorder(shape: Shape): Border = Border(
 /**
  * Anneau de focus M3 : contour 3 dp `secondary`, à 2 dp à l'extérieur de l'élément, suivant [shape].
  * Pour les éléments sans `border` de focus natif (composants `material3`, champs de saisie…) ;
- * pour une surface `tv-material`, utiliser [focusRingBorder].
+ * pour une surface `tv-material`, utiliser [focusRingBorder]. Seule exception : un bouton focalisé dès la composition
+ * de son écran, dont la surface ne reçoit pas toujours l'événement de focus (`OpenCtvIconButton(isRingFromFocus)`,
+ * surface sans anneau ni agrandissement au focus).
  * Dessiné derrière le contenu sans clip : ne jamais appliquer `clip` / `clipToBounds` sur un parent
  * sans lui laisser au moins 5 dp de marge.
  * À placer en amont du composant focalisable : réagit au focus de l'élément ou de ses enfants.
